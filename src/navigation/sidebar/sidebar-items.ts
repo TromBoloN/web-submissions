@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ClipboardList, LayoutDashboard, Settings, Users } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/user-display";
 
@@ -51,6 +51,7 @@ export function getSidebarItems(role: CurrentUser["role"]): NavGroup[] {
           { id: "dashboard", title: "Dasbor", url: "/admin", icon: LayoutDashboard },
           { id: "accounts", title: "Akun", url: "/admin/akun", icon: Users },
           { id: "teams", title: "Tim", url: "/admin/tim", icon: ClipboardList },
+          { id: "submissions", title: "Submission", url: "/admin/submission", icon: FileText },
           { id: "settings", title: "Pengaturan", url: "/admin/pengaturan", icon: Settings },
         ],
       },
@@ -58,7 +59,6 @@ export function getSidebarItems(role: CurrentUser["role"]): NavGroup[] {
         id: 2,
         label: "Segera hadir",
         items: [
-          { id: "submissions", title: "Submission", url: "#", disabled: true, badge: "soon" },
           { id: "scoring", title: "Penilaian", url: "#", disabled: true, badge: "soon" },
           { id: "ranking", title: "Peringkat", url: "#", disabled: true, badge: "soon" },
           { id: "export", title: "Ekspor Data", url: "#", disabled: true, badge: "soon" },
