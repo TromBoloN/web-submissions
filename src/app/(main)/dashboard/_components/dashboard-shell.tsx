@@ -9,7 +9,6 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { type CurrentUser, getRoleLabel } from "@/lib/user-display";
 import { getPreference } from "@/server/server-actions";
 
-import { GitHubRepositoriesMenu } from "./header/github-repositories-menu";
 import { LayoutControls } from "./header/layout-controls";
 import { SearchDialog } from "./header/search-dialog";
 import { ThemeSwitcher } from "./header/theme-switcher";
@@ -52,7 +51,7 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
                 orientation="vertical"
                 className="mx-2 data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center"
               />
-              <SearchDialog />
+              <SearchDialog role={user.role} />
             </div>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm sm:block">
@@ -60,7 +59,6 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
               </span>
               <LayoutControls />
               <ThemeSwitcher />
-              <GitHubRepositoriesMenu />
             </div>
           </div>
         </header>
