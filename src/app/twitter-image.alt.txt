@@ -1,1 +1,1 @@
-Studio Admin open source admin dashboard with shadcn/ui
+MIT-WEEK 2026 competition management portal

@@ -3,12 +3,11 @@ import packageJson from "../../package.json";
 const currentYear = new Date().getFullYear();
 
 export const APP_CONFIG = {
-  name: "Studio Admin",
+  name: "MIT-WEEK 2026",
   version: packageJson.version,
-  copyright: `© ${currentYear}, Studio Admin.`,
+  copyright: `© ${currentYear}, MIT-WEEK 2026.`,
   meta: {
-    title: "Studio Admin: Open Source Admin Dashboard with shadcn/ui",
-    description:
-      "A polished open source shadcn/ui admin dashboard with 25+ screens and editions for Radix UI, Base UI, React Aria, and TanStack Start.",
+    title: "MIT-WEEK 2026",
+    description: "Portal manajemen kompetisi MIT-WEEK 2026.",
   },
 };
