@@ -1,3 +1,4 @@
+import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -26,6 +27,7 @@ export default async function AccountsPage({ searchParams }: AccountsPageProps) 
   const parsedPage = Number(params.page ?? 1);
   const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const supabase = await createClient();
+  const caller = await getCurrentProfile();
 
   let profileQuery = supabase
     .from("profiles")
@@ -41,13 +43,17 @@ export default async function AccountsPage({ searchParams }: AccountsPageProps) 
 
   const [{ data: profiles, count, error: profilesError }, { data: teams, error: teamsError }] = await Promise.all([
     profileQuery,
-    supabase.from("teams").select("profile_id, team_name, team_code"),
+    supabase.from("teams").select("id, profile_id, team_code, team_name, institution, leader_name, members"),
   ]);
   const teamByProfile = new Map((teams ?? []).map((team) => [team.profile_id, team]));
-  const rows: AccountRow[] = (profiles ?? []).map((profile) => ({
-    ...profile,
-    teamName: teamByProfile.get(profile.id)?.team_name ?? null,
-  }));
+  const rows: AccountRow[] = (profiles ?? []).map((profile) => {
+    const team = teamByProfile.get(profile.id) ?? null;
+    return {
+      ...profile,
+      team,
+      teamName: team?.team_name ?? null,
+    };
+  });
   const nextTeamCode = getNextTeamCode((teams ?? []).map((team) => team.team_code));
 
   return (
@@ -61,7 +67,14 @@ export default async function AccountsPage({ searchParams }: AccountsPageProps) 
           Data akun tidak dapat dimuat. Silakan coba lagi.
         </p>
       ) : (
-        <AccountsClient rows={rows} total={count ?? 0} page={page} pageSize={pageSize} nextTeamCode={nextTeamCode} />
+        <AccountsClient
+          rows={rows}
+          total={count ?? 0}
+          page={page}
+          pageSize={pageSize}
+          nextTeamCode={nextTeamCode}
+          currentUserId={caller?.id ?? ""}
+        />
       )}
     </div>
   );

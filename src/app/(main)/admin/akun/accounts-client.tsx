@@ -5,7 +5,19 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { type ColumnDef, tableFeatures, useTable } from "@tanstack/react-table";
+import { KeyRound, MoreVertical, Pencil, UserCheck, UserX } from "lucide-react";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,18 +30,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Database } from "@/types/database";
 
-import { createAccount } from "./actions";
+import { createAccount, resetAccountPassword, toggleAccountActive, updateAccount } from "./actions";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type TeamData = Database["public"]["Tables"]["teams"]["Row"];
 type Role = Database["public"]["Enums"]["user_role_type"];
+type JudgeStage = Database["public"]["Enums"]["judge_stage_type"];
 
-export type AccountRow = Profile & { teamName: string | null };
+export type AccountRow = Profile & {
+  team: Pick<TeamData, "id" | "team_code" | "team_name" | "institution" | "leader_name" | "members"> | null;
+  teamName: string | null;
+};
 
 type AccountsClientProps = {
   rows: AccountRow[];
@@ -37,11 +61,12 @@ type AccountsClientProps = {
   page: number;
   pageSize: number;
   nextTeamCode: string;
+  currentUserId: string;
 };
 
 const features = tableFeatures({});
 const roleLabels: Record<Role, string> = { admin: "Admin", judge: "Juri", team: "Peserta" };
-const stageLabels = { preliminary: "Preliminary", final: "Final", both: "Keduanya" };
+const stageLabels: Record<JudgeStage, string> = { preliminary: "Preliminary", final: "Final", both: "Keduanya" };
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -76,10 +101,12 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
+type MemberItem = { id: string; name: string };
+
 function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<Role>("admin");
-  const [members, setMembers] = useState([""]);
+  const [members, setMembers] = useState<MemberItem[]>([{ id: "initial-member", name: "" }]);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
@@ -91,7 +118,7 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
       setError(undefined);
       setCreated(null);
       setPassword("");
-      setMembers([""]);
+      setMembers([{ id: "initial-member", name: "" }]);
     }
   };
 
@@ -101,7 +128,7 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
     form.set("role", role);
     form.set("password", password);
     if (role === "team") {
-      form.set("members", JSON.stringify(members.filter(Boolean)));
+      form.set("members", JSON.stringify(members.map((m) => m.name).filter(Boolean)));
     }
     setError(undefined);
     startTransition(async () => {
@@ -111,6 +138,7 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
         return;
       }
       setCreated(result.account);
+      toast.success("Akun berhasil dibuat.");
       onCreated();
     });
   };
@@ -233,20 +261,26 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
                   required
                   onChange={(event) =>
                     setMembers((current) =>
-                      current.map((member, memberIndex) => (memberIndex === 0 ? event.target.value : member)),
+                      current.map((item, memberIndex) =>
+                        memberIndex === 0 ? { ...item, name: event.target.value } : item,
+                      ),
                     )
                   }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Anggota</Label>
-                {members.map((member, index) => (
-                  <div className="flex gap-2" key={member || "anggota-kosong"}>
+                {members.map((item, index) => (
+                  <div className="flex gap-2" key={item.id}>
                     <Input
-                      value={member}
+                      value={item.name}
                       onChange={(event) =>
                         setMembers((current) =>
-                          current.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)),
+                          current.map((currentMember) =>
+                            currentMember.id === item.id
+                              ? { ...currentMember, name: event.target.value }
+                              : currentMember,
+                          ),
                         )
                       }
                       placeholder={index === 0 ? "Nama ketua tim" : "Nama anggota"}
@@ -256,14 +290,25 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setMembers((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        onClick={() =>
+                          setMembers((current) => current.filter((currentMember) => currentMember.id !== item.id))
+                        }
                       >
                         Hapus
                       </Button>
                     )}
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => setMembers((current) => [...current, ""])}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setMembers((current) => [
+                      ...current,
+                      { id: `create-member-${Date.now()}-${current.length}`, name: "" },
+                    ])
+                  }
+                >
                   Tambah anggota
                 </Button>
               </div>
@@ -290,11 +335,410 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
   );
 }
 
-export function AccountsClient({ rows, total, page, pageSize, nextTeamCode }: AccountsClientProps) {
+function EditAccountDialog({
+  account,
+  open,
+  onOpenChange,
+  onUpdated,
+}: {
+  account: AccountRow;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => void;
+}) {
+  const [fullName, setFullName] = useState(account.full_name);
+  const [judgeStage, setJudgeStage] = useState<JudgeStage>(account.judge_stage ?? "preliminary");
+  const [teamName, setTeamName] = useState(account.team?.team_name ?? "");
+  const [institution, setInstitution] = useState(account.team?.institution ?? "");
+  const [leaderName, setLeaderName] = useState(account.team?.leader_name ?? "");
+  const [members, setMembers] = useState<MemberItem[]>(() => {
+    if (account.team?.members?.length) {
+      return account.team.members.map((name, index) => ({ id: `edit-member-${index}-${name}`, name }));
+    }
+    return [{ id: "edit-initial-leader", name: account.team?.leader_name ?? "" }];
+  });
+  const [teamCode, setTeamCode] = useState(account.team?.team_code ?? "");
+  const [error, setError] = useState<string>();
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData();
+    form.set("userId", account.id);
+    form.set("role", account.role);
+    form.set("full_name", fullName);
+
+    if (account.role === "judge") {
+      form.set("judge_stage", judgeStage);
+    }
+
+    if (account.role === "team") {
+      form.set("team_name", teamName);
+      form.set("institution", institution);
+      form.set("leader_name", leaderName);
+      form.set("members", JSON.stringify(members.map((m) => m.name).filter(Boolean)));
+      form.set("team_code", teamCode);
+    }
+
+    setError(undefined);
+    startTransition(async () => {
+      const result = await updateAccount(form);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      toast.success("Akun berhasil diperbarui.");
+      onOpenChange(false);
+      onUpdated();
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ubah Akun</DialogTitle>
+          <DialogDescription>Ubah data akun {account.full_name}.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-email">Email</Label>
+            <Input id="edit-email" value={account.email} disabled className="bg-muted text-muted-foreground" />
+            <p className="text-muted-foreground text-xs">Email tidak dapat diubah.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-role">Role</Label>
+            <Input
+              id="edit-role"
+              value={roleLabels[account.role]}
+              disabled
+              className="bg-muted text-muted-foreground"
+            />
+            <p className="text-muted-foreground text-xs">Role tidak dapat diubah.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-full_name">Nama lengkap</Label>
+            <Input id="edit-full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          </div>
+          {account.role === "judge" && (
+            <div className="space-y-1.5">
+              <Label>Tahap juri</Label>
+              <Select value={judgeStage} onValueChange={(value) => setJudgeStage(value as JudgeStage)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="preliminary">Preliminary</SelectItem>
+                  <SelectItem value="final">Final</SelectItem>
+                  <SelectItem value="both">Keduanya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {account.role === "team" && (
+            <div className="space-y-4 rounded-lg border p-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-team_name">Nama tim</Label>
+                <Input id="edit-team_name" value={teamName} onChange={(e) => setTeamName(e.target.value)} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-institution">Institusi</Label>
+                <Input
+                  id="edit-institution"
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-leader_name">Ketua tim</Label>
+                <Input
+                  id="edit-leader_name"
+                  value={leaderName}
+                  required
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    const prevLeader = leaderName;
+                    setLeaderName(nextVal);
+                    setMembers((current) =>
+                      current.map((member, idx) =>
+                        idx === 0 && member.name === prevLeader ? { ...member, name: nextVal } : member,
+                      ),
+                    );
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Anggota</Label>
+                {members.map((item, index) => (
+                  <div className="flex gap-2" key={item.id}>
+                    <Input
+                      value={item.name}
+                      onChange={(e) =>
+                        setMembers((current) =>
+                          current.map((currentMember) =>
+                            currentMember.id === item.id ? { ...currentMember, name: e.target.value } : currentMember,
+                          ),
+                        )
+                      }
+                      placeholder={index === 0 ? "Nama ketua tim" : "Nama anggota"}
+                      required
+                    />
+                    {members.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setMembers((current) => current.filter((currentMember) => currentMember.id !== item.id))
+                        }
+                      >
+                        Hapus
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setMembers((current) => [
+                      ...current,
+                      { id: `edit-member-${Date.now()}-${current.length}`, name: "" },
+                    ])
+                  }
+                >
+                  Tambah anggota
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-team_code">Kode tim</Label>
+                <Input
+                  id="edit-team_code"
+                  value={teamCode}
+                  onChange={(e) => setTeamCode(e.target.value)}
+                  pattern="MIT-[0-9]{3}"
+                  required
+                />
+              </div>
+            </div>
+          )}
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Batal
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ResetPasswordDialog({
+  account,
+  open,
+  onOpenChange,
+}: {
+  account: AccountRow;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string>();
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleOpenChange = (value: boolean) => {
+    onOpenChange(value);
+    if (!value) {
+      setPassword("");
+      setError(undefined);
+      setResetResult(null);
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(undefined);
+    startTransition(async () => {
+      const result = await resetAccountPassword({
+        userId: account.id,
+        password,
+      });
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      setResetResult({ email: account.email, password: result.password });
+      toast.success("Kata sandi berhasil direset.");
+    });
+  };
+
+  if (resetResult !== null) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kata sandi berhasil direset</DialogTitle>
+            <DialogDescription>
+              Simpan kata sandi ini sekarang. Kata sandi tidak akan ditampilkan lagi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Email</Label>
+              <div className="flex gap-2">
+                <Input value={resetResult.email} readOnly />
+                <CopyButton value={resetResult.email} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Kata sandi baru</Label>
+              <div className="flex gap-2">
+                <Input value={resetResult.password} readOnly />
+                <CopyButton value={resetResult.password} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button>Selesai</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reset Kata Sandi</DialogTitle>
+          <DialogDescription>
+            Masukkan kata sandi baru untuk akun {account.full_name} ({account.email}).
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="reset-password">Kata sandi baru</Label>
+            <div className="flex gap-2">
+              <Input
+                id="reset-password"
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                required
+              />
+              <Button type="button" variant="outline" onClick={() => setPassword(generatePassword())}>
+                Buat otomatis
+              </Button>
+            </div>
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Batal
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Menyimpan..." : "Reset Kata Sandi"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ConfirmToggleActiveDialog({
+  target,
+  open,
+  onOpenChange,
+  onConfirmed,
+}: {
+  target: { account: AccountRow; targetActive: boolean } | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirmed: () => void;
+}) {
+  const [error, setError] = useState<string>();
+  const [isPending, startTransition] = useTransition();
+
+  if (!target) return null;
+
+  const handleConfirm = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await toggleAccountActive({
+        userId: target.account.id,
+        targetActive: target.targetActive,
+      });
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      toast.success(target.targetActive ? "Akun berhasil diaktifkan." : "Akun berhasil dinonaktifkan.");
+      onOpenChange(false);
+      onConfirmed();
+    });
+  };
+
+  let actionText = target.targetActive ? "Aktifkan" : "Nonaktifkan";
+  if (isPending) {
+    actionText = "Menyimpan...";
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{target.targetActive ? "Aktifkan Akun" : "Nonaktifkan Akun"}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {target.targetActive
+              ? `Apakah Anda yakin ingin mengaktifkan akun ${target.account.full_name}? Pengguna ini akan dapat masuk kembali ke sistem.`
+              : `Apakah Anda yakin ingin menonaktifkan akun ${target.account.full_name}? Pengguna ini tidak akan dapat masuk ke sistem.`}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error && <p className="text-destructive text-sm">{error}</p>}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Batal</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={isPending}
+            variant={target.targetActive ? "default" : "destructive"}
+            onClick={(e) => {
+              e.preventDefault();
+              handleConfirm();
+            }}
+          >
+            {actionText}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function AccountsClient({ rows, total, page, pageSize, nextTeamCode, currentUserId }: AccountsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [role, setRole] = useState(searchParams.get("role") ?? "all");
+
+  const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null);
+  const [resettingAccount, setResettingAccount] = useState<AccountRow | null>(null);
+  const [confirmToggleTarget, setConfirmToggleTarget] = useState<{
+    account: AccountRow;
+    targetActive: boolean;
+  } | null>(null);
+
   const columns: ColumnDef<typeof features, AccountRow>[] = [
     { accessorKey: "full_name", header: "Nama" },
     { accessorKey: "email", header: "Email" },
@@ -316,7 +760,57 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode }: Ac
       ),
     },
     { accessorKey: "created_at", header: "Dibuat", cell: ({ row }) => formatDate(row.original.created_at) },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Aksi</span>,
+      cell: ({ row }) => {
+        const account = row.original;
+        const isSelf = account.id === currentUserId;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8 p-0">
+                <span className="sr-only">Buka menu aksi</span>
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingAccount(account)}>
+                <Pencil className="mr-2 size-4" />
+                Ubah
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResettingAccount(account)}>
+                <KeyRound className="mr-2 size-4" />
+                Reset kata sandi
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {account.is_active ? (
+                <DropdownMenuItem
+                  disabled={isSelf}
+                  onClick={() => {
+                    if (!isSelf) {
+                      setConfirmToggleTarget({ account, targetActive: false });
+                    }
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <UserX className="mr-2 size-4" />
+                  Nonaktifkan
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setConfirmToggleTarget({ account, targetActive: true })}>
+                  <UserCheck className="mr-2 size-4" />
+                  Aktifkan
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
   ];
+
   const table = useTable({ features, data: rows, columns });
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -379,7 +873,7 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode }: Ac
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getAllCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className={cell.column.id === "actions" ? "text-right" : undefined}>
                       <table.FlexRender cell={cell} />
                     </TableCell>
                   ))}
@@ -408,6 +902,38 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode }: Ac
           </Button>
         </div>
       </div>
+
+      {editingAccount && (
+        <EditAccountDialog
+          key={editingAccount.id}
+          account={editingAccount}
+          open={editingAccount !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingAccount(null);
+          }}
+          onUpdated={() => router.refresh()}
+        />
+      )}
+
+      {resettingAccount && (
+        <ResetPasswordDialog
+          key={resettingAccount.id}
+          account={resettingAccount}
+          open={resettingAccount !== null}
+          onOpenChange={(open) => {
+            if (!open) setResettingAccount(null);
+          }}
+        />
+      )}
+
+      <ConfirmToggleActiveDialog
+        target={confirmToggleTarget}
+        open={confirmToggleTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmToggleTarget(null);
+        }}
+        onConfirmed={() => router.refresh()}
+      />
     </div>
   );
 }

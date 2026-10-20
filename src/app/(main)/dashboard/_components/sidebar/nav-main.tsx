@@ -276,6 +276,11 @@ function NavItemBadge({ badge }: { badge?: NavBadge }) {
     return null;
   }
 
+  const badgeLabels: Record<NavBadge, string> = {
+    new: "Baru",
+    soon: "Segera",
+  };
+
   return (
     <SidebarMenuBadge
       className={cn(
@@ -285,7 +290,7 @@ function NavItemBadge({ badge }: { badge?: NavBadge }) {
         badge === "soon" && "border-muted-foreground text-muted-foreground",
       )}
     >
-      {badge}
+      {badgeLabels[badge] ?? badge}
     </SidebarMenuBadge>
   );
 }

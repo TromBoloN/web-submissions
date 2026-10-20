@@ -2,10 +2,13 @@
 
 import "server-only";
 
+import { revalidatePath } from "next/cache";
+
 import { z } from "zod";
 
 import { getCurrentProfile } from "@/lib/auth";
 import { adminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
 const baseAccountSchema = z.object({
@@ -40,9 +43,46 @@ const accountSchema = z.discriminatedUnion("role", [
     }),
 ]);
 
+const baseUpdateSchema = z.object({
+  userId: z.string().uuid("ID akun tidak valid."),
+  full_name: z.string().trim().min(1, "Nama wajib diisi."),
+});
+
+const updateAccountSchema = z.discriminatedUnion("role", [
+  baseUpdateSchema.extend({
+    role: z.literal("admin"),
+  }),
+  baseUpdateSchema.extend({
+    role: z.literal("judge"),
+    judge_stage: z.enum(["preliminary", "final", "both"], {
+      message: "Tahap juri harus dipilih.",
+    }),
+  }),
+  baseUpdateSchema
+    .extend({
+      role: z.literal("team"),
+      team_name: z.string().trim().min(1, "Nama tim wajib diisi."),
+      institution: z.string().trim().min(1, "Institusi wajib diisi."),
+      leader_name: z.string().trim().min(1, "Nama ketua wajib diisi."),
+      members: z.array(z.string().trim().min(1, "Nama anggota tidak boleh kosong.")).min(1),
+      team_code: z
+        .string()
+        .trim()
+        .regex(/^MIT-\d{3}$/, "Kode tim harus berformat MIT-001."),
+    })
+    .refine((data) => data.members.includes(data.leader_name), {
+      message: "Anggota harus mencantumkan ketua tim.",
+      path: ["members"],
+    }),
+]);
+
 export type CreateAccountResult =
   | { success: true; account: { email: string; password: string } }
   | { success: false; error: string };
+
+export type ActionResult = { success: true } | { success: false; error: string };
+
+export type ResetPasswordResult = { success: true; password: string } | { success: false; error: string };
 
 function getDuplicateError(error: { code?: string; message?: string } | null) {
   if (error?.code !== "23505") return null;
@@ -139,5 +179,161 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
     }
   }
 
+  revalidatePath("/admin/akun");
   return { success: true, account: { email: parsed.data.email, password: parsed.data.password } };
+}
+
+export async function toggleAccountActive(input: { userId: string; targetActive: boolean }): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = z
+    .object({
+      userId: z.string().uuid("ID akun tidak valid."),
+      targetActive: z.boolean(),
+    })
+    .safeParse(input);
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  if (caller.id === parsed.data.userId && !parsed.data.targetActive) {
+    return { success: false, error: "Anda tidak dapat menonaktifkan akun Anda sendiri." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_active: parsed.data.targetActive })
+    .eq("id", parsed.data.userId);
+
+  if (error) {
+    console.error("Failed to toggle account active status", error);
+    return { success: false, error: "Gagal mengubah status akun. Coba lagi." };
+  }
+
+  revalidatePath("/admin/akun");
+  return { success: true };
+}
+
+export async function resetAccountPassword(input: { userId: string; password: string }): Promise<ResetPasswordResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = z
+    .object({
+      userId: z.string().uuid("ID akun tidak valid."),
+      password: z.string().min(8, "Kata sandi minimal 8 karakter."),
+    })
+    .safeParse(input);
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  const { error } = await adminClient.auth.admin.updateUserById(parsed.data.userId, {
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    console.error("Failed to reset password", error);
+    return { success: false, error: "Gagal mereset kata sandi. Coba lagi." };
+  }
+
+  return { success: true, password: parsed.data.password };
+}
+
+export async function updateAccount(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const role = formData.get("role");
+  const rawData = {
+    userId: formData.get("userId"),
+    full_name: formData.get("full_name"),
+    role,
+    ...(role === "judge" ? { judge_stage: formData.get("judge_stage") } : {}),
+    ...(role === "team"
+      ? {
+          team_name: formData.get("team_name"),
+          institution: formData.get("institution"),
+          leader_name: formData.get("leader_name"),
+          members: (() => {
+            try {
+              return JSON.parse(String(formData.get("members") ?? "[]"));
+            } catch {
+              return [];
+            }
+          })(),
+          team_code: formData.get("team_code"),
+        }
+      : {}),
+  };
+
+  const parsed = updateAccountSchema.safeParse(rawData);
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data perubahan tidak valid." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: targetProfile, error: profileFetchError } = await supabase
+    .from("profiles")
+    .select("id, role")
+    .eq("id", parsed.data.userId)
+    .maybeSingle();
+
+  if (profileFetchError || !targetProfile) {
+    return { success: false, error: "Akun tidak ditemukan." };
+  }
+
+  if (targetProfile.role !== parsed.data.role) {
+    return { success: false, error: "Role akun tidak dapat diubah." };
+  }
+
+  if (parsed.data.role === "team") {
+    const { error: teamError } = await supabase
+      .from("teams")
+      .update({
+        team_name: parsed.data.team_name,
+        institution: parsed.data.institution,
+        leader_name: parsed.data.leader_name,
+        members: parsed.data.members,
+        team_code: parsed.data.team_code,
+      })
+      .eq("profile_id", parsed.data.userId);
+
+    if (teamError) {
+      const duplicateError = getDuplicateError(teamError);
+      if (duplicateError) return { success: false, error: duplicateError };
+      console.error("Failed to update team", teamError);
+      return { success: false, error: "Gagal memperbarui data tim. Coba lagi." };
+    }
+  }
+
+  const profileUpdates: Database["public"]["Tables"]["profiles"]["Update"] = {
+    full_name: parsed.data.full_name,
+    judge_stage: parsed.data.role === "judge" ? parsed.data.judge_stage : null,
+  };
+
+  const { error: profileError } = await supabase.from("profiles").update(profileUpdates).eq("id", parsed.data.userId);
+
+  if (profileError) {
+    console.error("Failed to update profile", profileError);
+    return { success: false, error: "Gagal memperbarui profil akun. Coba lagi." };
+  }
+
+  revalidatePath("/admin/akun");
+  if (parsed.data.role === "team") {
+    revalidatePath("/admin/tim");
+  }
+  return { success: true };
 }
