@@ -5,7 +5,17 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { type ColumnDef, tableFeatures, useTable } from "@tanstack/react-table";
-import { CheckCircle2, Clock, ExternalLink, FileQuestion, Info, MoreVertical, Pencil, Users } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Download,
+  ExternalLink,
+  FileQuestion,
+  Info,
+  MoreVertical,
+  Pencil,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -367,9 +377,17 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-semibold text-2xl">Submission</h1>
-        <p className="text-muted-foreground">Pantau dan kelola berkas submission dari seluruh tim peserta.</p>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="font-semibold text-2xl">Submission</h1>
+          <p className="text-muted-foreground">Pantau dan kelola berkas submission dari seluruh tim peserta.</p>
+        </div>
+        <Button variant="outline" asChild>
+          <a href="/admin/submission/export" download>
+            <Download className="mr-2 size-4" />
+            Ekspor CSV
+          </a>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
