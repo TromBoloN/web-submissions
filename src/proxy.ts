@@ -36,14 +36,10 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
   const isLoginPage = pathname === "/login";
-  const isProtectedPath = ["/admin", "/judge", "/team"].some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
 
-  if (!user && isProtectedPath) {
+  if (!user && !isLoginPage) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -58,5 +54,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|txt|xml)$).*)"],
 };
