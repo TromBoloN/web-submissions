@@ -1,15 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDeadlineWita } from "@/lib/deadline";
 import { createClient } from "@/lib/supabase/server";
-
-function formatDeadline(value: string | null) {
-  if (!value) return "Belum diatur";
-
-  return `${new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Makassar",
-    dateStyle: "long",
-    timeStyle: "short",
-  }).format(new Date(value))} WITA`;
-}
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -25,7 +16,7 @@ export default async function AdminPage() {
     { label: "Total tim", value: teams.count ?? 0 },
     { label: "Total juri", value: judges.count ?? 0 },
     { label: "Submission terkirim", value: submissions.count ?? 0 },
-    { label: "Batas waktu", value: formatDeadline(settings.data?.submission_closes_at ?? null) },
+    { label: "Batas waktu", value: formatDeadlineWita(settings.data?.submission_closes_at ?? null) },
   ];
 
   return (
