@@ -13,9 +13,10 @@ An all-in-one competition management and submission platform developed specifica
 
 ## 📌 Context: About MIT-WEEK 2026
 
-**MIT-WEEK (Mahakarya Information Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines.
+**MIT-WEEK (Mulawarman Information Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines run by Association of Informatics, Faculty of Engineering, Mulawarman University.
 
 This web application serves as the **official competition platform for the Web Development Competition** branch of MIT-WEEK 2026. It manages the full lifecycle of the contest:
+
 - **Participant Onboarding & Submissions:** Contestants submit and refine their web projects within tight deadlines.
 - **Multi-Stage Adjudication:** Preliminary and final rounds scored independently by an expert panel of judges.
 - **Committee Operations:** Organizers oversee teams, manage schedules, monitor deliverables, and export results.
@@ -25,7 +26,9 @@ This web application serves as the **official competition platform for the Web D
 ## 🚀 Key Modules & Capabilities
 
 ### 👨‍💻 1. Contestant Portal (`/team`)
+
 Designed to give teams an intuitive and distraction-free submission experience:
+
 - **Team Dashboard:** Displays verified team code (`MIT-XXX`), registered team name, educational institution, team leader, and member roster.
 - **Copy Helper:** One-click copy for the unique team code, used for official communications and fallback backup forms.
 - **Real-Time Deadline Countdown:** Dynamic countdown timer calculating clock offsets between client and server time to prevent local clock tampering.
@@ -41,15 +44,19 @@ Designed to give teams an intuitive and distraction-free submission experience:
 - **Submission Timestamps:** Transparent display of first save (`Pertama disimpan`) and last modified (`Terakhir diubah`) in Central Indonesia Time (WITA / UTC+8).
 
 ### ⚖️ 2. Judicial Evaluation Panel (`/judge`)
+
 Built for fair, confidential, and structured evaluation:
+
 - **Two-Stage Judging Pipeline:**
-  - **Preliminary Round (*Babak Penyisihan*):** Assessment of all active submissions against core judging criteria.
-  - **Final Round (*Babak Final*):** Restricted evaluation exclusively for the Top 5 Finalist teams.
+  - **Preliminary Round (_Babak Penyisihan_):** Assessment of all active submissions against core judging criteria.
+  - **Final Round (_Babak Final_):** Restricted evaluation exclusively for the Top 5 Finalist teams.
 - **Strict Blind Judging & Privacy:** Judges evaluate submissions independently; no judge can view or edit scorecards filled by other judges.
 - **Eligible Submission Feeds:** Automatically displays only teams with completed submissions (`submitted`) who have not been disqualified.
 
 ### 🛡️ 3. Administrative Control Center (`/admin`)
+
 Full-spectrum operational management for the organizing committee:
+
 - **Dashboard Overview (`/admin`):**
   - KPI metric cards: Total Teams, Finalist Count, Active Judges, and Submissions count.
   - Active competition deadline status with last-accepted-minute precision.
@@ -79,6 +86,7 @@ Full-spectrum operational management for the organizing committee:
   - Strict "last accepted minute" time boundary calculation.
 
 ### 🎨 4. Theme & Layout Personalization
+
 - **Theme Presets:** Integrated theme switcher supporting Light Mode, Dark Mode, and distinct aesthetic presets (Default Neutral, Tangerine, Neo Brutalism, Soft Pop).
 - **Responsive Layout:** Adaptive sidebar navigation with collapsed icon-only mode for mobile and compact desktop screens.
 
@@ -135,38 +143,43 @@ mit-week-portal/
 
 ## 🛠️ Tech Stack & Dependencies
 
-| Layer | Technology |
-| :--- | :--- |
-| **Framework** | Next.js 16.4 (App Router with Turbopack), React 19, TypeScript |
-| **Styling** | Tailwind CSS v4, Lucide React Icons |
-| **Component Library** | shadcn/ui (Radix UI primitives) |
-| **Backend & Database** | Supabase (PostgreSQL 15+, Auth, Row Level Security) |
-| **Form Management** | React Hook Form, Zod schema validation |
-| **Data Tables** | TanStack Table v9 |
-| **Code Quality** | Biome (linter & formatter) |
+| Layer                  | Technology                                                     |
+| :--------------------- | :------------------------------------------------------------- |
+| **Framework**          | Next.js 16.4 (App Router with Turbopack), React 19, TypeScript |
+| **Styling**            | Tailwind CSS v4, Lucide React Icons                            |
+| **Component Library**  | shadcn/ui (Radix UI primitives)                                |
+| **Backend & Database** | Supabase (PostgreSQL 15+, Auth, Row Level Security)            |
+| **Form Management**    | React Hook Form, Zod schema validation                         |
+| **Data Tables**        | TanStack Table v9                                              |
+| **Code Quality**       | Biome (linter & formatter)                                     |
 
 ---
 
 ## 🏁 Getting Started Locally
 
 ### Prerequisites
+
 - **Node.js** v20.x or higher
 - **npm** v10.x or higher
 - A Supabase project (local or cloud-hosted)
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/TromBoloN/web-submissions.git
 cd web-submissions
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 3. Environment Variables
+
 Create a `.env.local` file in the root directory:
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
@@ -176,12 +189,15 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 > **Note:** The `SUPABASE_SERVICE_ROLE_KEY` is strictly server-side and will never be exposed to browser bundles.
 
 ### 4. Database Setup
+
 Apply the initial schema, functions, triggers, and RLS policies using the Supabase CLI or by executing the SQL script located at:
+
 ```
 supabase/migrations/20261020000000_init_schema.sql
 ```
 
 ### 5. Run the Development Server
+
 ```bash
 npm run dev
 ```
@@ -192,13 +208,13 @@ Visit [http://localhost:3000](http://localhost:3000) to view the application.
 
 ## 📜 Available Scripts
 
-| Command | Purpose |
-| :--- | :--- |
-| `npm run dev` | Starts local Next.js development server with Turbopack |
-| `npm run build` | Compiles the production build and type-checks |
-| `npm run lint` | Runs Biome linter across the codebase |
-| `npm run format` | Automatically formats files using Biome |
-| `npm run check` | Checks formatting and linting concurrently |
+| Command          | Purpose                                                |
+| :--------------- | :----------------------------------------------------- |
+| `npm run dev`    | Starts local Next.js development server with Turbopack |
+| `npm run build`  | Compiles the production build and type-checks          |
+| `npm run lint`   | Runs Biome linter across the codebase                  |
+| `npm run format` | Automatically formats files using Biome                |
+| `npm run check`  | Checks formatting and linting concurrently             |
 
 ---
 
