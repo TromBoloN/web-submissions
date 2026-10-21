@@ -40,6 +40,8 @@ export async function requireRole(roles: UserRole | UserRole[]) {
   const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
   if (!profile) {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
     redirect("/login");
   }
 
