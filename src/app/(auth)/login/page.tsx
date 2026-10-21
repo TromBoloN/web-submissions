@@ -1,6 +1,9 @@
+import { redirect } from "next/navigation";
+
 import type { Metadata } from "next";
 
 import { APP_CONFIG } from "@/config/app-config";
+import { getCurrentProfile, getDashboardPath } from "@/lib/auth";
 
 import { LoginForm } from "../_components/login-form";
 
@@ -10,7 +13,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/login" },
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const profile = await getCurrentProfile();
+
+  if (profile) {
+    redirect(getDashboardPath(profile.role));
+  }
+
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-8 px-6 sm:w-[350px] sm:px-0">
       <div className="space-y-2 text-center">
