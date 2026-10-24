@@ -311,16 +311,18 @@ export function FinalisClient({ notice, finalists }: FinalisClientProps) {
               <Globe className="size-5 text-emerald-600" />
               Publikasikan Pengumuman Finalis?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-sm">
-              <p>
-                Setelah dipublikasikan, seluruh tim peserta akan <strong>langsung dapat melihat</strong> status
-                lolos/tidaknya tim mereka beserta pesan instruksi di halaman dasbor tim masing-masing.
-              </p>
-              {finalists.length !== 5 && (
-                <p className="font-medium text-amber-600 dark:text-amber-400">
-                  Catatan: Saat ini ada {finalists.length} tim finalis yang tercatat.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Setelah dipublikasikan, seluruh tim peserta akan <strong>langsung dapat melihat</strong> status
+                  lolos/tidaknya tim mereka beserta pesan instruksi di halaman dasbor tim masing-masing.
                 </p>
-              )}
+                {finalists.length !== 5 && (
+                  <p className="font-medium text-amber-600 dark:text-amber-400">
+                    Catatan: Saat ini ada {finalists.length} tim finalis yang tercatat.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
