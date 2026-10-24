@@ -6,14 +6,17 @@ import { useRouter } from "next/navigation";
 
 import { type ColumnDef, tableFeatures, useTable } from "@tanstack/react-table";
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Download,
   ExternalLink,
   FileQuestion,
+  HelpCircle,
   Info,
   MoreVertical,
   Pencil,
+  RotateCw,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,8 +44,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 
-import { adminUpdateSubmission } from "./actions";
+import { adminRecheckLinks, adminUpdateSubmission } from "./actions";
 
 export type SubmissionRow = {
   team_id: string;
@@ -59,7 +63,10 @@ export type SubmissionRow = {
   live_demo_url: string;
   video_url: string;
   submitted_at: string | null;
+  first_submitted_at: string | null;
   updated_at: string | null;
+  link_check: LinkCheckResult | null;
+  link_checked_at: string | null;
 };
 
 type SubmissionsClientProps = {
@@ -106,6 +113,164 @@ function SubmissionLink({ url, label }: { url: string; label?: string }) {
       <span className="truncate">{label ?? trimmed}</span>
       <ExternalLink className="size-3 shrink-0 opacity-70" />
     </a>
+  );
+}
+
+function getLinkCheckSummary(linkCheck: LinkCheckResult | null, linkCheckedAt: string | null) {
+  if (!linkCheck || !linkCheckedAt) {
+    return {
+      status: "unverified" as const,
+      label: "Belum diperiksa",
+      warningsCount: 0,
+    };
+  }
+
+  const items = [linkCheck.github, linkCheck.liveDemo, linkCheck.video].filter(Boolean);
+  const warnings = items.filter((i) => i?.status === "warning");
+
+  if (warnings.length > 0) {
+    return {
+      status: "warning" as const,
+      label: `${warnings.length} peringatan`,
+      warningsCount: warnings.length,
+    };
+  }
+
+  const oks = items.filter((i) => i?.status === "ok");
+  if (oks.length > 0) {
+    return {
+      status: "ok" as const,
+      label: "Semua aman",
+      warningsCount: 0,
+    };
+  }
+
+  return {
+    status: "unknown" as const,
+    label: "Diperiksa",
+    warningsCount: 0,
+  };
+}
+
+function LinkCheckDetailDialog({
+  row,
+  open,
+  onOpenChange,
+  onRecheck,
+  isRechecking,
+}: {
+  row: SubmissionRow | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRecheck: (teamId: string) => Promise<void>;
+  isRechecking: boolean;
+}) {
+  if (!row) return null;
+
+  const linkCheck = row.link_check;
+  const items: { label: string; url: string; item?: LinkCheckItem }[] = [
+    { label: "GitHub", url: row.github_url, item: linkCheck?.github },
+    { label: "Live Demo", url: row.live_demo_url, item: linkCheck?.liveDemo },
+    { label: "Video Demo", url: row.video_url, item: linkCheck?.video },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Detail Pemeriksaan Tautan</DialogTitle>
+          <DialogDescription>
+            {row.team_code} — {row.team_name}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2 text-sm">
+          <div className="rounded-md border bg-muted/40 p-2.5 text-xs">
+            <span className="text-muted-foreground">Waktu pemeriksaan: </span>
+            <span className="font-medium text-foreground">
+              {row.link_checked_at ? formatTimestampWita(row.link_checked_at) : "Belum pernah diperiksa"}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {items.map(({ label, url, item }) => (
+              <div key={label} className="space-y-1.5 rounded-md border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-muted-foreground text-xs">{label}</span>
+                  {item?.status === "ok" && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-[11px] text-emerald-700 dark:text-emerald-400"
+                    >
+                      <CheckCircle2 className="size-3" /> Aman
+                    </Badge>
+                  )}
+                  {item?.status === "warning" && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 border-amber-500/20 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400"
+                    >
+                      <AlertTriangle className="size-3" /> Peringatan
+                    </Badge>
+                  )}
+                  {item?.status === "unknown" && (
+                    <Badge variant="outline" className="gap-1 text-[11px] text-muted-foreground">
+                      <HelpCircle className="size-3" /> Info
+                    </Badge>
+                  )}
+                  {!item && (
+                    <Badge variant="outline" className="border-dashed text-[11px] text-muted-foreground">
+                      Belum dicek
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="truncate text-xs">
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <span className="truncate">{url}</span>
+                      <ExternalLink className="size-3 shrink-0 opacity-70" />
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground italic">(Tautan belum diisi)</span>
+                  )}
+                </div>
+
+                {item?.message && <p className="text-muted-foreground text-xs">{item.message}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <DialogFooter className="flex flex-row items-center justify-between sm:justify-between">
+          {row.submission_id ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isRechecking}
+              onClick={() => onRecheck(row.team_id)}
+              className="gap-1.5"
+            >
+              <RotateCw className={`size-3.5 ${isRechecking ? "animate-spin" : ""}`} />
+              {isRechecking ? "Memeriksa..." : "Periksa Ulang"}
+            </Button>
+          ) : (
+            <div />
+          )}
+          <DialogClose asChild>
+            <Button type="button" variant="secondary" size="sm">
+              Tutup
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -243,8 +408,11 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [linkFilter, setLinkFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [editingRow, setEditingRow] = useState<SubmissionRow | null>(null);
+  const [detailRow, setDetailRow] = useState<SubmissionRow | null>(null);
+  const [recheckingId, setRecheckingId] = useState<string | null>(null);
 
   // Summary counts
   const totalTeams = rows.length;
@@ -263,9 +431,16 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
         return false;
       }
 
+      if (linkFilter !== "all") {
+        const summary = getLinkCheckSummary(row.link_check, row.link_checked_at);
+        if (linkFilter === "warning" && summary.status !== "warning") return false;
+        if (linkFilter === "ok" && summary.status !== "ok") return false;
+        if (linkFilter === "unverified" && summary.status !== "unverified") return false;
+      }
+
       return true;
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, linkFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const paginatedRows = useMemo(() => {
@@ -281,6 +456,39 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
   const handleFilterChange = (val: string) => {
     setStatusFilter(val);
     setPage(1);
+  };
+
+  const handleLinkFilterChange = (val: string) => {
+    setLinkFilter(val);
+    setPage(1);
+  };
+
+  const handleRecheck = async (teamId: string) => {
+    setRecheckingId(teamId);
+    try {
+      const res = await adminRecheckLinks(teamId);
+      if (res.ok) {
+        toast.success("Pemeriksaan tautan berhasil diperbarui.");
+        if (detailRow?.team_id === teamId) {
+          setDetailRow((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  link_check: res.data,
+                  link_checked_at: res.checkedAt,
+                }
+              : null,
+          );
+        }
+        router.refresh();
+      } else {
+        toast.error(res.message);
+      }
+    } catch {
+      toast.error("Gagal melakukan pemeriksaan ulang tautan.");
+    } finally {
+      setRecheckingId(null);
+    }
   };
 
   const columns: ColumnDef<typeof features, SubmissionRow>[] = [
@@ -313,6 +521,62 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
       },
     },
     {
+      id: "link_check",
+      header: "Tautan",
+      cell: ({ row }) => {
+        const summary = getLinkCheckSummary(row.original.link_check, row.original.link_checked_at);
+        if (summary.status === "warning") {
+          return (
+            <Badge
+              variant="secondary"
+              className="cursor-pointer gap-1 border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
+              onClick={() => setDetailRow(row.original)}
+              title={`${summary.label}. Klik untuk detail.`}
+            >
+              <AlertTriangle className="size-3" />
+              {summary.label}
+            </Badge>
+          );
+        }
+        if (summary.status === "ok") {
+          return (
+            <Badge
+              variant="secondary"
+              className="cursor-pointer gap-1 border-emerald-500/30 bg-emerald-500/10 text-[11px] text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
+              onClick={() => setDetailRow(row.original)}
+              title="Semua tautan aman. Klik untuk detail."
+            >
+              <CheckCircle2 className="size-3" />
+              Semua aman
+            </Badge>
+          );
+        }
+        if (summary.status === "unknown") {
+          return (
+            <Badge
+              variant="outline"
+              className="cursor-pointer gap-1 text-[11px] hover:bg-muted"
+              onClick={() => setDetailRow(row.original)}
+              title="Perlu verifikasi manual. Klik untuk detail."
+            >
+              <HelpCircle className="size-3" />
+              Diperiksa
+            </Badge>
+          );
+        }
+        return (
+          <Badge
+            variant="outline"
+            className="cursor-pointer border-dashed text-[11px] text-muted-foreground hover:bg-muted"
+            onClick={() => setDetailRow(row.original)}
+            title="Belum diperiksa. Klik untuk detail atau periksa ulang."
+          >
+            Belum diperiksa
+          </Badge>
+        );
+      },
+    },
+    {
       id: "github_url",
       header: "GitHub",
       cell: ({ row }) => <SubmissionLink url={row.original.github_url} label="GitHub" />,
@@ -326,6 +590,13 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
       id: "video_url",
       header: "Video",
       cell: ({ row }) => <SubmissionLink url={row.original.video_url} label="Video Demo" />,
+    },
+    {
+      id: "first_submitted_at",
+      header: "Pertama Dikirim",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs">{formatTimestampWita(row.original.first_submitted_at)}</span>
+      ),
     },
     {
       id: "submitted_at",
@@ -363,10 +634,23 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setDetailRow(row.original)}>
+              <Info className="mr-2 size-4" />
+              Detail tautan
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setEditingRow(row.original)}>
               <Pencil className="mr-2 size-4" />
               Ubah submission
             </DropdownMenuItem>
+            {row.original.submission_id && (
+              <DropdownMenuItem
+                disabled={recheckingId === row.original.team_id}
+                onClick={() => void handleRecheck(row.original.team_id)}
+              >
+                <RotateCw className={`mr-2 size-4 ${recheckingId === row.original.team_id ? "animate-spin" : ""}`} />
+                Periksa ulang tautan
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -440,7 +724,7 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
           className="max-w-md"
         />
         <Select value={statusFilter} onValueChange={handleFilterChange}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Semua status" />
           </SelectTrigger>
           <SelectContent>
@@ -448,6 +732,18 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
             <SelectItem value="submitted">Terkirim</SelectItem>
             <SelectItem value="draft">Draf</SelectItem>
             <SelectItem value="unsubmitted">Belum dikirim</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={linkFilter} onValueChange={handleLinkFilterChange}>
+          <SelectTrigger className="w-full sm:w-52">
+            <SelectValue placeholder="Semua tautan" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua status tautan</SelectItem>
+            <SelectItem value="warning">Ada peringatan tautan</SelectItem>
+            <SelectItem value="ok">Semua tautan aman</SelectItem>
+            <SelectItem value="unverified">Belum diperiksa</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -510,6 +806,19 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
             if (!open) setEditingRow(null);
           }}
           onUpdated={() => router.refresh()}
+        />
+      )}
+
+      {detailRow && (
+        <LinkCheckDetailDialog
+          key={detailRow.team_id}
+          row={detailRow}
+          open={detailRow !== null}
+          onOpenChange={(open) => {
+            if (!open) setDetailRow(null);
+          }}
+          onRecheck={handleRecheck}
+          isRechecking={recheckingId === detailRow.team_id}
         />
       )}
     </div>

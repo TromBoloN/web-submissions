@@ -12,7 +12,9 @@ export default async function AdminSubmissionPage() {
       .order("team_code", { ascending: true }),
     supabase
       .from("submissions")
-      .select("id, team_id, github_url, live_demo_url, video_url, status, submitted_at, updated_at"),
+      .select(
+        "id, team_id, github_url, live_demo_url, video_url, status, submitted_at, first_submitted_at, updated_at, link_check, link_checked_at",
+      ),
   ]);
 
   if (teamsError || submissionsError) {
@@ -49,7 +51,10 @@ export default async function AdminSubmissionPage() {
         live_demo_url: "",
         video_url: "",
         submitted_at: null,
+        first_submitted_at: null,
         updated_at: null,
+        link_check: null,
+        link_checked_at: null,
       };
     }
 
@@ -68,7 +73,10 @@ export default async function AdminSubmissionPage() {
       live_demo_url: sub.live_demo_url ?? "",
       video_url: sub.video_url ?? "",
       submitted_at: sub.submitted_at,
+      first_submitted_at: sub.first_submitted_at,
       updated_at: sub.updated_at,
+      link_check: (sub.link_check as unknown as SubmissionRow["link_check"]) ?? null,
+      link_checked_at: sub.link_checked_at,
     };
   });
 

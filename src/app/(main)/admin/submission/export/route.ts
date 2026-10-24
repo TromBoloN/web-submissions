@@ -23,7 +23,7 @@ export async function GET() {
       .order("team_code", { ascending: true }),
     supabase
       .from("submissions")
-      .select("team_id, github_url, live_demo_url, video_url, status, submitted_at, updated_at"),
+      .select("team_id, github_url, live_demo_url, video_url, status, submitted_at, first_submitted_at, updated_at"),
   ]);
 
   if (teamsError || submissionsError) {
@@ -42,6 +42,7 @@ export async function GET() {
     "github_url",
     "live_demo_url",
     "video_url",
+    "first_submitted_at",
     "first_saved_at",
     "last_updated_at",
     "is_finalist",
@@ -72,6 +73,7 @@ export async function GET() {
       sub?.github_url ?? "",
       sub?.live_demo_url ?? "",
       sub?.video_url ?? "",
+      formatWitaDateTime(sub?.first_submitted_at),
       formatWitaDateTime(sub?.submitted_at),
       formatWitaDateTime(sub?.updated_at),
       team.is_finalist ? "true" : "false",

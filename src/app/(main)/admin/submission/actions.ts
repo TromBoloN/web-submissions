@@ -7,7 +7,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentProfile } from "@/lib/auth";
+import { checkLinks, type LinkCheckResult } from "@/lib/link-check";
+import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/types/database";
 
 export type AdminUpdateSubmissionResult = { ok: true } | { ok: false; message: string };
 
@@ -146,4 +149,51 @@ export async function adminUpdateSubmission(formData: FormData): Promise<AdminUp
   revalidatePath("/admin");
   revalidatePath("/team");
   return { ok: true };
+}
+
+export type AdminRecheckLinksResult =
+  | { ok: true; data: LinkCheckResult; checkedAt: string }
+  | { ok: false; message: string };
+
+export async function adminRecheckLinks(teamId: string): Promise<AdminRecheckLinksResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: submission, error: subError } = await supabase
+    .from("submissions")
+    .select("id, github_url, live_demo_url, video_url")
+    .eq("team_id", teamId)
+    .maybeSingle();
+
+  if (subError || !submission) {
+    return { ok: false, message: "Data submission tidak ditemukan untuk tim ini." };
+  }
+
+  const checkResult = await checkLinks({
+    github: submission.github_url,
+    liveDemo: submission.live_demo_url,
+    video: submission.video_url,
+  });
+
+  const nowIso = new Date().toISOString();
+
+  const { error: updateError } = await adminClient
+    .from("submissions")
+    .update({
+      link_check: checkResult as Json,
+      link_checked_at: nowIso,
+    })
+    .eq("id", submission.id);
+
+  if (updateError) {
+    console.error("Failed to update submission link_check by admin", updateError);
+    return { ok: false, message: "Gagal menyimpan hasil pemeriksaan tautan." };
+  }
+
+  revalidatePath("/admin/submission");
+  return { ok: true, data: checkResult, checkedAt: nowIso };
 }
