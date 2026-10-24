@@ -9,7 +9,7 @@ export default async function TeamPage() {
 
   const [teamRes, settingsRes] = await Promise.all([
     supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
-    supabase.from("competition_settings").select("submission_closes_at").eq("id", true).maybeSingle(),
+    supabase.from("competition_settings").select("submission_closes_at, juknis_url").eq("id", true).maybeSingle(),
   ]);
 
   if (teamRes.error || !teamRes.data) {
@@ -37,6 +37,7 @@ export default async function TeamPage() {
       deadlineIso={deadlineIso}
       serverNowIso={serverNowIso}
       initialClosed={initialClosed}
+      juknisUrl={settingsRes.data?.juknis_url ?? null}
     />
   );
 }

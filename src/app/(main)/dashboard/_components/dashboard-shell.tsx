@@ -6,6 +6,7 @@ import { cn } from "cn";
 
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { createClient } from "@/lib/supabase/server";
 import { type CurrentUser, getRoleLabel } from "@/lib/user-display";
 import { getPreference } from "@/server/server-actions";
 
@@ -22,12 +23,19 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
     getPreference("sidebar_collapsible"),
   ]);
 
+  let juknisUrl: string | null = null;
+  if (user.role === "team" || user.role === "judge") {
+    const supabase = await createClient();
+    const { data } = await supabase.from("competition_settings").select("juknis_url").eq("id", true).maybeSingle();
+    juknisUrl = data?.juknis_url ?? null;
+  }
+
   return (
     <SidebarProvider
       defaultOpen={defaultOpen}
       style={{ "--sidebar-width": "calc(var(--spacing) * 68)" } as React.CSSProperties}
     >
-      <AppSidebar user={user} variant={variant} collapsible={collapsible} />
+      <AppSidebar user={user} juknisUrl={juknisUrl} variant={variant} collapsible={collapsible} />
       <SidebarInset
         className={cn(
           "[html[data-content-layout=centered]_&>*]:mx-auto",
@@ -47,7 +55,7 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
           <div className="flex w-full items-center justify-between px-4 lg:px-6">
             <div className="flex items-center gap-1 lg:gap-2">
               <SidebarTrigger className="-ml-1" />
-              {user.role !== "team" && (
+              {user.role === "admin" && (
                 <>
                   <Separator
                     orientation="vertical"

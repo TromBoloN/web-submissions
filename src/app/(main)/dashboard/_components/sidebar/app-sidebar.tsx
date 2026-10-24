@@ -22,7 +22,11 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: CurrentUser }) {
+export function AppSidebar({
+  user,
+  juknisUrl,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user: CurrentUser; juknisUrl?: string | null }) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
       sidebarVariant: s.values.sidebar_variant,
@@ -49,7 +53,7 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={getSidebarItems(user.role)} />
+        <NavMain items={getSidebarItems(user.role, juknisUrl)} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

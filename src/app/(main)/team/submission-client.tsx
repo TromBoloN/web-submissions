@@ -2,9 +2,21 @@
 
 import { useEffect, useState, useTransition } from "react";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { AlertOctagon, Clock, Code2, Copy, Globe, RotateCw, Video } from "lucide-react";
+import {
+  AlertOctagon,
+  BookOpen,
+  Clock,
+  Code2,
+  Copy,
+  ExternalLink,
+  FileText,
+  Globe,
+  RotateCw,
+  Video,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -37,6 +49,7 @@ type SubmissionClientProps = {
   deadlineIso: string | null;
   serverNowIso: string;
   initialClosed: boolean;
+  juknisUrl: string | null;
 };
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -142,6 +155,7 @@ export function SubmissionClient({
   deadlineIso,
   serverNowIso,
   initialClosed,
+  juknisUrl,
 }: SubmissionClientProps) {
   const router = useRouter();
   // Closed state is only applied when page is loaded after deadline
@@ -458,6 +472,25 @@ export function SubmissionClient({
                   serverNowIso={serverNowIso}
                   onExpire={() => setIsCountdownZero(true)}
                 />
+              </div>
+
+              <div className="space-y-2 border-t pt-3">
+                <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
+                  <Link href="/team/studi-kasus">
+                    <BookOpen className="size-4 text-primary" />
+                    <span>Lihat Studi Kasus</span>
+                  </Link>
+                </Button>
+
+                {juknisUrl?.startsWith("https://") && (
+                  <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
+                    <a href={juknisUrl} target="_blank" rel="noopener noreferrer">
+                      <FileText className="size-4 text-primary" />
+                      <span>Buka Juknis Kompetisi</span>
+                      <ExternalLink className="ml-auto size-3.5 text-muted-foreground" />
+                    </a>
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

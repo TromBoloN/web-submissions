@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Award, ClipboardList, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Award, BookOpen, ClipboardList, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/user-display";
 
@@ -41,7 +41,7 @@ export interface NavGroup {
   items: NavMainItem[];
 }
 
-export function getSidebarItems(role: CurrentUser["role"]): NavGroup[] {
+export function getSidebarItems(role: CurrentUser["role"], juknisUrl?: string | null): NavGroup[] {
   if (role === "admin") {
     return [
       {
@@ -59,18 +59,39 @@ export function getSidebarItems(role: CurrentUser["role"]): NavGroup[] {
     ];
   }
 
+  const isJudge = role === "judge";
+  const basePath = isJudge ? "/judge" : "/team";
+
+  const items: NavMainItem[] = [
+    {
+      id: "home",
+      title: "Dasbor",
+      url: basePath,
+      icon: LayoutDashboard,
+    },
+    {
+      id: "case-study",
+      title: "Studi Kasus",
+      url: `${basePath}/studi-kasus`,
+      icon: BookOpen,
+    },
+  ];
+
+  if (juknisUrl?.startsWith("https://")) {
+    items.push({
+      id: "juknis",
+      title: "Juknis",
+      url: juknisUrl,
+      icon: FileText,
+      newTab: true,
+    });
+  }
+
   return [
     {
       id: 1,
-      label: role === "judge" ? "Juri" : "Peserta",
-      items: [
-        {
-          id: "home",
-          title: "Dasbor",
-          url: role === "judge" ? "/judge" : "/team",
-          icon: LayoutDashboard,
-        },
-      ],
+      label: isJudge ? "Juri" : "Peserta",
+      items,
     },
   ];
 }
