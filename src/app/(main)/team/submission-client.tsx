@@ -40,6 +40,7 @@ import type { Database } from "@/types/database";
 
 import { saveSubmission } from "./actions";
 import { SubmissionChecklist } from "./submission-checklist";
+import { SubmissionReceipt } from "./submission-receipt";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -335,6 +336,8 @@ export function SubmissionClient({
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
+          {isSubmitted && submission && <SubmissionReceipt team={team} submission={submission} />}
+
           <SubmissionChecklist isSubmitted={isSubmitted} />
 
           <Card>
@@ -543,8 +546,16 @@ export function SubmissionClient({
               </CardHeader>
               <CardContent className="space-y-2.5 text-xs">
                 <div>
-                  <span className="text-muted-foreground">Pertama disimpan:</span>
+                  <span className="text-muted-foreground">Pertama disimpan (draf/awal):</span>
                   <p className="font-medium text-foreground">{formatTimestampWita(submission?.submitted_at)}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Pertama dikirim (resmi):</span>
+                  <p className="font-medium text-foreground">
+                    {submission?.first_submitted_at
+                      ? formatTimestampWita(submission.first_submitted_at)
+                      : "Belum dikirim"}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Terakhir diubah:</span>
