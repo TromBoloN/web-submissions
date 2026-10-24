@@ -7,27 +7,38 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentProfile } from "@/lib/auth";
+import { usernameToEmail } from "@/lib/identity";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
 const baseAccountSchema = z.object({
   full_name: z.string().trim().min(1, "Nama wajib diisi."),
-  email: z.email("Email tidak valid.").transform((value) => value.trim().toLowerCase()),
   password: z.string().min(8, "Kata sandi minimal 8 karakter."),
 });
 
 const accountSchema = z.discriminatedUnion("role", [
   baseAccountSchema.extend({
     role: z.literal("admin"),
+    email: z.email("Email tidak valid.").transform((value) => value.trim().toLowerCase()),
   }),
   baseAccountSchema.extend({
     role: z.literal("judge"),
+    username: z
+      .string()
+      .trim()
+      .min(1, "Username wajib diisi.")
+      .refine((val) => usernameToEmail(val) !== null, {
+        message:
+          "Username juri tidak valid (gunakan 3-32 karakter huruf kecil, angka, titik, strip, atau garis bawah).",
+      })
+      .transform((val) => val.trim().toLowerCase()),
     judge_stage: z.enum(["preliminary", "final", "both"]),
   }),
   baseAccountSchema
     .extend({
       role: z.literal("team"),
+      email: z.email("Email tidak valid.").transform((value) => value.trim().toLowerCase()),
       team_name: z.string().trim().min(1, "Nama tim wajib diisi."),
       institution: z.string().trim().min(1, "Institusi wajib diisi."),
       leader_name: z.string().trim().min(1, "Nama ketua wajib diisi."),
@@ -77,17 +88,25 @@ const updateAccountSchema = z.discriminatedUnion("role", [
 ]);
 
 export type CreateAccountResult =
-  | { success: true; account: { email: string; password: string } }
+  | {
+      success: true;
+      account: {
+        email: string;
+        password: string;
+        role: "admin" | "judge" | "team";
+        username?: string;
+      };
+    }
   | { success: false; error: string };
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
 export type ResetPasswordResult = { success: true; password: string } | { success: false; error: string };
 
-function getDuplicateError(error: { code?: string; message?: string } | null) {
+function getDuplicateError(error: { code?: string; message?: string } | null, isJudge = false) {
   if (error?.code !== "23505") return null;
   const message = error.message?.toLowerCase() ?? "";
-  if (message.includes("email")) return "Email sudah terdaftar.";
+  if (message.includes("email")) return isJudge ? "Username juri sudah terdaftar." : "Email sudah terdaftar.";
   if (message.includes("team_name")) return "Nama tim sudah dipakai.";
   if (message.includes("team_code")) return "Kode tim sudah dipakai.";
   return "Data akun sudah terdaftar.";
@@ -102,10 +121,16 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
   const role = formData.get("role");
   const rawData = {
     full_name: formData.get("full_name"),
-    email: formData.get("email"),
     password: formData.get("password"),
     role,
-    ...(role === "judge" ? { judge_stage: formData.get("judge_stage") } : {}),
+    ...(role === "judge"
+      ? {
+          username: formData.get("username") ?? formData.get("email"),
+          judge_stage: formData.get("judge_stage"),
+        }
+      : {
+          email: formData.get("email"),
+        }),
     ...(role === "team"
       ? {
           team_name: formData.get("team_name"),
@@ -128,15 +153,21 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data akun tidak valid." };
   }
 
+  const targetEmail =
+    parsed.data.role === "judge" ? (usernameToEmail(parsed.data.username) as string) : parsed.data.email;
+
   const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
-    email: parsed.data.email,
+    email: targetEmail,
     password: parsed.data.password,
     email_confirm: true,
   });
 
   if (authError || !authUser.user) {
     if (authError?.message.toLowerCase().includes("already")) {
-      return { success: false, error: "Email sudah terdaftar." };
+      return {
+        success: false,
+        error: parsed.data.role === "judge" ? "Username juri sudah terdaftar." : "Email sudah terdaftar.",
+      };
     }
     console.error("Failed to create auth user", authError);
     return { success: false, error: "Gagal membuat akun. Coba lagi." };
@@ -145,7 +176,7 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
   const userId = authUser.user.id;
   const profileData = {
     id: userId,
-    email: parsed.data.email,
+    email: targetEmail,
     full_name: parsed.data.full_name,
     role: parsed.data.role,
     judge_stage: parsed.data.role === "judge" ? parsed.data.judge_stage : null,
@@ -154,7 +185,7 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
   const { error: profileError } = await adminClient.from("profiles").insert(profileData);
   if (profileError) {
     await adminClient.auth.admin.deleteUser(userId);
-    const duplicateError = getDuplicateError(profileError);
+    const duplicateError = getDuplicateError(profileError, parsed.data.role === "judge");
     if (duplicateError) return { success: false, error: duplicateError };
     console.error("Failed to create profile", profileError);
     return { success: false, error: "Gagal membuat profil akun. Coba lagi." };
@@ -180,7 +211,15 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
   }
 
   revalidatePath("/admin/akun");
-  return { success: true, account: { email: parsed.data.email, password: parsed.data.password } };
+  return {
+    success: true,
+    account: {
+      email: targetEmail,
+      password: parsed.data.password,
+      role: parsed.data.role,
+      ...(parsed.data.role === "judge" ? { username: parsed.data.username } : {}),
+    },
+  };
 }
 
 export async function toggleAccountActive(input: { userId: string; targetActive: boolean }): Promise<ActionResult> {

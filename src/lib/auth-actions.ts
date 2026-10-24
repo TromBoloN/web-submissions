@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getDashboardPath } from "@/lib/auth";
+import { loginIdentifierToEmail } from "@/lib/identity";
 import { createClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
-  email: z.email(),
+  identifier: z.string().trim().min(1),
   password: z.string().min(1),
 });
 
@@ -18,7 +19,7 @@ export type LoginResult = {
 
 export async function signIn(formData: FormData): Promise<LoginResult> {
   const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
+    identifier: formData.get("identifier") ?? formData.get("email"),
     password: formData.get("password"),
   });
 
@@ -26,8 +27,16 @@ export async function signIn(formData: FormData): Promise<LoginResult> {
     return { error: "Email atau kata sandi salah." };
   }
 
+  const email = loginIdentifierToEmail(parsed.data.identifier);
+  if (!email) {
+    return { error: "Email atau kata sandi salah." };
+  }
+
   const supabase = await createClient();
-  const { error: signInError } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password: parsed.data.password,
+  });
 
   if (signInError) {
     return { error: "Email atau kata sandi salah." };

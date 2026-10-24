@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth-actions";
 
 const formSchema = z.object({
-  email: z.email({ message: "Masukkan alamat email yang valid." }),
+  identifier: z.string().trim().min(1, { message: "Masukkan email atau username." }),
   password: z.string().min(1, { message: "Masukkan kata sandi." }),
 });
 
@@ -23,13 +23,13 @@ export function LoginForm() {
   const [isPending, startTransition] = useTransition();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { identifier: "", password: "" },
   });
 
   const onSubmit = (values: LoginFormValues) => {
     setErrorMessage(undefined);
     const formData = new FormData();
-    formData.set("email", values.email);
+    formData.set("identifier", values.identifier);
     formData.set("password", values.password);
 
     startTransition(async () => {
@@ -45,16 +45,16 @@ export function LoginForm() {
       <FieldGroup className="gap-4">
         <Controller
           control={form.control}
-          name="email"
+          name="identifier"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="login-email">Email</FieldLabel>
+              <FieldLabel htmlFor="login-identifier">Email atau username</FieldLabel>
               <Input
                 {...field}
-                id="login-email"
-                type="email"
-                placeholder="nama@contoh.com"
-                autoComplete="email"
+                id="login-identifier"
+                type="text"
+                placeholder="nama@contoh.com atau username"
+                autoComplete="username"
                 aria-invalid={fieldState.invalid}
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}

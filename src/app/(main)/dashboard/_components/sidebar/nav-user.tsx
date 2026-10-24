@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth-actions";
-import { type CurrentUser, getRoleLabel } from "@/lib/user-display";
+import { type CurrentUser, getRoleLabel, getUserDisplayEmail } from "@/lib/user-display";
 import { getInitials } from "@/lib/utils";
 
 export function NavUser({ user }: { readonly user: CurrentUser }) {
@@ -33,7 +33,7 @@ export function NavUser({ user }: { readonly user: CurrentUser }) {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.full_name}</span>
-                <span className="truncate text-muted-foreground text-xs">{user.email}</span>
+                <span className="truncate text-muted-foreground text-xs">{getUserDisplayEmail(user.email)}</span>
               </div>
               <EllipsisVertical className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -51,7 +51,7 @@ export function NavUser({ user }: { readonly user: CurrentUser }) {
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.full_name}</span>
-                  <span className="truncate text-muted-foreground text-xs">{user.email}</span>
+                  <span className="truncate text-muted-foreground text-xs">{getUserDisplayEmail(user.email)}</span>
                   <span className="truncate text-muted-foreground text-xs">{getRoleLabel(user.role)}</span>
                 </div>
               </div>

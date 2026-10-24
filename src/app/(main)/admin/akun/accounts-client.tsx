@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { emailToDisplayName, usernameToEmail } from "@/lib/identity";
 import type { Database } from "@/types/database";
 
 import { createAccount, resetAccountPassword, toggleAccountActive, updateAccount } from "./actions";
@@ -102,14 +103,21 @@ function CopyButton({ value }: { value: string }) {
 }
 
 type MemberItem = { id: string; name: string };
+type CreatedAccountInfo = {
+  email: string;
+  password: string;
+  role?: "admin" | "judge" | "team";
+  username?: string;
+};
 
 function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<Role>("admin");
+  const [judgeUsername, setJudgeUsername] = useState("");
   const [members, setMembers] = useState<MemberItem[]>([{ id: "initial-member", name: "" }]);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
-  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+  const [created, setCreated] = useState<CreatedAccountInfo | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleOpenChange = (value: boolean) => {
@@ -118,6 +126,7 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
       setError(undefined);
       setCreated(null);
       setPassword("");
+      setJudgeUsername("");
       setMembers([{ id: "initial-member", name: "" }]);
     }
   };
@@ -127,6 +136,9 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
     const form = new FormData(event.currentTarget);
     form.set("role", role);
     form.set("password", password);
+    if (role === "judge") {
+      form.set("username", judgeUsername.trim());
+    }
     if (role === "team") {
       form.set("members", JSON.stringify(members.map((m) => m.name).filter(Boolean)));
     }
@@ -143,7 +155,14 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
     });
   };
 
+  const trimmedJudgeUsername = judgeUsername.trim();
+  const isJudgeUsernameValid = Boolean(trimmedJudgeUsername && usernameToEmail(trimmedJudgeUsername));
+
   if (created !== null) {
+    const isJudgeAccount = created.role === "judge" || created.username !== undefined;
+    const identifierLabel = isJudgeAccount ? "Username" : "Email";
+    const identifierValue = isJudgeAccount ? (created.username ?? emailToDisplayName(created.email)) : created.email;
+
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
@@ -155,10 +174,10 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Email</Label>
+              <Label>{identifierLabel}</Label>
               <div className="flex gap-2">
-                <Input value={created.email} readOnly />
-                <CopyButton value={created.email} />
+                <Input value={identifierValue} readOnly />
+                <CopyButton value={identifierValue} />
               </div>
             </div>
             <div className="space-y-1">
@@ -194,10 +213,40 @@ function CreateAccountDialog({ nextTeamCode, onCreated }: { nextTeamCode: string
             <Label htmlFor="full_name">Nama lengkap</Label>
             <Input id="full_name" name="full_name" required />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
-          </div>
+          {role === "judge" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                name="username"
+                value={judgeUsername}
+                onChange={(event) => setJudgeUsername(event.target.value)}
+                placeholder="contoh: juri-budi"
+                required
+              />
+              {trimmedJudgeUsername.length === 0 && (
+                <p className="text-muted-foreground text-xs">
+                  Gunakan 3-32 karakter (huruf kecil, angka, titik, strip, atau garis bawah).
+                </p>
+              )}
+              {trimmedJudgeUsername.length > 0 && isJudgeUsernameValid && (
+                <p className="text-muted-foreground text-xs">
+                  Identifier login:{" "}
+                  <span className="font-medium text-foreground">{trimmedJudgeUsername.toLowerCase()}</span>
+                </p>
+              )}
+              {trimmedJudgeUsername.length > 0 && !isJudgeUsernameValid && (
+                <p className="text-destructive text-xs">
+                  Gunakan 3-32 karakter (huruf kecil, angka, titik, strip, atau garis bawah).
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" placeholder="nama@contoh.com" required />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="password">Kata sandi</Label>
             <div className="flex gap-2">
@@ -402,9 +451,16 @@ function EditAccountDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="edit-email">Email</Label>
-            <Input id="edit-email" value={account.email} disabled className="bg-muted text-muted-foreground" />
-            <p className="text-muted-foreground text-xs">Email tidak dapat diubah.</p>
+            <Label htmlFor="edit-email">{account.role === "judge" ? "Username" : "Email"}</Label>
+            <Input
+              id="edit-email"
+              value={account.role === "judge" ? emailToDisplayName(account.email) : account.email}
+              disabled
+              className="bg-muted text-muted-foreground"
+            />
+            <p className="text-muted-foreground text-xs">
+              {account.role === "judge" ? "Username tidak dapat diubah." : "Email tidak dapat diubah."}
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="edit-role">Role</Label>
@@ -548,6 +604,9 @@ function ResetPasswordDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const isJudge = account.role === "judge";
+  const identifierLabel = isJudge ? "Username" : "Email";
+  const displayIdentifier = emailToDisplayName(account.email);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
@@ -591,10 +650,10 @@ function ResetPasswordDialog({
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Email</Label>
+              <Label>{identifierLabel}</Label>
               <div className="flex gap-2">
-                <Input value={resetResult.email} readOnly />
-                <CopyButton value={resetResult.email} />
+                <Input value={displayIdentifier} readOnly />
+                <CopyButton value={displayIdentifier} />
               </div>
             </div>
             <div className="space-y-1">
@@ -621,7 +680,7 @@ function ResetPasswordDialog({
         <DialogHeader>
           <DialogTitle>Reset Kata Sandi</DialogTitle>
           <DialogDescription>
-            Masukkan kata sandi baru untuk akun {account.full_name} ({account.email}).
+            Masukkan kata sandi baru untuk akun {account.full_name} ({displayIdentifier}).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -741,7 +800,11 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode, curr
 
   const columns: ColumnDef<typeof features, AccountRow>[] = [
     { accessorKey: "full_name", header: "Nama" },
-    { accessorKey: "email", header: "Email" },
+    {
+      accessorKey: "email",
+      header: "Email / Username",
+      cell: ({ row }) => <span className="truncate">{emailToDisplayName(row.original.email)}</span>,
+    },
     { accessorKey: "role", header: "Role", cell: ({ row }) => roleLabels[row.original.role] },
     {
       id: "judge_stage",
@@ -836,7 +899,7 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode, curr
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari nama atau email..."
+            placeholder="Cari nama, email, atau username..."
           />
           <Select value={role} onValueChange={setRole}>
             <SelectTrigger className="w-full sm:w-36">
