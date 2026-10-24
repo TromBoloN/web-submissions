@@ -7,7 +7,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentProfile } from "@/lib/auth";
+import { checkLinks, type LinkCheckResult } from "@/lib/link-check";
+import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/types/database";
 
 export type SaveSubmissionResult =
   | { ok: true; status: "draft" | "submitted"; updatedAt: string }
@@ -202,4 +205,87 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
   const insertedRow = inserted[0];
   revalidatePath("/team");
   return { ok: true, status: insertedRow.status, updatedAt: insertedRow.updated_at };
+}
+
+export type CheckMyLinksResult =
+  | { ok: true; data: LinkCheckResult; checkedAt: string }
+  | { ok: false; message: string; data?: LinkCheckResult | null; checkedAt?: string | null };
+
+export async function checkMyLinks(): Promise<CheckMyLinksResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "team") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: team, error: teamError } = await supabase
+    .from("teams")
+    .select("id, is_disqualified")
+    .eq("profile_id", caller.id)
+    .maybeSingle();
+
+  if (teamError || !team) {
+    return { ok: false, message: "Data tim Anda tidak ditemukan." };
+  }
+
+  const { data: submission, error: subError } = await supabase
+    .from("submissions")
+    .select("id, github_url, live_demo_url, video_url, link_check, link_checked_at")
+    .eq("team_id", team.id)
+    .maybeSingle();
+
+  if (subError) {
+    console.error("Failed to fetch submission for link check", subError);
+    return { ok: false, message: "Gagal memuat data submission." };
+  }
+
+  if (!submission) {
+    return { ok: false, message: "Belum ada submission yang disimpan untuk diperiksa." };
+  }
+
+  // Rate limit: 10 seconds
+  if (submission.link_checked_at) {
+    const lastCheckTime = new Date(submission.link_checked_at).getTime();
+    const diffMs = Date.now() - lastCheckTime;
+    if (diffMs < 10000) {
+      const remainingSec = Math.ceil((10000 - diffMs) / 1000);
+      return {
+        ok: false,
+        message: `Harap tunggu ${remainingSec} detik sebelum memeriksa tautan kembali.`,
+        data: submission.link_check as LinkCheckResult | null,
+        checkedAt: submission.link_checked_at,
+      };
+    }
+  }
+
+  const checkResult = await checkLinks({
+    github: submission.github_url,
+    liveDemo: submission.live_demo_url,
+    video: submission.video_url,
+  });
+
+  const nowIso = new Date().toISOString();
+
+  // Use adminClient because this works even after the deadline when team cannot UPDATE submissions
+  const { error: updateError } = await adminClient
+    .from("submissions")
+    .update({
+      link_check: checkResult as Json,
+      link_checked_at: nowIso,
+    })
+    .eq("id", submission.id);
+
+  if (updateError) {
+    console.error("Failed to update submission link_check", updateError);
+    return { ok: false, message: "Gagal menyimpan hasil pemeriksaan tautan." };
+  }
+
+  revalidatePath("/team");
+
+  return {
+    ok: true,
+    data: checkResult,
+    checkedAt: nowIso,
+  };
 }

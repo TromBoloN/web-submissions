@@ -7,13 +7,16 @@ import { useRouter } from "next/navigation";
 
 import {
   AlertOctagon,
+  AlertTriangle,
   BookOpen,
+  CheckCircle2,
   Clock,
   Code2,
   Copy,
   ExternalLink,
   FileText,
   Globe,
+  HelpCircle,
   RotateCw,
   Video,
 } from "lucide-react";
@@ -36,9 +39,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDeadlineWita } from "@/lib/deadline";
+import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
-import { saveSubmission } from "./actions";
+import { checkMyLinks, saveSubmission } from "./actions";
 import { SubmissionChecklist } from "./submission-checklist";
 import { SubmissionReceipt } from "./submission-receipt";
 
@@ -151,6 +155,50 @@ function CountdownTimer({
   return <span className="font-semibold text-primary text-sm sm:text-base">Sisa waktu: {durationText}</span>;
 }
 
+function LinkCheckBadge({ item, isChecking }: { item?: LinkCheckItem; isChecking?: boolean }) {
+  if (isChecking) {
+    return (
+      <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+        <RotateCw className="size-3 animate-spin" />
+        <span>Memeriksa tautan...</span>
+      </div>
+    );
+  }
+
+  if (!item) return null;
+
+  if (item.status === "ok") {
+    return (
+      <div className="flex items-start gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-700 text-xs dark:text-emerald-400">
+        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
+        <div>
+          <span className="font-medium">Tautan valid:</span> {item.message}
+        </div>
+      </div>
+    );
+  }
+
+  if (item.status === "warning") {
+    return (
+      <div className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-amber-700 text-xs dark:text-amber-400">
+        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+        <div>
+          <span className="font-medium">Peringatan:</span> {item.message}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-1.5 rounded-md border border-muted bg-muted/40 p-2 text-muted-foreground text-xs">
+      <HelpCircle className="mt-0.5 size-3.5 shrink-0" />
+      <div>
+        <span className="font-medium">Info verifikasi:</span> {item.message}
+      </div>
+    </div>
+  );
+}
+
 export function SubmissionClient({
   team,
   submission,
@@ -178,10 +226,51 @@ export function SubmissionClient({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  const [linkCheck, setLinkCheck] = useState<LinkCheckResult | null>(
+    (submission?.link_check as unknown as LinkCheckResult | null) ?? null,
+  );
+  const [linkCheckedAt, setLinkCheckedAt] = useState<string | null>(submission?.link_checked_at ?? null);
+  const [isCheckingLinks, setIsCheckingLinks] = useState(false);
+
+  useEffect(() => {
+    if (submission?.link_check) {
+      setLinkCheck(submission.link_check as unknown as LinkCheckResult);
+    }
+    if (submission?.link_checked_at) {
+      setLinkCheckedAt(submission.link_checked_at);
+    }
+  }, [submission?.link_check, submission?.link_checked_at]);
+
   const isDisqualified = team.is_disqualified;
   const isReadOnly = isClosed || isDisqualified;
   const isSubmitted = submission?.status === "submitted";
   const hasSubmissionRow = Boolean(submission);
+
+  const runLinkCheck = async (showToast = false) => {
+    setIsCheckingLinks(true);
+    try {
+      const res = await checkMyLinks();
+      if (res.ok) {
+        setLinkCheck(res.data);
+        setLinkCheckedAt(res.checkedAt);
+        if (showToast) {
+          toast.success("Pemeriksaan tautan selesai.");
+        }
+      } else {
+        if (res.data) setLinkCheck(res.data);
+        if (res.checkedAt) setLinkCheckedAt(res.checkedAt);
+        if (showToast) {
+          toast.info(res.message);
+        }
+      }
+    } catch {
+      if (showToast) {
+        toast.error("Gagal memeriksa tautan. Coba lagi beberapa saat.");
+      }
+    } finally {
+      setIsCheckingLinks(false);
+    }
+  };
 
   const validateForSubmit = () => {
     const errors: typeof fieldErrors = {};
@@ -256,6 +345,9 @@ export function SubmissionClient({
       }
       setIsConfirmOpen(false);
       router.refresh();
+
+      // Trigger background link check without blocking save
+      void runLinkCheck(false);
     });
   };
 
@@ -377,6 +469,7 @@ export function SubmissionClient({
                     <code>https://github.com/</code>.
                   </p>
                 )}
+                <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} />
               </div>
 
               <div className="space-y-2">
@@ -408,6 +501,7 @@ export function SubmissionClient({
                     Netlify, dsb).
                   </p>
                 )}
+                <LinkCheckBadge item={linkCheck?.liveDemo} isChecking={isCheckingLinks} />
               </div>
 
               <div className="space-y-2">
@@ -439,21 +533,66 @@ export function SubmissionClient({
                     akses publik).
                   </p>
                 )}
+                <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} />
               </div>
+
+              <p className="text-muted-foreground text-xs italic">
+                * Pemeriksaan ini hanya peringatan dan tidak menghalangi pengiriman.
+              </p>
 
               {serverError && <p className="text-destructive text-sm">{serverError}</p>}
             </CardContent>
 
             {!isReadOnly && (
-              <CardFooter className="flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
-                {!isSubmitted && (
-                  <Button type="button" variant="outline" disabled={isPending} onClick={handleSaveDraftClick}>
-                    Simpan draf
+              <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
+                <div className="flex flex-wrap items-center gap-2">
+                  {hasSubmissionRow && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isCheckingLinks || isPending}
+                      onClick={() => runLinkCheck(true)}
+                      className="gap-1.5"
+                    >
+                      <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
+                      {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
+                    </Button>
+                  )}
+                  {linkCheckedAt && (
+                    <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                  {!isSubmitted && (
+                    <Button type="button" variant="outline" disabled={isPending} onClick={handleSaveDraftClick}>
+                      Simpan draf
+                    </Button>
+                  )}
+                  <Button type="button" disabled={isPending} onClick={handleSubmitClick}>
+                    {isSubmitted ? "Perbarui submission" : "Kirim submission"}
                   </Button>
-                )}
-                <Button type="button" disabled={isPending} onClick={handleSubmitClick}>
-                  {isSubmitted ? "Perbarui submission" : "Kirim submission"}
+                </div>
+              </CardFooter>
+            )}
+
+            {isReadOnly && hasSubmissionRow && (
+              <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isCheckingLinks}
+                  onClick={() => runLinkCheck(true)}
+                  className="gap-1.5"
+                >
+                  <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
+                  {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
                 </Button>
+                {linkCheckedAt && (
+                  <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
+                )}
               </CardFooter>
             )}
           </Card>
