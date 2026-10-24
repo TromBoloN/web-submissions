@@ -2,11 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Theme preset styles: these override CSS variables based on the selected data-theme-preset */
-@import "../styles/presets/brutalist.css";
-@import "../styles/presets/soft-pop.css";
-@import "../styles/presets/tangerine.css";
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -48,83 +43,118 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand accents from the poster. Usable as bg-brand-green, text-brand-purple, etc. */
+  --color-brand-green: var(--brand-green);
+  --color-brand-green-foreground: var(--brand-green-foreground);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-sky: var(--brand-sky);
+  --color-brand-navy: var(--brand-navy);
+
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
 }
 
-/* Default theme styles (used when no data-theme-preset is set or when 'default' is selected).
-These serve as the fallback; there is no separate default.css file. */
+/*
+ * MIT-WEEK 2026 palette, estimated by eye from the launch poster:
+ *   navy   : deep outlines and headline text
+ *   indigo : primary buttons and focus ring
+ *   sky    : pale blue surfaces
+ *   green  : small neon accents only (badges, active marker); never as text on light backgrounds
+ */
 :root {
-  --radius: 0.625rem;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  color-scheme: light;
+  --radius: 0.75rem;
 
-  /* fonts */
-  --font-sans: var(--font-geist);
-  --font-mono: var(--font-geist-mono);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* brand */
+  --brand-navy: oklch(0.24 0.07 268);
+  --brand-purple: oklch(0.5 0.23 280);
+  --brand-sky: oklch(0.78 0.09 255);
+  --brand-green: oklch(0.82 0.21 155);
+  --brand-green-foreground: oklch(0.25 0.07 155);
+
+  /* surfaces */
+  --background: oklch(0.975 0.012 255);
+  --foreground: oklch(0.24 0.07 268);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.07 268);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.07 268);
+
+  /* actions */
+  --primary: oklch(0.42 0.2 277);
+  --primary-foreground: oklch(0.99 0.005 255);
+  --secondary: oklch(0.94 0.03 265);
+  --secondary-foreground: oklch(0.28 0.09 270);
+  --muted: oklch(0.955 0.015 260);
+  --muted-foreground: oklch(0.48 0.04 265);
+  --accent: oklch(0.935 0.04 265);
+  --accent-foreground: oklch(0.28 0.09 270);
+  --destructive: oklch(0.577 0.245 27.325);
+
+  /* lines and focus */
+  --border: oklch(0.9 0.02 262);
+  --input: oklch(0.9 0.02 262);
+  --ring: oklch(0.6 0.18 277);
+
+  /* charts: blue, purple, green, navy, light blue */
+  --chart-1: oklch(0.62 0.17 262);
+  --chart-2: oklch(0.5 0.22 280);
+  --chart-3: oklch(0.8 0.19 155);
+  --chart-4: oklch(0.38 0.12 268);
+  --chart-5: oklch(0.75 0.1 250);
+
+  /* sidebar: light, tinted, so any logo reads well on it */
+  --sidebar: oklch(0.965 0.02 262);
+  --sidebar-foreground: oklch(0.24 0.07 268);
+  --sidebar-primary: oklch(0.42 0.2 277);
+  --sidebar-primary-foreground: oklch(0.99 0.005 255);
+  --sidebar-accent: oklch(0.92 0.045 265);
+  --sidebar-accent-foreground: oklch(0.28 0.09 270);
+  --sidebar-border: oklch(0.9 0.02 262);
+  --sidebar-ring: oklch(0.6 0.18 277);
+
+  /* Fonts are set on body in @layer base below, because the next/font variables
+     (--font-geist etc.) are only defined from body down, not on :root. */
 }
 
+/* Tuned dark palette so nothing looks broken while a dark toggle or "System" mode still exists.
+   If you remove the toggle and force light mode, this whole block can be deleted. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  color-scheme: dark;
+
+  --background: oklch(0.19 0.045 268);
+  --foreground: oklch(0.96 0.01 260);
+  --card: oklch(0.24 0.055 268);
+  --card-foreground: oklch(0.96 0.01 260);
+  --popover: oklch(0.24 0.055 268);
+  --popover-foreground: oklch(0.96 0.01 260);
+  --primary: oklch(0.72 0.15 277);
+  --primary-foreground: oklch(0.2 0.05 268);
+  --secondary: oklch(0.3 0.06 268);
+  --secondary-foreground: oklch(0.96 0.01 260);
+  --muted: oklch(0.3 0.06 268);
+  --muted-foreground: oklch(0.72 0.04 265);
+  --accent: oklch(0.3 0.07 270);
+  --accent-foreground: oklch(0.96 0.01 260);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.65 0.17 277);
+  --chart-1: oklch(0.7 0.15 262);
+  --chart-2: oklch(0.62 0.2 280);
+  --chart-3: oklch(0.8 0.19 155);
+  --chart-4: oklch(0.55 0.12 268);
+  --chart-5: oklch(0.78 0.09 250);
+  --sidebar: oklch(0.22 0.05 268);
+  --sidebar-foreground: oklch(0.96 0.01 260);
+  --sidebar-primary: oklch(0.72 0.15 277);
+  --sidebar-primary-foreground: oklch(0.2 0.05 268);
+  --sidebar-accent: oklch(0.31 0.07 270);
+  --sidebar-accent-foreground: oklch(0.96 0.01 260);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.65 0.17 277);
 }
 
 @layer base {
@@ -133,6 +163,11 @@ These serve as the fallback; there is no separate default.css file. */
   }
 
   body {
+    --font-sans: var(--font-geist);
+    --font-mono: var(--font-geist-mono);
+    /* Optional display face for the logo text and page titles (class: font-display).
+       Falls back to the normal font if the pixel font is not loaded. */
+    --font-display: var(--font-geist-pixel-square, var(--font-geist));
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
   }
@@ -141,96 +176,10 @@ These serve as the fallback; there is no separate default.css file. */
   }
 }
 
-@layer utilities {
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-2xs {
-    box-shadow: var(--shadow-2xs);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-xs {
-    box-shadow: var(--shadow-xs);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-sm {
-    box-shadow: var(--shadow-sm);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow {
-    box-shadow: var(--shadow);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-md {
-    box-shadow: var(--shadow-md);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-lg {
-    box-shadow: var(--shadow-lg);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-xl {
-    box-shadow: var(--shadow-xl);
-  }
-
-  [data-theme-preset]:not([data-theme-preset="default"]) .shadow-2xl {
-    box-shadow: var(--shadow-2xl);
-  }
-
-  html[data-font="inter"] body {
-    --font-sans: var(--font-inter);
-  }
-  html[data-font="notoSans"] body {
-    --font-sans: var(--font-noto-sans);
-  }
-  html[data-font="nunitoSans"] body {
-    --font-sans: var(--font-nunito-sans);
-  }
-  html[data-font="figtree"] body {
-    --font-sans: var(--font-figtree);
-  }
-  html[data-font="roboto"] body {
-    --font-sans: var(--font-roboto);
-  }
-  html[data-font="geist"] body {
-    --font-sans: var(--font-geist);
-  }
-  html[data-font="raleway"] body {
-    --font-sans: var(--font-raleway);
-  }
-  html[data-font="dmSans"] body {
-    --font-sans: var(--font-dm-sans);
-  }
-  html[data-font="publicSans"] body {
-    --font-sans: var(--font-public-sans);
-  }
-  html[data-font="outfit"] body {
-    --font-sans: var(--font-outfit);
-  }
-  html[data-font="geistMono"] body {
-    --font-sans: var(--font-geist-mono);
-  }
-  html[data-font="geistPixelSquare"] body {
-    --font-sans: var(--font-geist-pixel-square);
-  }
-  html[data-font="jetBrainsMono"] body {
-    --font-sans: var(--font-jetbrains-mono);
-  }
-  html[data-font="notoSerif"] body {
-    --font-sans: var(--font-noto-serif);
-  }
-  html[data-font="robotoSlab"] body {
-    --font-sans: var(--font-roboto-slab);
-  }
-  html[data-font="merriweather"] body {
-    --font-sans: var(--font-merriweather);
-  }
-  html[data-font="lora"] body {
-    --font-sans: var(--font-lora);
-  }
-  html[data-font="playfairDisplay"] body {
-    --font-sans: var(--font-playfair-display);
-  }
-
-  html body:has([data-landing-page]) {
-    --font-sans: var(--font-geist);
+@layer components {
+  /* Neon green marker on the active sidebar item, like the green highlights on the poster. */
+  [data-sidebar="menu-button"][data-active="true"] {
+    box-shadow: inset 3px 0 0 0 var(--brand-green);
   }
 }
 
@@ -238,64 +187,6 @@ html {
   overscroll-behavior: none;
 }
 
-html:has([data-landing-page]) {
-  view-transition-name: none;
-}
-
-[data-landing-dashboard-preview] {
-  view-transition-name: landing-dashboard-preview;
-}
-
-::view-transition-group(landing-dashboard-preview) {
-  animation-duration: 360ms;
-  animation-timing-function: ease-out;
-}
-
 .disable-transitions * {
   transition: none !important;
-}
-
-[data-print-root] {
-  display: none;
-}
-
-@media print {
-  @page {
-    size: Letter;
-    margin: 0;
-  }
-
-  html,
-  body {
-    width: 8.5in !important;
-    height: 11in !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-  }
-
-  body > *:not([data-print-root]) {
-    display: none !important;
-  }
-
-  [data-print-root] {
-    display: block !important;
-    width: 8.5in !important;
-    height: 11in !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    background: white !important;
-  }
-
-  [data-print-root] [data-print-paper] {
-    width: 8.5in !important;
-    height: 11in !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-  }
-
-  [data-print-root] [data-print-paper],
-  [data-print-root] [data-print-paper] * {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
 }
