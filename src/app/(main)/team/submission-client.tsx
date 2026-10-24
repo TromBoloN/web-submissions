@@ -39,6 +39,7 @@ import { formatDeadlineWita } from "@/lib/deadline";
 import type { Database } from "@/types/database";
 
 import { saveSubmission } from "./actions";
+import { SubmissionChecklist } from "./submission-checklist";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -334,6 +335,8 @@ export function SubmissionClient({
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
+          <SubmissionChecklist isSubmitted={isSubmitted} />
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Formulir Pengiriman Berkas</CardTitle>
