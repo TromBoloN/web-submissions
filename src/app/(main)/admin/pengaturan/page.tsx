@@ -5,13 +5,16 @@ import { SettingsClient } from "./settings-client";
 export default async function SettingsPage() {
   const supabase = await createClient();
 
-  const { data: settings, error } = await supabase
-    .from("competition_settings")
-    .select("submission_closes_at, updated_at, juknis_url")
-    .eq("id", true)
-    .maybeSingle();
+  const [settingsRes, caseStudyRes] = await Promise.all([
+    supabase
+      .from("competition_settings")
+      .select("submission_closes_at, updated_at, juknis_url")
+      .eq("id", true)
+      .maybeSingle(),
+    supabase.from("case_study").select("title, content_md, release_at, updated_at").eq("id", true).maybeSingle(),
+  ]);
 
-  if (error) {
+  if (settingsRes.error) {
     return (
       <div className="space-y-6">
         <div>
@@ -25,11 +28,24 @@ export default async function SettingsPage() {
     );
   }
 
+  const settings = settingsRes.data;
+  const caseStudy = caseStudyRes.data ?? null;
+
   return (
     <SettingsClient
       currentClosesAt={settings?.submission_closes_at ?? null}
       currentJuknisUrl={settings?.juknis_url ?? null}
       updatedAt={settings?.updated_at ?? null}
+      caseStudy={
+        caseStudy
+          ? {
+              title: caseStudy.title,
+              contentMd: caseStudy.content_md,
+              releaseAt: caseStudy.release_at,
+              updatedAt: caseStudy.updated_at,
+            }
+          : null
+      }
     />
   );
 }

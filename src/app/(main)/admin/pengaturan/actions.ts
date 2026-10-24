@@ -7,10 +7,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentProfile } from "@/lib/auth";
-import { parseWitaInputToExclusiveCutoff } from "@/lib/deadline";
+import { parseWitaInputToExclusiveCutoff, parseWitaInputToUtcIso } from "@/lib/deadline";
 import { createClient } from "@/lib/supabase/server";
 
-export type ActionResult = { success: true } | { success: false; error: string };
+export type ActionResult = { success: true; warning?: string } | { success: false; error: string };
 
 const deadlineSchema = z.object({
   deadline: z
@@ -118,5 +118,86 @@ export async function updateJuknisUrl(formData: FormData): Promise<ActionResult>
   revalidatePath("/admin/pengaturan");
   revalidatePath("/team", "layout");
   revalidatePath("/judge", "layout");
+  return { success: true };
+}
+
+const caseStudySchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Judul studi kasus tidak boleh kosong.")
+    .max(150, "Judul studi kasus maksimal 150 karakter."),
+  content_md: z
+    .string()
+    .min(1, "Isi studi kasus tidak boleh kosong.")
+    .max(20000, "Isi studi kasus maksimal 20.000 karakter."),
+  release_at: z.string().trim().optional(),
+});
+
+export async function updateCaseStudy(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const rawTitle = formData.get("title");
+  const rawContent = formData.get("content_md");
+  const rawReleaseAt = formData.get("release_at");
+
+  const parsed = caseStudySchema.safeParse({
+    title: typeof rawTitle === "string" ? rawTitle : "",
+    content_md: typeof rawContent === "string" ? rawContent : "",
+    release_at: typeof rawReleaseAt === "string" ? rawReleaseAt : "",
+  });
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data studi kasus tidak valid." };
+  }
+
+  let releaseAtIso: string | null = null;
+  let isPastWarning = false;
+  if (parsed.data.release_at) {
+    releaseAtIso = parseWitaInputToUtcIso(parsed.data.release_at);
+    if (!releaseAtIso) {
+      return { success: false, error: "Format waktu rilis (WITA) tidak valid." };
+    }
+    if (new Date(releaseAtIso) <= new Date()) {
+      isPastWarning = true;
+    }
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("case_study")
+    .update({
+      title: parsed.data.title,
+      content_md: parsed.data.content_md,
+      release_at: releaseAtIso,
+      updated_by: caller.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true)
+    .select();
+
+  if (error) {
+    console.error("Failed to update case study", error);
+    return { success: false, error: "Gagal menyimpan studi kasus. Coba lagi." };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data studi kasus tidak ditemukan untuk diperbarui." };
+  }
+
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/team/studi-kasus");
+  revalidatePath("/judge/studi-kasus");
+
+  if (isPastWarning) {
+    return {
+      success: true,
+      warning: "Waktu rilis berada di masa lalu, sehingga studi kasus langsung terlihat oleh peserta.",
+    };
+  }
+
   return { success: true };
 }

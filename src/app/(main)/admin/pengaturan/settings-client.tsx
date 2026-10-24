@@ -4,22 +4,38 @@ import { useState, useTransition } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { BookOpen, CalendarClock, Clock, ExternalLink, Info } from "lucide-react";
+import { AlertTriangle, BookOpen, CalendarClock, Clock, ExternalLink, FileText, Info } from "lucide-react";
 import { toast } from "sonner";
 
+import { MarkdownContent } from "@/components/markdown-content";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatDeadlineWita, toWitaDateTimeLocalString } from "@/lib/deadline";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  formatDeadlineWita,
+  parseWitaInputToUtcIso,
+  toWitaDateTimeLocalString,
+  toWitaDateTimeLocalStringExact,
+} from "@/lib/deadline";
 
-import { updateCompetitionDeadline, updateJuknisUrl } from "./actions";
+import { updateCaseStudy, updateCompetitionDeadline, updateJuknisUrl } from "./actions";
+
+type CaseStudyData = {
+  title: string;
+  contentMd: string;
+  releaseAt: string | null;
+  updatedAt: string | null;
+};
 
 type SettingsClientProps = {
   currentClosesAt: string | null;
   currentJuknisUrl: string | null;
   updatedAt: string | null;
+  caseStudy: CaseStudyData | null;
 };
 
 function formatUpdatedAt(iso: string | null) {
@@ -33,7 +49,7 @@ function formatUpdatedAt(iso: string | null) {
   }).format(date)} WITA`;
 }
 
-export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }: SettingsClientProps) {
+export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, caseStudy }: SettingsClientProps) {
   const router = useRouter();
   const [deadlineInput, setDeadlineInput] = useState(() => toWitaDateTimeLocalString(currentClosesAt));
   const [deadlineError, setDeadlineError] = useState<string>();
@@ -43,9 +59,27 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }:
   const [juknisError, setJuknisError] = useState<string>();
   const [isJuknisPending, startJuknisTransition] = useTransition();
 
+  const [caseStudyTitle, setCaseStudyTitle] = useState(caseStudy?.title ?? "");
+  const [caseStudyContent, setCaseStudyContent] = useState(caseStudy?.contentMd ?? "");
+  const [caseStudyReleaseAt, setCaseStudyReleaseAt] = useState(() =>
+    toWitaDateTimeLocalStringExact(caseStudy?.releaseAt ?? null),
+  );
+  const [caseStudyError, setCaseStudyError] = useState<string>();
+  const [caseStudyWarning, setCaseStudyWarning] = useState<string>();
+  const [isCaseStudyPending, startCaseStudyTransition] = useTransition();
+
   const formattedCurrentDeadline = formatDeadlineWita(currentClosesAt);
   const formattedUpdatedAt = formatUpdatedAt(updatedAt);
+  const formattedCaseStudyUpdatedAt = formatUpdatedAt(caseStudy?.updatedAt ?? null);
   const canOpenSavedUrl = Boolean(currentJuknisUrl?.startsWith("https://"));
+
+  const isReleaseAtInPast = Boolean(
+    caseStudyReleaseAt &&
+      (() => {
+        const iso = parseWitaInputToUtcIso(caseStudyReleaseAt);
+        return iso ? new Date(iso).getTime() <= Date.now() : false;
+      })(),
+  );
 
   const handleDeadlineSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -79,15 +113,38 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }:
     });
   };
 
+  const handleCaseStudySubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCaseStudyError(undefined);
+    setCaseStudyWarning(undefined);
+    const form = new FormData(event.currentTarget);
+
+    startCaseStudyTransition(async () => {
+      const result = await updateCaseStudy(form);
+      if (!result.success) {
+        setCaseStudyError(result.error);
+        return;
+      }
+      if (result.warning) {
+        setCaseStudyWarning(result.warning);
+        toast.warning(result.warning);
+      } else {
+        toast.success("Studi kasus berhasil diperbarui.");
+      }
+      router.refresh();
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-semibold text-2xl">Pengaturan</h1>
-        <p className="text-muted-foreground">Kelola konfigurasi dan batas waktu kompetisi MIT-WEEK 2026.</p>
+        <p className="text-muted-foreground">Kelola konfigurasi, tautan juknis, dan studi kasus MIT-WEEK 2026.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
+          {/* 1. Batas Waktu Pengiriman */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -135,6 +192,7 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }:
             </form>
           </Card>
 
+          {/* 2. Tautan Juknis */}
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -195,8 +253,129 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }:
               </CardFooter>
             </form>
           </Card>
+
+          {/* 3. Studi Kasus */}
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="size-5 text-primary" />
+                  Studi Kasus
+                </CardTitle>
+                <CardDescription>
+                  {formattedCaseStudyUpdatedAt
+                    ? `Terakhir diperbarui: ${formattedCaseStudyUpdatedAt}`
+                    : "Belum pernah diperbarui"}
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <form onSubmit={handleCaseStudySubmit}>
+              <CardContent className="space-y-4">
+                {/* Judul */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="title">Judul Studi Kasus</Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    type="text"
+                    value={caseStudyTitle}
+                    onChange={(event) => setCaseStudyTitle(event.target.value)}
+                    maxLength={150}
+                    required
+                    placeholder="Judul studi kasus..."
+                  />
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Judul utama studi kasus kompetisi.</span>
+                    <span>{caseStudyTitle.length}/150</span>
+                  </div>
+                </div>
+
+                {/* Tampil Mulai (WITA) */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="release_at">Tampil Mulai (WITA) — Opsional</Label>
+                  <Input
+                    id="release_at"
+                    name="release_at"
+                    type="datetime-local"
+                    value={caseStudyReleaseAt}
+                    onChange={(event) => setCaseStudyReleaseAt(event.target.value)}
+                    className="max-w-md font-mono"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Kosongkan jika studi kasus dapat langsung dilihat oleh peserta. Jika diisi, studi kasus
+                    disembunyikan sampai waktu yang ditentukan.
+                  </p>
+                  {isReleaseAtInPast && (
+                    <p className="flex items-center gap-1.5 text-amber-600 text-xs dark:text-amber-400">
+                      <AlertTriangle className="size-3.5 shrink-0" />
+                      Perhatian: Waktu rilis yang dipilih sudah lewat di masa lalu. Studi kasus akan langsung terlihat
+                      oleh peserta.
+                    </p>
+                  )}
+                </div>
+
+                {/* Isi Markdown dengan Tab Edit & Pratinjau */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="content_md">Isi Studi Kasus (Markdown)</Label>
+                    <span className="font-mono text-muted-foreground text-xs">
+                      {caseStudyContent.length}/20.000 karakter
+                    </span>
+                  </div>
+
+                  <Tabs defaultValue="edit" className="w-full">
+                    <TabsList>
+                      <TabsTrigger value="edit">Edit</TabsTrigger>
+                      <TabsTrigger value="preview">Pratinjau</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="edit" className="space-y-2 pt-2">
+                      <Textarea
+                        id="content_md"
+                        name="content_md"
+                        value={caseStudyContent}
+                        onChange={(event) => setCaseStudyContent(event.target.value)}
+                        rows={14}
+                        maxLength={20000}
+                        required
+                        placeholder="Tulis isi studi kasus menggunakan format Markdown..."
+                        className="font-mono text-sm leading-relaxed"
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        Format Markdown: <code>## Judul Bagian</code>, <code>1. Daftar bernomor</code>,{" "}
+                        <code>* Daftar poin</code>, <code>**Tebal**</code>, <code>*Miring*</code>,{" "}
+                        <code>&gt; Kutipan</code>.
+                      </p>
+                    </TabsContent>
+                    <TabsContent value="preview" className="pt-2">
+                      <div className="max-h-[500px] min-h-[300px] overflow-y-auto rounded-md border bg-muted/20 p-4">
+                        {caseStudyContent.trim() ? (
+                          <MarkdownContent content={caseStudyContent} />
+                        ) : (
+                          <p className="text-muted-foreground text-sm italic">Belum ada konten untuk dipratinjau.</p>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+
+                {caseStudyError && <p className="text-destructive text-sm">{caseStudyError}</p>}
+                {caseStudyWarning && (
+                  <p className="flex items-center gap-1.5 text-amber-600 text-xs dark:text-amber-400">
+                    <AlertTriangle className="size-3.5 shrink-0" />
+                    {caseStudyWarning}
+                  </p>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-end gap-2 border-t pt-4">
+                <Button type="submit" disabled={isCaseStudyPending}>
+                  {isCaseStudyPending ? "Menyimpan..." : "Perbarui studi kasus"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
         </div>
 
+        {/* Panel Kanan: Status Pengaturan */}
         <div>
           <Card>
             <CardHeader>
@@ -210,6 +389,7 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }:
                 <span className="text-muted-foreground text-xs">Batas waktu aktif:</span>
                 <p className="font-semibold text-foreground text-lg">{formattedCurrentDeadline}</p>
               </div>
+
               <div className="border-t pt-3">
                 <span className="text-muted-foreground text-xs">Tautan juknis aktif:</span>
                 {canOpenSavedUrl && currentJuknisUrl ? (
@@ -220,9 +400,28 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }:
                   <p className="mt-0.5 text-muted-foreground text-xs">Belum diatur</p>
                 )}
               </div>
+
+              <div className="border-t pt-3">
+                <span className="text-muted-foreground text-xs">Status Studi Kasus:</span>
+                {caseStudy ? (
+                  <div className="mt-1 space-y-1">
+                    <p className="truncate font-medium text-foreground text-sm" title={caseStudy.title}>
+                      {caseStudy.title}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {caseStudy.releaseAt
+                        ? `Rilis: ${formatUpdatedAt(caseStudy.releaseAt)}`
+                        : "Terlihat langsung (tanpa jadwal)"}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-0.5 text-muted-foreground text-xs">Belum ada studi kasus</p>
+                )}
+              </div>
+
               {formattedUpdatedAt && (
                 <div className="border-t pt-3">
-                  <span className="text-muted-foreground text-xs">Terakhir diperbarui:</span>
+                  <span className="text-muted-foreground text-xs">Pengaturan diperbarui:</span>
                   <p className="mt-0.5 text-muted-foreground text-xs">{formattedUpdatedAt}</p>
                 </div>
               )}
