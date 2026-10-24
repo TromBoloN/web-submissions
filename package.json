@@ -14,7 +14,8 @@
     "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
     "seed": "node --env-file=.env src/scripts/seed.mjs seed",
     "seed:clear": "node --env-file=.env src/scripts/seed.mjs clear",
-    "onboard": "node --env-file=.env scripts/import-registrations.mjs"
+    "onboard": "node --env-file=.env scripts/import-registrations.mjs",
+    "whatsapp": "node --env-file=.env scripts/whatsapp-links.mjs"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]

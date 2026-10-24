@@ -1,0 +1,16 @@
+Halo {leader_name}, selamat! Tim {team_name} sudah terdaftar di kompetisi Web Development MIT-WEEK 2026.
+
+Berikut akun portal submission tim Anda:
+Alamat: {login_url}
+Email: {email}
+Kata sandi: {password}
+Kode tim: {team_code}
+
+Catatan:
+- Mohon ganti kata sandi setelah login pertama (menu pengguna, Ganti kata sandi).
+- Akun ini dipakai bersama seluruh anggota tim, jangan dibagikan ke pihak lain.
+- Batas pengiriman karya: {deadline}.
+- Simpan kode tim Anda, dibutuhkan jika panitia memakai formulir cadangan.
+
+Jika ada kendala saat login, balas pesan ini.
+Panitia MIT-WEEK 2026
