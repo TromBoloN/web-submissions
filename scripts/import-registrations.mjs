@@ -1,8 +1,9 @@
 // scripts/import-registrations.mjs
 // Onboarding script for MIT-WEEK 2026 registered teams.
 // Usage:
-//   npm run onboard           -> Dry run (reads registrations.csv, verifies against DB, prints plan, no DB writes)
-//   npm run onboard --commit  -> Interactive commit (creates auth users, profiles, teams, writes credentials)
+//   npm run onboard              -> Dry run (reads data/registrations.csv, checks the DB, prints the plan, writes nothing)
+//   npm run onboard -- --commit  -> Interactive commit (creates auth users, profiles, teams, writes credentials)
+// Note: the extra "--" is required, otherwise npm swallows the --commit flag.
 
 import { randomInt } from "node:crypto";
 import fs from "node:fs";
@@ -15,9 +16,10 @@ import { parse } from "csv-parse/sync";
 
 // ---------------------------------------------------------------------------
 // 4.1 COLUMN MAPPING
-// Maps internal field names to the exact header text in data/registrations.csv.
+// Maps internal field names to the header text in data/registrations.csv.
+// Matching ignores case, surrounding spaces and repeated spaces.
 // ---------------------------------------------------------------------------
-export const COLUMN_MAP = {
+const COLUMN_MAP = {
   timestamp: "Timestamp",
   email: "Email Address",
   category: "Pilihan Lomba",
@@ -27,7 +29,7 @@ export const COLUMN_MAP = {
   institution: "Asal sekolah / perguruan tinggi",
   members: "Nama anggota lain beserta asal sekolah/kampus",
   teamName: "Nama tim",
-  verified: "verified", // Added manually to the Google Sheet by committee
+  verified: "Verified", // added manually to the Google Sheet by the committee
 };
 
 const CSV_PATH = path.join("data", "registrations.csv");
@@ -37,6 +39,29 @@ const UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const LOWER = "abcdefghijkmnopqrstuvwxyz";
 const DIGIT = "23456789";
 const ALL_CHARS = UPPER + LOWER + DIGIT;
+
+// Load .env.local / .env only for variables that are still missing.
+// process.loadEnvFile never overrides variables that are already set.
+function loadLocalEnv() {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+  for (const file of [".env.local", ".env"]) {
+    if (fs.existsSync(file) && typeof process.loadEnvFile === "function") {
+      try {
+        process.loadEnvFile(file);
+      } catch {
+        // ignore unreadable env file; the check below reports missing variables
+      }
+    }
+  }
+}
+
+function normalizeHeader(value) {
+  return String(value ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
 function generateTeamPassword(length = 14) {
   while (true) {
@@ -53,19 +78,29 @@ function generateTeamPassword(length = 14) {
   }
 }
 
+// Returns an international number without "+" (for example 62812...), or null if it does not look valid.
 function normalizePhone(raw) {
   if (!raw) return null;
-  const digits = String(raw).replace(/\D/g, "");
-  let normalized = digits;
-  if (normalized.startsWith("0")) {
-    normalized = `62${normalized.slice(1)}`;
-  } else if (normalized.startsWith("8")) {
-    normalized = `628${normalized.slice(1)}`;
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.startsWith("620")) {
+    digits = `62${digits.slice(3)}`; // typo like +62 0812...
+  } else if (digits.startsWith("0")) {
+    digits = `62${digits.slice(1)}`;
+  } else if (digits.startsWith("8")) {
+    digits = `62${digits}`;
   }
-  if (normalized.length >= 10 && normalized.length <= 15) {
-    return normalized;
+  if (digits.startsWith("62") && digits.length >= 10 && digits.length <= 15) {
+    return digits;
   }
   return null;
+}
+
+// Removes an attached institution but keeps hyphenated names such as "Siti Nur-Aini" intact.
+function cleanMemberName(raw) {
+  return String(raw ?? "")
+    .replace(/\s*\([^)]*\)\s*$/, "") // trailing "(Universitas ...)"
+    .replace(/\s+[-–—]\s+.*$/, "") // " - Universitas ..." (dash must have spaces around it)
+    .trim();
 }
 
 function parseMembers(rawLeader, rawMembers) {
@@ -76,7 +111,7 @@ function parseMembers(rawLeader, rawMembers) {
   if (rawMembers) {
     const lines = String(rawMembers).split(/[\r\n;]+/);
     for (const line of lines) {
-      const cleaned = line.replace(/\s*(?:\([^)]*\)|-[^-]*)$/, "").trim();
+      const cleaned = cleanMemberName(line);
       if (cleaned && !seen.has(cleaned.toLowerCase())) {
         seen.add(cleaned.toLowerCase());
         members.push(cleaned);
@@ -144,11 +179,22 @@ async function main() {
     process.exit(1);
   }
 
+  // Resolve every mapped field to the real header once (case-insensitive, trimmed).
   const availableHeaders = Object.keys(records[0]);
+  const headerLookup = new Map();
+  for (const header of availableHeaders) {
+    const key = normalizeHeader(header);
+    if (!headerLookup.has(key)) headerLookup.set(key, header);
+  }
+
+  const H = {}; // field name -> actual header in the CSV
   const missingHeaders = [];
   for (const [fieldKey, headerName] of Object.entries(COLUMN_MAP)) {
-    if (!availableHeaders.includes(headerName)) {
+    const actual = headerLookup.get(normalizeHeader(headerName));
+    if (actual === undefined) {
       missingHeaders.push(`  - [${fieldKey}]: "${headerName}"`);
+    } else {
+      H[fieldKey] = actual;
     }
   }
 
@@ -162,6 +208,7 @@ async function main() {
   }
 
   // Load environment
+  loadLocalEnv();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -169,6 +216,8 @@ async function main() {
     console.error("NEXT_PUBLIC_SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY belum diset.");
     process.exit(1);
   }
+
+  const supabaseHost = new URL(url).hostname;
 
   const supabase = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -186,26 +235,27 @@ async function main() {
     process.exit(1);
   }
 
-  const dbEmails = new Set((existingProfiles ?? []).map((p) => p.email.toLowerCase()));
-  const dbTeamNames = new Set((existingTeams ?? []).map((t) => t.team_name.toLowerCase()));
+  const dbEmails = new Set((existingProfiles ?? []).map((p) => (p.email ?? "").toLowerCase()));
+  const dbTeamNames = new Set((existingTeams ?? []).map((t) => (t.team_name ?? "").toLowerCase()));
 
   // Determine starting team code number (highest existing MIT-xxx)
-  let nextTeamNumber = (existingTeams ?? []).reduce((highest, team) => {
-    const match = team.team_code?.match(/^MIT-(\d{3})$/);
-    return match ? Math.max(highest, Number(match[1])) : highest;
-  }, 0) + 1;
+  let nextTeamNumber =
+    (existingTeams ?? []).reduce((highest, team) => {
+      const match = team.team_code?.match(/^MIT-(\d{3})$/);
+      return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0) + 1;
 
   // Process rows
   let ignoredCount = 0;
-  const targetCandidates = []; // { csvRow, email, phone, teamName, leaderName, institution, members }
+  const targetCandidates = [];
 
   const emailCountsInSheet = new Map();
   const teamNameCountsInSheet = new Map();
 
   records.forEach((row, index) => {
     const csvRow = index + 2; // +1 for header, +1 for 1-based index
-    const category = (row[COLUMN_MAP.category] ?? "").trim().toLowerCase();
-    const verifiedVal = (row[COLUMN_MAP.verified] ?? "").trim().toLowerCase();
+    const category = (row[H.category] ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+    const verifiedVal = (row[H.verified] ?? "").trim().toLowerCase();
 
     // 4.2 Only process category Web Development AND verified = TRUE / YA / Y / 1
     const isWebDev = category === "web development";
@@ -216,16 +266,16 @@ async function main() {
       return;
     }
 
-    const email = (row[COLUMN_MAP.email] ?? "").trim().toLowerCase();
-    const leaderName = (row[COLUMN_MAP.leaderName] ?? "").trim();
-    let teamName = (row[COLUMN_MAP.teamName] ?? "").trim();
+    const email = (row[H.email] ?? "").trim().toLowerCase();
+    const leaderName = (row[H.leaderName] ?? "").trim();
+    let teamName = (row[H.teamName] ?? "").trim();
     if (!teamName) {
       teamName = leaderName;
     }
-    const phone = normalizePhone(row[COLUMN_MAP.phone]);
-    const institution = (row[COLUMN_MAP.institution] ?? "").trim();
-    const isIndividu = (row[COLUMN_MAP.type] ?? "").trim().toLowerCase().includes("individu");
-    const members = isIndividu ? [leaderName] : parseMembers(leaderName, row[COLUMN_MAP.members]);
+    const phone = normalizePhone(row[H.phone]);
+    const institution = (row[H.institution] ?? "").trim();
+    const isIndividu = (row[H.type] ?? "").trim().toLowerCase().includes("individu");
+    const members = isIndividu ? [leaderName] : parseMembers(leaderName, row[H.members]);
 
     if (email) {
       emailCountsInSheet.set(email, (emailCountsInSheet.get(email) ?? 0) + 1);
@@ -237,7 +287,6 @@ async function main() {
 
     targetCandidates.push({
       csvRow,
-      rawEmail: (row[COLUMN_MAP.email] ?? "").trim(),
       email,
       phone,
       teamName,
@@ -249,7 +298,7 @@ async function main() {
 
   // Evaluate problem rows
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const processedRows = []; // { ...data, status, isProblem, problemReason }
+  const processedRows = [];
 
   for (const item of targetCandidates) {
     const problems = [];
@@ -258,7 +307,7 @@ async function main() {
       problems.push("email tidak valid");
     }
     if (!item.phone) {
-      problems.push("nomor telepon tidak valid (butuh 10-15 digit)");
+      problems.push("nomor telepon tidak valid (harus diawali 62, 10-15 digit)");
     }
     if (!item.leaderName) {
       problems.push("nama ketua kosong");
@@ -276,35 +325,26 @@ async function main() {
       problems.push("nama tim sudah ada di database");
     }
 
-    if (problems.length > 0) {
-      processedRows.push({
-        ...item,
-        status: problems.join("; "),
-        isProblem: true,
-      });
-    } else {
-      processedRows.push({
-        ...item,
-        status: "akan dibuat",
-        isProblem: false,
-      });
-    }
+    processedRows.push({
+      ...item,
+      status: problems.length > 0 ? problems.join("; ") : "akan dibuat",
+      isProblem: problems.length > 0,
+    });
   }
 
-  // Summary counts
   const willCreateRows = processedRows.filter((r) => !r.isProblem);
   const problemRows = processedRows.filter((r) => r.isProblem);
 
   console.log("\n========================================================");
   console.log(`  IMPORT PENDAFTARAN TIM MIT-WEEK 2026 (${isCommit ? "MODE COMMIT" : "DRY RUN"})`);
   console.log("========================================================\n");
+  console.log(`Database target           : ${supabaseHost}`);
   console.log(`Total baris di CSV        : ${records.length}`);
   console.log(`Diabaikan (bukan WebDev/belum verified) : ${ignoredCount}`);
   console.log(`Lolos filter kriteria     : ${targetCandidates.length}`);
   console.log(`Baris bermasalah (skip)   : ${problemRows.length}`);
   console.log(`Siap dibuatkan akun       : ${willCreateRows.length}\n`);
 
-  // Print table
   console.log(
     "Baris | Nama Tim                       | Email                      | No. HP         | Anggota | Status",
   );
@@ -318,6 +358,7 @@ async function main() {
     const hp = (r.phone ?? "-").padEnd(14, " ");
     const ang = String(r.members.length).padStart(7, " ");
     console.log(`${baris} | ${tim} | ${eml} | ${hp} | ${ang} | ${r.status}`);
+    console.log(`        anggota: ${r.members.join(" | ")}`);
   }
   console.log(
     "------+--------------------------------+----------------------------+----------------+---------+---------------------\n",
@@ -337,7 +378,6 @@ async function main() {
     return;
   }
 
-  const supabaseHost = new URL(url).hostname;
   console.log(`TARGET DATABASE: ${supabaseHost}`);
   const confirmation = await promptConfirmation('Ketik "YA" (huruf besar) untuk mengeksekusi pembuatan akun: ');
   if (confirmation !== "YA") {
@@ -350,7 +390,7 @@ async function main() {
   const credPath = path.join(PRIVATE_OUTPUT_DIR, `credentials-${ts}.csv`);
   const logPath = path.join(PRIVATE_OUTPUT_DIR, `import-log-${ts}.txt`);
 
-  // Write Credentials CSV header with BOM
+  // Credentials CSV header with BOM so Excel reads UTF-8 correctly
   const credHeader = ["team_code", "team_name", "leader_name", "email", "phone", "password"]
     .map(escapeCsvCell)
     .join(",");
@@ -422,7 +462,7 @@ async function main() {
       continue;
     }
 
-    // 4. Immediately append to credentials CSV (flush)
+    // 4. Append to the credentials CSV immediately, so a crash never loses a created account's password
     const credRow = [teamCode, row.teamName, row.leaderName, row.email, row.phone, password]
       .map(escapeCsvCell)
       .join(",");
@@ -434,7 +474,6 @@ async function main() {
     console.log("SUKSES");
   }
 
-  // Record problem rows in log
   if (problemRows.length > 0) {
     logEntries.push("\n--- BARIS DILEWATI (SKIPPED) ---");
     for (const pr of problemRows) {
@@ -453,6 +492,8 @@ async function main() {
   console.log(`File kredensial : ${credPath}`);
   console.log(`File log import : ${logPath}`);
   console.log("\n[PENTING] Segera amankan atau hapus file kredensial setelah pesan WhatsApp terkirim!");
+
+  if (failedCount > 0) process.exitCode = 1;
 }
 
 main().catch((err) => {
