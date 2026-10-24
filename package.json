@@ -13,12 +13,11 @@
     "prepare": "husky",
     "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
     "seed": "node --env-file=.env src/scripts/seed.mjs seed",
-    "seed:clear": "node --env-file=.env src/scripts/seed.mjs clear"
+    "seed:clear": "node --env-file=.env src/scripts/seed.mjs clear",
+    "onboard": "node --env-file=.env scripts/import-registrations.mjs"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx}": [
-      "biome check --write --no-errors-on-unmatched"
-    ]
+    "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -71,6 +70,7 @@
     "@types/react-dom": "^19.3.0",
     "@types/topojson-client": "^3.1.5",
     "babel-plugin-react-compiler": "^1.0.0",
+    "csv-parse": "^7.0.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "postcss": "^8.5.31",
