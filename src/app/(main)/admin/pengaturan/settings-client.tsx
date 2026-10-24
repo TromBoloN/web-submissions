@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { CalendarClock, Clock, Info } from "lucide-react";
+import { BookOpen, CalendarClock, Clock, ExternalLink, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,10 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDeadlineWita, toWitaDateTimeLocalString } from "@/lib/deadline";
 
-import { updateCompetitionDeadline } from "./actions";
+import { updateCompetitionDeadline, updateJuknisUrl } from "./actions";
 
 type SettingsClientProps = {
   currentClosesAt: string | null;
+  currentJuknisUrl: string | null;
   updatedAt: string | null;
 };
 
@@ -32,27 +33,48 @@ function formatUpdatedAt(iso: string | null) {
   }).format(date)} WITA`;
 }
 
-export function SettingsClient({ currentClosesAt, updatedAt }: SettingsClientProps) {
+export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt }: SettingsClientProps) {
   const router = useRouter();
   const [deadlineInput, setDeadlineInput] = useState(() => toWitaDateTimeLocalString(currentClosesAt));
-  const [error, setError] = useState<string>();
-  const [isPending, startTransition] = useTransition();
+  const [deadlineError, setDeadlineError] = useState<string>();
+  const [isDeadlinePending, startDeadlineTransition] = useTransition();
+
+  const [juknisInput, setJuknisInput] = useState(currentJuknisUrl ?? "");
+  const [juknisError, setJuknisError] = useState<string>();
+  const [isJuknisPending, startJuknisTransition] = useTransition();
 
   const formattedCurrentDeadline = formatDeadlineWita(currentClosesAt);
   const formattedUpdatedAt = formatUpdatedAt(updatedAt);
+  const canOpenSavedUrl = Boolean(currentJuknisUrl?.startsWith("https://"));
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleDeadlineSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(undefined);
+    setDeadlineError(undefined);
     const form = new FormData(event.currentTarget);
 
-    startTransition(async () => {
+    startDeadlineTransition(async () => {
       const result = await updateCompetitionDeadline(form);
       if (!result.success) {
-        setError(result.error);
+        setDeadlineError(result.error);
         return;
       }
       toast.success("Batas waktu pengiriman berhasil diperbarui.");
+      router.refresh();
+    });
+  };
+
+  const handleJuknisSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setJuknisError(undefined);
+    const form = new FormData(event.currentTarget);
+
+    startJuknisTransition(async () => {
+      const result = await updateJuknisUrl(form);
+      if (!result.success) {
+        setJuknisError(result.error);
+        return;
+      }
+      toast.success("Tautan juknis berhasil diperbarui.");
       router.refresh();
     });
   };
@@ -65,7 +87,7 @@ export function SettingsClient({ currentClosesAt, updatedAt }: SettingsClientPro
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
+        <div className="space-y-6 md:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -77,7 +99,7 @@ export function SettingsClient({ currentClosesAt, updatedAt }: SettingsClientPro
                 (UTC+8).
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleDeadlineSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="deadline">Batas akhir pengiriman (WITA)</Label>
@@ -103,11 +125,72 @@ export function SettingsClient({ currentClosesAt, updatedAt }: SettingsClientPro
                   </AlertDescription>
                 </Alert>
 
-                {error && <p className="text-destructive text-sm">{error}</p>}
+                {deadlineError && <p className="text-destructive text-sm">{deadlineError}</p>}
               </CardContent>
               <CardFooter className="flex justify-end gap-2 border-t pt-4">
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Menyimpan..." : "Simpan Pengaturan"}
+                <Button type="submit" disabled={isDeadlinePending}>
+                  {isDeadlinePending ? "Menyimpan..." : "Simpan Pengaturan"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="size-5 text-primary" />
+                    Tautan Juknis
+                  </CardTitle>
+                  <CardDescription>
+                    Tautan dokumen petunjuk teknis kompetisi. Tautan yang tersimpan dapat dibuka oleh peserta dan juri.
+                  </CardDescription>
+                </div>
+                {canOpenSavedUrl && currentJuknisUrl && (
+                  <Button asChild variant="outline" size="sm" className="shrink-0">
+                    <a href={currentJuknisUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-1.5 size-4" />
+                      Buka tautan
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <form onSubmit={handleJuknisSubmit}>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="juknis_url">Tautan Juknis (Google Drive)</Label>
+                  <Input
+                    id="juknis_url"
+                    name="juknis_url"
+                    type="url"
+                    placeholder="https://drive.google.com/..."
+                    value={juknisInput}
+                    onChange={(event) => setJuknisInput(event.target.value)}
+                    maxLength={500}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Tempel tautan Google Drive. Pastikan akses diatur &apos;Siapa saja yang memiliki link&apos;.
+                    Kosongkan untuk menghapus tautan.
+                  </p>
+                </div>
+
+                {juknisError && <p className="text-destructive text-sm">{juknisError}</p>}
+              </CardContent>
+              <CardFooter className="flex items-center justify-between gap-2 border-t pt-4">
+                <div className="text-muted-foreground text-xs">
+                  {currentJuknisUrl ? (
+                    <span className="block max-w-xs truncate font-mono md:max-w-sm" title={currentJuknisUrl}>
+                      Tersimpan: {currentJuknisUrl}
+                    </span>
+                  ) : (
+                    <span>Belum ada tautan tersimpan.</span>
+                  )}
+                </div>
+                <Button type="submit" disabled={isJuknisPending}>
+                  {isJuknisPending ? "Menyimpan..." : "Simpan"}
                 </Button>
               </CardFooter>
             </form>
@@ -119,18 +202,28 @@ export function SettingsClient({ currentClosesAt, updatedAt }: SettingsClientPro
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="size-4 text-muted-foreground" />
-                Status Batas Waktu
+                Status Pengaturan
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-4 text-sm">
               <div>
                 <span className="text-muted-foreground text-xs">Batas waktu aktif:</span>
                 <p className="font-semibold text-foreground text-lg">{formattedCurrentDeadline}</p>
               </div>
+              <div className="border-t pt-3">
+                <span className="text-muted-foreground text-xs">Tautan juknis aktif:</span>
+                {canOpenSavedUrl && currentJuknisUrl ? (
+                  <p className="mt-0.5 truncate font-mono text-foreground text-xs" title={currentJuknisUrl}>
+                    {currentJuknisUrl}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-muted-foreground text-xs">Belum diatur</p>
+                )}
+              </div>
               {formattedUpdatedAt && (
-                <div className="border-t pt-2">
+                <div className="border-t pt-3">
                   <span className="text-muted-foreground text-xs">Terakhir diperbarui:</span>
-                  <p className="text-muted-foreground text-xs">{formattedUpdatedAt}</p>
+                  <p className="mt-0.5 text-muted-foreground text-xs">{formattedUpdatedAt}</p>
                 </div>
               )}
             </CardContent>

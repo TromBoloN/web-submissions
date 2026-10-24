@@ -61,3 +61,62 @@ export async function updateCompetitionDeadline(formData: FormData): Promise<Act
   revalidatePath("/admin/pengaturan");
   return { success: true };
 }
+
+const juknisSchema = z.object({
+  juknis_url: z
+    .string()
+    .trim()
+    .max(500, "Tautan juknis maksimal 500 karakter.")
+    .refine((val) => {
+      if (val === "") return true;
+      if (!val.startsWith("https://")) return false;
+      try {
+        const u = new URL(val);
+        return u.protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, "Tautan juknis harus berupa URL https:// yang valid."),
+});
+
+export async function updateJuknisUrl(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const rawUrl = formData.get("juknis_url");
+  const parsed = juknisSchema.safeParse({
+    juknis_url: typeof rawUrl === "string" ? rawUrl : "",
+  });
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Tautan juknis tidak valid." };
+  }
+
+  const normalizedUrl = parsed.data.juknis_url === "" ? null : parsed.data.juknis_url;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("competition_settings")
+    .update({
+      juknis_url: normalizedUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true)
+    .select();
+
+  if (error) {
+    console.error("Failed to update juknis url", error);
+    return { success: false, error: "Gagal menyimpan tautan juknis. Coba lagi." };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
+  }
+
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/team", "layout");
+  revalidatePath("/judge", "layout");
+  return { success: true };
+}

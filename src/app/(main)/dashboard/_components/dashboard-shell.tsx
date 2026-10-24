@@ -47,11 +47,15 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
           <div className="flex w-full items-center justify-between px-4 lg:px-6">
             <div className="flex items-center gap-1 lg:gap-2">
               <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mx-2 data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center"
-              />
-              <SearchDialog role={user.role} />
+              {user.role !== "team" && (
+                <>
+                  <Separator
+                    orientation="vertical"
+                    className="mx-2 data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center"
+                  />
+                  <SearchDialog role={user.role} />
+                </>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm sm:block">

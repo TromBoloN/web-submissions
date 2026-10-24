@@ -7,7 +7,7 @@ export default async function SettingsPage() {
 
   const { data: settings, error } = await supabase
     .from("competition_settings")
-    .select("submission_closes_at, updated_at")
+    .select("submission_closes_at, updated_at, juknis_url")
     .eq("id", true)
     .maybeSingle();
 
@@ -26,6 +26,10 @@ export default async function SettingsPage() {
   }
 
   return (
-    <SettingsClient currentClosesAt={settings?.submission_closes_at ?? null} updatedAt={settings?.updated_at ?? null} />
+    <SettingsClient
+      currentClosesAt={settings?.submission_closes_at ?? null}
+      currentJuknisUrl={settings?.juknis_url ?? null}
+      updatedAt={settings?.updated_at ?? null}
+    />
   );
 }

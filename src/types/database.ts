@@ -1,4 +1,4 @@
-﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -8,20 +8,85 @@ export type Database = {
   };
   public: {
     Tables: {
+      case_study: {
+        Row: {
+          content_md: string;
+          id: boolean;
+          release_at: string | null;
+          title: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          content_md?: string;
+          id?: boolean;
+          release_at?: string | null;
+          title?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          content_md?: string;
+          id?: boolean;
+          release_at?: string | null;
+          title?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "case_study_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       competition_settings: {
         Row: {
           id: boolean;
+          juknis_url: string | null;
           submission_closes_at: string;
           updated_at: string;
         };
         Insert: {
           id?: boolean;
+          juknis_url?: string | null;
           submission_closes_at: string;
           updated_at?: string;
         };
         Update: {
           id?: boolean;
+          juknis_url?: string | null;
           submission_closes_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      finalist_notice: {
+        Row: {
+          finalist_message: string;
+          id: boolean;
+          is_published: boolean;
+          non_finalist_message: string;
+          published_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          finalist_message?: string;
+          id?: boolean;
+          is_published?: boolean;
+          non_finalist_message?: string;
+          published_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          finalist_message?: string;
+          id?: boolean;
+          is_published?: boolean;
+          non_finalist_message?: string;
+          published_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -209,8 +274,11 @@ export type Database = {
       };
       submissions: {
         Row: {
+          first_submitted_at: string | null;
           github_url: string;
           id: string;
+          link_check: Json | null;
+          link_checked_at: string | null;
           live_demo_url: string;
           status: Database["public"]["Enums"]["submission_status_type"];
           submitted_at: string;
@@ -219,8 +287,11 @@ export type Database = {
           video_url: string;
         };
         Insert: {
+          first_submitted_at?: string | null;
           github_url?: string;
           id?: string;
+          link_check?: Json | null;
+          link_checked_at?: string | null;
           live_demo_url?: string;
           status?: Database["public"]["Enums"]["submission_status_type"];
           submitted_at?: string;
@@ -229,8 +300,11 @@ export type Database = {
           video_url?: string;
         };
         Update: {
+          first_submitted_at?: string | null;
           github_url?: string;
           id?: string;
+          link_check?: Json | null;
+          link_checked_at?: string | null;
           live_demo_url?: string;
           status?: Database["public"]["Enums"]["submission_status_type"];
           submitted_at?: string;
@@ -337,6 +411,14 @@ export type Database = {
     Functions: {
       current_user_judge_stage: { Args: never; Returns: string };
       current_user_role: { Args: never; Returns: string };
+      get_my_finalist_notice: {
+        Args: never;
+        Returns: {
+          is_finalist: boolean;
+          message: string;
+          published_at: string | null;
+        }[];
+      };
       judge_can_score_final: { Args: { p_team_id: string }; Returns: boolean };
       judge_can_score_preliminary: {
         Args: { p_team_id: string };
