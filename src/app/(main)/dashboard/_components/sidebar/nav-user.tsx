@@ -1,6 +1,8 @@
 "use client";
 
-import { EllipsisVertical, LogOut } from "lucide-react";
+import Link from "next/link";
+
+import { EllipsisVertical, KeyRound, LogOut } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -57,6 +59,12 @@ export function NavUser({ user }: { readonly user: CurrentUser }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href={`/${user.role}/kata-sandi`}>
+                <KeyRound className="size-4" />
+                Ganti kata sandi
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action={signOut}>
               <DropdownMenuItem asChild>
