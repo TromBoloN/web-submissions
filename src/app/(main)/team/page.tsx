@@ -7,9 +7,10 @@ export default async function TeamPage() {
   const profile = await requireRole("team");
   const supabase = await createClient();
 
-  const [teamRes, settingsRes] = await Promise.all([
+  const [teamRes, settingsRes, noticeRes] = await Promise.all([
     supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
     supabase.from("competition_settings").select("submission_closes_at, juknis_url").eq("id", true).maybeSingle(),
+    supabase.rpc("get_my_finalist_notice"),
   ]);
 
   if (teamRes.error || !teamRes.data) {
@@ -30,6 +31,8 @@ export default async function TeamPage() {
 
   const { data: submission } = await supabase.from("submissions").select("*").eq("team_id", team.id).maybeSingle();
 
+  const finalistNotice = noticeRes.data && noticeRes.data.length > 0 ? noticeRes.data[0] : null;
+
   return (
     <SubmissionClient
       team={team}
@@ -38,6 +41,7 @@ export default async function TeamPage() {
       serverNowIso={serverNowIso}
       initialClosed={initialClosed}
       juknisUrl={settingsRes.data?.juknis_url ?? null}
+      finalistNotice={finalistNotice}
     />
   );
 }

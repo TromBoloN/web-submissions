@@ -43,6 +43,7 @@ import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
 import { checkMyLinks, saveSubmission } from "./actions";
+import { FinalistBanner, type FinalistNoticeData } from "./finalist-banner";
 import { SubmissionChecklist } from "./submission-checklist";
 import { SubmissionReceipt } from "./submission-receipt";
 
@@ -56,6 +57,7 @@ type SubmissionClientProps = {
   serverNowIso: string;
   initialClosed: boolean;
   juknisUrl: string | null;
+  finalistNotice: FinalistNoticeData | null;
 };
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -206,6 +208,7 @@ export function SubmissionClient({
   serverNowIso,
   initialClosed,
   juknisUrl,
+  finalistNotice,
 }: SubmissionClientProps) {
   const router = useRouter();
   // Closed state is only applied when page is loaded after deadline
@@ -376,6 +379,8 @@ export function SubmissionClient({
 
   return (
     <div className="space-y-6">
+      <FinalistBanner notice={finalistNotice} />
+
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-semibold text-2xl">Portal Submission</h1>

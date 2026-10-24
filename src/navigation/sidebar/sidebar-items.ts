@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Award, BookOpen, ClipboardList, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Award, BookOpen, ClipboardList, FileText, LayoutDashboard, Settings, Trophy, Users } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/user-display";
 
@@ -53,6 +53,7 @@ export function getSidebarItems(role: CurrentUser["role"], juknisUrl?: string | 
           { id: "teams", title: "Tim", url: "/admin/tim", icon: ClipboardList },
           { id: "submissions", title: "Submission", url: "/admin/submission", icon: FileText },
           { id: "ranking", title: "Peringkat", url: "/admin/peringkat", icon: Award },
+          { id: "finalists", title: "Finalis", url: "/admin/finalis", icon: Trophy },
           { id: "settings", title: "Pengaturan", url: "/admin/pengaturan", icon: Settings },
         ],
       },
