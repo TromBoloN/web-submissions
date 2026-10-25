@@ -232,6 +232,12 @@ async function runSeed() {
 
   // 3. Submissions
   const submissionRows = [];
+  const seedNotes = {
+    1: "Akun demo: demo@example.com / Demo1234. Jalankan lewat tautan live demo.",
+    2: "<script>alert(1)</script> Catatan uji: harus tampil sebagai teks biasa.",
+    3: "=1+1 Catatan uji: harus aman di ekspor CSV.",
+  };
+
   for (const def of teamDefs) {
     if (def.submission === "none") continue;
     const base = `${pad(def.n)}`;
@@ -241,6 +247,7 @@ async function runSeed() {
       live_demo_url: def.submission === "submitted" ? `https://example.com/seed/${base}` : "",
       video_url: def.submission === "submitted" ? `https://example.com/seed/${base}/video` : "",
       status: def.submission,
+      notes_for_judges: def.submission === "submitted" ? (seedNotes[def.n] ?? "") : "",
     });
   }
   const { error: submissionError } = await sb.from("submissions").insert(submissionRows);
@@ -262,6 +269,7 @@ async function runSeed() {
         code_quality_score: randomScore(),
         documentation_score: randomScore(),
         feedback: "Data contoh (seed).",
+        locked_at: def.n === 1 && judgeId === judgeIds.preliminary ? new Date().toISOString() : null,
       });
     }
   }
@@ -284,6 +292,7 @@ async function runSeed() {
         documentation_score: randomScore(),
         presentation_qa_score: randomScore(),
         feedback: "Data contoh (seed).",
+        locked_at: def.n === 1 && judgeId === judgeIds.final ? new Date().toISOString() : null,
       });
     }
   }
