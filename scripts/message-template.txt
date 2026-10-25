@@ -1,4 +1,4 @@
-Halo {leader_name}, selamat! Tim {team_name} sudah terdaftar di kompetisi Web Development MIT-WEEK 2026.
+Halo {leader_name}, selamat! Pendaftaran "{team_name}" di kompetisi Web Development MIT-WEEK 2026 sudah diverifikasi.
 
 Berikut akun portal submission tim Anda:
 Alamat: {login_url}

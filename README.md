@@ -13,7 +13,7 @@ An all-in-one competition management and submission platform developed specifica
 
 ## 📌 Context: About MIT-WEEK 2026
 
-**MIT-WEEK (Mulawarman Information Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines run by Association of Informatics, Faculty of Engineering, Mulawarman University.
+**MIT-WEEK (Mulawarman Informatics Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines run by Association of Informatics, Faculty of Engineering, Mulawarman University.
 
 This web application serves as the **official competition platform for the Web Development Competition** branch of MIT-WEEK 2026. It manages the full lifecycle of the contest:
 

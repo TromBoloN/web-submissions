@@ -39,12 +39,34 @@ function formatTimestamp(d = new Date()) {
   return `${y}${m}${day}-${h}${min}${s}`;
 }
 
+// The import script writes a leading ' in front of values that start with = + - @ (formula protection).
+// Remove only that protective quote, so a real name such as 'Abdul keeps its apostrophe.
 function stripFormulaPrefix(val) {
   const str = String(val ?? "").trim();
-  if (str.startsWith("'")) {
-    return str.slice(1);
+  return str.replace(/^'(?=[=+\-@\t\r])/, "");
+}
+
+// Single-pass placeholder fill. Using a replacer function means "$&", "$1" and similar
+// sequences inside values are never interpreted, and a value can never be re-substituted.
+function fillTemplate(template, values) {
+  return template.replace(
+    /\{(leader_name|team_name|team_code|email|password|login_url|deadline)\}/g,
+    (_match, key) => values[key],
+  );
+}
+
+function normalizePortalUrl(raw) {
+  const trimmed = String(raw ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (!/^https:\/\//i.test(trimmed)) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.hostname.includes(".")) return null;
+  } catch {
+    return null;
   }
-  return str;
+  return trimmed;
 }
 
 function findNewestCredentialsCsv() {
@@ -61,11 +83,11 @@ function findNewestCredentialsCsv() {
 function main() {
   loadLocalEnv();
 
-  const portalUrl = process.env.PORTAL_URL?.trim();
+  const portalUrl = normalizePortalUrl(process.env.PORTAL_URL);
   if (!portalUrl) {
-    console.error("\n[ERROR] Variabel PORTAL_URL belum diatur di environment (.env atau .env.local).");
-    console.error("PORTAL_URL diperlukan untuk mengisi placeholder {login_url} di pesan WhatsApp.");
-    console.error("Silakan tambahkan ke .env, contoh:\n  PORTAL_URL=https://mit-week.vercel.app\n");
+    console.error("\n[ERROR] PORTAL_URL belum diatur atau tidak valid.");
+    console.error("PORTAL_URL harus diawali https:// dan berisi alamat portal asli (dipakai untuk placeholder {login_url}).");
+    console.error("Tambahkan ke .env atau .env.local, contoh:\n  PORTAL_URL=https://nama-proyek-anda.vercel.app\n");
     process.exit(1);
   }
 
@@ -125,14 +147,15 @@ function main() {
     const phone = stripFormulaPrefix(r.phone);
     const password = stripFormulaPrefix(r.password);
 
-    const message = templateContent
-      .replaceAll("{leader_name}", leader_name)
-      .replaceAll("{team_name}", team_name)
-      .replaceAll("{team_code}", team_code)
-      .replaceAll("{email}", email)
-      .replaceAll("{password}", password)
-      .replaceAll("{login_url}", portalUrl)
-      .replaceAll("{deadline}", DEADLINE);
+    const message = fillTemplate(templateContent, {
+      leader_name,
+      team_name,
+      team_code,
+      email,
+      password,
+      login_url: portalUrl,
+      deadline: DEADLINE,
+    });
 
     const isValidPhone = Boolean(phone && /^62\d{8,13}$/.test(phone));
 
@@ -151,8 +174,12 @@ function main() {
   const ts = formatTimestamp();
   const outputPath = path.join(PRIVATE_OUTPUT_DIR, `whatsapp-links-${ts}.html`);
 
+  // "Sent" marks are stored per credentials file, so a later run with the same team codes
+  // (for example after the database is cleaned) never inherits old marks.
+  const storagePrefix = `mitweek-sent:${path.basename(csvPath)}`;
+
   // Safely escape JSON data so <script> cannot be terminated or inject markup
-  const safeJsonData = JSON.stringify(teams).replace(/</g, "\\u003c");
+  const safeJsonData = JSON.stringify({ storagePrefix, teams }).replace(/</g, "\\u003c");
 
   const htmlContent = `<!DOCTYPE html>
 <html lang="id">
@@ -294,11 +321,6 @@ function main() {
       font-weight: 600;
     }
     .btn-wa:hover { background: #22bf5b; }
-    .btn-wa:disabled {
-      background: #334155;
-      color: #64748b;
-      cursor: not-allowed;
-    }
     .btn-copy {
       background: #334155;
       color: var(--text);
@@ -323,6 +345,8 @@ function main() {
       border-radius: 4px;
     }
 
+    /* The flex layout lives on a div inside the cell, never on the td itself. */
+    .check-cell { text-align: center; }
     .checkbox-wrap {
       display: flex;
       align-items: center;
@@ -339,15 +363,6 @@ function main() {
       display: flex;
       gap: 8px;
       align-items: center;
-    }
-
-    .msg-preview {
-      font-size: 12px;
-      color: var(--text-muted);
-      cursor: pointer;
-      text-decoration: underline;
-      margin-top: 4px;
-      display: inline-block;
     }
   </style>
 </head>
@@ -378,7 +393,7 @@ function main() {
     </div>
 
     <div class="controls">
-      <input type="text" id="search-box" class="search-input" placeholder="Cari kode tim, nama tim, ketua, atau nomor HP...">
+      <input type="text" id="search-box" class="search-input" placeholder="Cari kode tim, nama tim, ketua, nomor HP, atau email...">
       <button type="button" class="filter-btn active" data-filter="all">Semua</button>
       <button type="button" class="filter-btn" data-filter="pending">Belum Terkirim</button>
       <button type="button" class="filter-btn" data-filter="sent">Sudah Terkirim</button>
@@ -388,7 +403,7 @@ function main() {
       <table>
         <thead>
           <tr>
-            <th style="width: 50px; text-align: center;">Kirim?</th>
+            <th style="width: 80px; text-align: center;">Terkirim</th>
             <th style="width: 100px;">Kode Tim</th>
             <th>Nama Tim</th>
             <th>Ketua Tim</th>
@@ -408,8 +423,9 @@ ${safeJsonData}
 
   <script>
     (function () {
-      var rawData = document.getElementById('teams-data').textContent;
-      var teams = JSON.parse(rawData);
+      var payload = JSON.parse(document.getElementById('teams-data').textContent);
+      var teams = payload.teams;
+      var storagePrefix = payload.storagePrefix;
       var currentFilter = 'all';
       var searchQuery = '';
 
@@ -420,8 +436,49 @@ ${safeJsonData}
       var searchBox = document.getElementById('search-box');
       var filterButtons = document.querySelectorAll('.filter-btn');
 
+      function storageKey(teamCode) {
+        return storagePrefix + ':' + teamCode;
+      }
+
       function isSent(teamCode) {
-        return localStorage.getItem('sent_' + teamCode) === 'true';
+        try {
+          return localStorage.getItem(storageKey(teamCode)) === 'true';
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function setSent(teamCode, value) {
+        try {
+          if (value) {
+            localStorage.setItem(storageKey(teamCode), 'true');
+          } else {
+            localStorage.removeItem(storageKey(teamCode));
+          }
+        } catch (e) {
+          // storage unavailable: marks simply will not persist
+        }
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (ok) { resolve(); } else { reject(new Error('copy failed')); }
+          } catch (e) {
+            reject(e);
+          }
+        });
       }
 
       function updateStats() {
@@ -477,24 +534,26 @@ ${safeJsonData}
             tr.classList.add('sent-row');
           }
 
-          // Checkbox cell
+          // Checkbox cell (flex wrapper is a div inside the td)
           var tdCheck = document.createElement('td');
-          tdCheck.className = 'checkbox-wrap';
+          tdCheck.className = 'check-cell';
+          var checkWrap = document.createElement('div');
+          checkWrap.className = 'checkbox-wrap';
           var cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.title = 'Tandai sudah terkirim';
           cb.checked = isSent(team.team_code);
           cb.addEventListener('change', function () {
+            setSent(team.team_code, this.checked);
             if (this.checked) {
-              localStorage.setItem('sent_' + team.team_code, 'true');
               tr.classList.add('sent-row');
             } else {
-              localStorage.removeItem('sent_' + team.team_code);
               tr.classList.remove('sent-row');
             }
             updateStats();
           });
-          tdCheck.appendChild(cb);
+          checkWrap.appendChild(cb);
+          tdCheck.appendChild(checkWrap);
           tr.appendChild(tdCheck);
 
           // Team code cell
@@ -548,13 +607,13 @@ ${safeJsonData}
             waBtn.rel = 'noopener noreferrer';
             waBtn.addEventListener('click', function () {
               cb.checked = true;
-              localStorage.setItem('sent_' + team.team_code, 'true');
+              setSent(team.team_code, true);
               tr.classList.add('sent-row');
               updateStats();
             });
           } else {
             waBtn.href = '#';
-            waBtn.disabled = true;
+            waBtn.setAttribute('aria-disabled', 'true');
             waBtn.style.pointerEvents = 'none';
             waBtn.style.opacity = '0.4';
           }
@@ -566,12 +625,17 @@ ${safeJsonData}
           copyBtn.className = 'btn btn-copy';
           copyBtn.textContent = 'Salin Pesan';
           copyBtn.addEventListener('click', function () {
-            navigator.clipboard.writeText(team.message).then(function () {
+            copyText(team.message).then(function () {
               copyBtn.textContent = 'Tersalin!';
               copyBtn.classList.add('copied');
               setTimeout(function () {
                 copyBtn.textContent = 'Salin Pesan';
                 copyBtn.classList.remove('copied');
+              }, 1500);
+            }).catch(function () {
+              copyBtn.textContent = 'Gagal menyalin';
+              setTimeout(function () {
+                copyBtn.textContent = 'Salin Pesan';
               }, 1500);
             });
           });
@@ -617,7 +681,7 @@ ${safeJsonData}
   console.log("Fitur:");
   console.log("- Tombol 'Kirim WhatsApp' membuka chat dengan template pesan yang sudah diisi.");
   console.log("- Tombol 'Salin Pesan' menyalin teks pesan langsung ke clipboard.");
-  console.log("- Checkbox 'Kirim?' tersimpan otomatis di localStorage agar dapat dilanjutkan kapan saja.");
+  console.log("- Checkbox 'Terkirim' tersimpan otomatis di localStorage agar dapat dilanjutkan kapan saja.");
   console.log("- Pencarian cepat berdasarkan kode tim, nama tim, nama ketua, nomor HP, atau email.");
   console.log("\n[PENTING] File HTML ini berisi kata sandi akun tim. Hapus file ini setelah seluruh pesan dikirim!");
 }

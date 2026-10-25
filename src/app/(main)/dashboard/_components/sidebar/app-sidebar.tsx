@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
-import { Command } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import {
@@ -18,6 +18,7 @@ import { APP_CONFIG } from "@/config/app-config";
 import type { CurrentUser } from "@/lib/user-display";
 import { getSidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
+import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
@@ -45,7 +46,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link prefetch={false} href="/">
-                <Command />
+                <Image src={logo} alt="" className="size-6 object-contain" priority />
                 <span className="font-semibold text-base">{APP_CONFIG.name}</span>
               </Link>
             </SidebarMenuButton>

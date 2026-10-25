@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/server";
 import { type CurrentUser, getRoleLabel } from "@/lib/user-display";
 import { getPreference } from "@/server/server-actions";
 
-import { LayoutControls } from "./header/layout-controls";
 import { SearchDialog } from "./header/search-dialog";
 import { ThemeSwitcher } from "./header/theme-switcher";
 import { AppSidebar } from "./sidebar/app-sidebar";
@@ -69,7 +68,6 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
               <span className="hidden text-sm sm:block">
                 {user.full_name} <span className="text-muted-foreground">({getRoleLabel(user.role)})</span>
               </span>
-              <LayoutControls />
               <ThemeSwitcher />
             </div>
           </div>
