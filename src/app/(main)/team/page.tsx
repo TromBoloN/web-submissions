@@ -9,7 +9,11 @@ export default async function TeamPage() {
 
   const [teamRes, settingsRes, noticeRes] = await Promise.all([
     supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
-    supabase.from("competition_settings").select("submission_closes_at, juknis_url").eq("id", true).maybeSingle(),
+    supabase
+      .from("competition_settings")
+      .select("submission_closes_at, juknis_url, contact_whatsapp")
+      .eq("id", true)
+      .maybeSingle(),
     supabase.rpc("get_my_finalist_notice"),
   ]);
 
@@ -41,6 +45,7 @@ export default async function TeamPage() {
       serverNowIso={serverNowIso}
       initialClosed={initialClosed}
       juknisUrl={settingsRes.data?.juknis_url ?? null}
+      contactWhatsapp={settingsRes.data?.contact_whatsapp ?? null}
       finalistNotice={finalistNotice}
     />
   );

@@ -56,7 +56,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
   // Load submission (must be 'submitted')
   const { data: submission, error: submissionError } = await supabase
     .from("submissions")
-    .select("status, github_url, live_demo_url, video_url")
+    .select("status, github_url, live_demo_url, video_url, notes_for_judges")
     .eq("team_id", teamId)
     .maybeSingle();
 
@@ -84,6 +84,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
         total_weighted_score: Number(prelimScore.total_weighted_score),
         feedback: prelimScore.feedback,
         updated_at: prelimScore.updated_at,
+        locked_at: prelimScore.locked_at,
       };
     }
   } else {
@@ -105,6 +106,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
         total_weighted_score: Number(finalScore.total_weighted_score),
         feedback: finalScore.feedback,
         updated_at: finalScore.updated_at,
+        locked_at: finalScore.locked_at,
       };
     }
   }
@@ -121,6 +123,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
         github_url: submission.github_url ?? "",
         live_demo_url: submission.live_demo_url ?? "",
         video_url: submission.video_url ?? "",
+        notes_for_judges: submission.notes_for_judges ?? "",
       }}
       initialScore={initialScore}
     />

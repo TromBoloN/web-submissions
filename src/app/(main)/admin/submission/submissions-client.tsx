@@ -13,6 +13,7 @@ import {
   ExternalLink,
   FileQuestion,
   HelpCircle,
+  History,
   Info,
   MoreVertical,
   Pencil,
@@ -44,6 +45,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 
 import { adminRecheckLinks, adminUpdateSubmission } from "./actions";
@@ -62,6 +64,7 @@ export type SubmissionRow = {
   github_url: string;
   live_demo_url: string;
   video_url: string;
+  notes_for_judges: string;
   submitted_at: string | null;
   first_submitted_at: string | null;
   updated_at: string | null;
@@ -69,8 +72,21 @@ export type SubmissionRow = {
   link_checked_at: string | null;
 };
 
+export type SubmissionHistoryItem = {
+  id: number;
+  submission_id: string;
+  github_url: string;
+  live_demo_url: string;
+  video_url: string;
+  notes_for_judges: string;
+  status: string;
+  changed_at: string;
+  changed_by_name: string | null;
+};
+
 type SubmissionsClientProps = {
   rows: SubmissionRow[];
+  history: SubmissionHistoryItem[];
 };
 
 const features = tableFeatures({});
@@ -274,6 +290,96 @@ function LinkCheckDetailDialog({
   );
 }
 
+function HistoryField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-1.5">
+      <span className="w-20 shrink-0 text-muted-foreground">{label}:</span>
+      {value.trim() ? (
+        <span className="break-all text-foreground">{value}</span>
+      ) : (
+        <span className="text-muted-foreground italic">kosong</span>
+      )}
+    </div>
+  );
+}
+
+function SubmissionHistoryDialog({
+  row,
+  items,
+  open,
+  onOpenChange,
+}: {
+  row: SubmissionRow | null;
+  items: SubmissionHistoryItem[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!row) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="size-4 text-primary" />
+            Riwayat Perubahan Submission
+          </DialogTitle>
+          <DialogDescription>
+            {row.team_code} — {row.team_name}
+          </DialogDescription>
+        </DialogHeader>
+
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-10 text-center">
+            <History className="mx-auto mb-2 size-8 text-muted-foreground opacity-60" />
+            <p className="font-medium text-sm">Belum ada riwayat tercatat.</p>
+            <p className="mt-1 text-muted-foreground text-xs">
+              Riwayat dicatat otomatis setiap kali submission dibuat atau diubah.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 py-2">
+            {items.map((item) => (
+              <div key={item.id} className="rounded-lg border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-foreground text-xs">{formatTimestampWita(item.changed_at)}</span>
+                  {item.status === "submitted" ? (
+                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Terkirim</Badge>
+                  ) : (
+                    <Badge variant="secondary">Draf</Badge>
+                  )}
+                </div>
+                <p className="mt-1 text-muted-foreground text-xs">
+                  Oleh: <span className="font-medium text-foreground">{item.changed_by_name ?? "Sistem"}</span>
+                </p>
+                <div className="mt-2 space-y-1 text-xs">
+                  <HistoryField label="GitHub" value={item.github_url} />
+                  <HistoryField label="Live Demo" value={item.live_demo_url} />
+                  <HistoryField label="Video" value={item.video_url} />
+                  {item.notes_for_judges.trim() && (
+                    <div className="flex gap-1.5">
+                      <span className="w-20 shrink-0 text-muted-foreground">Catatan juri:</span>
+                      <span className="whitespace-pre-wrap break-words text-foreground">{item.notes_for_judges}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="secondary" size="sm">
+              Tutup
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AdminEditSubmissionDialog({
   row,
   open,
@@ -288,6 +394,7 @@ function AdminEditSubmissionDialog({
   const [githubUrl, setGithubUrl] = useState(row.github_url);
   const [liveDemoUrl, setLiveDemoUrl] = useState(row.live_demo_url);
   const [videoUrl, setVideoUrl] = useState(row.video_url);
+  const [notesForJudges, setNotesForJudges] = useState(row.notes_for_judges);
   const [status, setStatus] = useState<"draft" | "submitted">(row.status === "submitted" ? "submitted" : "draft");
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
@@ -301,6 +408,7 @@ function AdminEditSubmissionDialog({
     form.set("github_url", githubUrl.trim());
     form.set("live_demo_url", liveDemoUrl.trim());
     form.set("video_url", videoUrl.trim());
+    form.set("notes_for_judges", notesForJudges.trim());
     form.set("status", status);
 
     startTransition(async () => {
@@ -371,6 +479,22 @@ function AdminEditSubmissionDialog({
           </div>
 
           <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="admin-notes_for_judges">Catatan untuk Juri</Label>
+              <span className="text-muted-foreground text-xs tabular-nums">{notesForJudges.length}/1000</span>
+            </div>
+            <Textarea
+              id="admin-notes_for_judges"
+              rows={4}
+              maxLength={1000}
+              value={notesForJudges}
+              onChange={(e) => setNotesForJudges(e.target.value)}
+              placeholder="Catatan opsional dari peserta untuk dewan juri..."
+            />
+            <p className="text-muted-foreground text-xs">Ditampilkan sebagai teks biasa di halaman penilaian juri.</p>
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Status Submission</Label>
             <Select value={status} onValueChange={(val) => setStatus(val as "draft" | "submitted")}>
               <SelectTrigger className="w-full">
@@ -404,7 +528,7 @@ function AdminEditSubmissionDialog({
   );
 }
 
-export function SubmissionsClient({ rows }: SubmissionsClientProps) {
+export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -412,6 +536,7 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
   const [page, setPage] = useState(1);
   const [editingRow, setEditingRow] = useState<SubmissionRow | null>(null);
   const [detailRow, setDetailRow] = useState<SubmissionRow | null>(null);
+  const [historyRow, setHistoryRow] = useState<SubmissionRow | null>(null);
   const [recheckingId, setRecheckingId] = useState<string | null>(null);
 
   // Summary counts
@@ -592,6 +717,18 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
       cell: ({ row }) => <SubmissionLink url={row.original.video_url} label="Video Demo" />,
     },
     {
+      id: "notes_for_judges",
+      header: "Catatan Juri",
+      cell: ({ row }) =>
+        row.original.notes_for_judges.trim() ? (
+          <span className="block max-w-[220px] truncate text-xs" title={row.original.notes_for_judges}>
+            {row.original.notes_for_judges}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">-</span>
+        ),
+    },
+    {
       id: "first_submitted_at",
       header: "Pertama Dikirim",
       cell: ({ row }) => (
@@ -642,6 +779,12 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
               <Pencil className="mr-2 size-4" />
               Ubah submission
             </DropdownMenuItem>
+            {row.original.submission_id && (
+              <DropdownMenuItem onClick={() => setHistoryRow(row.original)}>
+                <History className="mr-2 size-4" />
+                Riwayat perubahan
+              </DropdownMenuItem>
+            )}
             {row.original.submission_id && (
               <DropdownMenuItem
                 disabled={recheckingId === row.original.team_id}
@@ -819,6 +962,18 @@ export function SubmissionsClient({ rows }: SubmissionsClientProps) {
           }}
           onRecheck={handleRecheck}
           isRechecking={recheckingId === detailRow.team_id}
+        />
+      )}
+
+      {historyRow && (
+        <SubmissionHistoryDialog
+          key={historyRow.team_id}
+          row={historyRow}
+          items={history.filter((item) => item.submission_id === historyRow.submission_id)}
+          open={historyRow !== null}
+          onOpenChange={(open) => {
+            if (!open) setHistoryRow(null);
+          }}
         />
       )}
     </div>

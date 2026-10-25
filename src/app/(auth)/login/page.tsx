@@ -6,6 +6,8 @@ import type { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import { APP_CONFIG } from "@/config/app-config";
 import { getCurrentProfile, getDashboardPath } from "@/lib/auth";
+import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
+import { createClient } from "@/lib/supabase/server";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 import { LoginForm } from "../_components/login-form";
@@ -23,6 +25,10 @@ export default async function LoginPage() {
     redirect(getDashboardPath(profile.role));
   }
 
+  const supabase = await createClient();
+  const { data: contactWhatsapp } = await supabase.rpc("get_public_contact_whatsapp");
+  const formattedContact = formatWhatsAppNumber(contactWhatsapp);
+
   return (
     <div className="flex w-full max-w-sm flex-col items-center">
       <Card className="w-full gap-6 p-6 shadow-sm sm:p-8">
@@ -33,7 +39,19 @@ export default async function LoginPage() {
         </div>
         <LoginForm />
         <p className="text-center text-muted-foreground text-xs leading-relaxed">
-          Tim: gunakan email saat mendaftar. Juri: gunakan username dari panitia. Lupa kata sandi? Hubungi panitia.
+          Tim: gunakan email saat mendaftar. Juri: gunakan username dari panitia. Lupa kata sandi?{" "}
+          {contactWhatsapp ? (
+            <a
+              href={toWhatsAppUrl(contactWhatsapp)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Hubungi panitia via WhatsApp{formattedContact ? ` (${formattedContact})` : ""}
+            </a>
+          ) : (
+            "Hubungi panitia."
+          )}
         </p>
       </Card>
       <p className="mt-6 text-center text-muted-foreground text-xs">#SiberAmanMilikBersama</p>

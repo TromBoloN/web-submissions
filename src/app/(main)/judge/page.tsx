@@ -27,11 +27,14 @@ export default async function JudgePage() {
     isPrelimNeeded
       ? supabase
           .from("preliminary_scores")
-          .select("team_id, total_weighted_score, updated_at")
+          .select("team_id, total_weighted_score, updated_at, locked_at")
           .eq("judge_id", profile.id)
       : Promise.resolve({ data: [], error: null }),
     isFinalNeeded
-      ? supabase.from("final_scores").select("team_id, total_weighted_score, updated_at").eq("judge_id", profile.id)
+      ? supabase
+          .from("final_scores")
+          .select("team_id, total_weighted_score, updated_at, locked_at")
+          .eq("judge_id", profile.id)
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -57,6 +60,7 @@ export default async function JudgePage() {
       {
         total_weighted_score: Number(score.total_weighted_score),
         updated_at: score.updated_at,
+        locked_at: score.locked_at,
       },
     ]),
   );
@@ -67,6 +71,7 @@ export default async function JudgePage() {
       {
         total_weighted_score: Number(score.total_weighted_score),
         updated_at: score.updated_at,
+        locked_at: score.locked_at,
       },
     ]),
   );

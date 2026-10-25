@@ -8,7 +8,7 @@ export default async function SettingsPage() {
   const [settingsRes, caseStudyRes] = await Promise.all([
     supabase
       .from("competition_settings")
-      .select("submission_closes_at, updated_at, juknis_url")
+      .select("submission_closes_at, updated_at, juknis_url, contact_whatsapp")
       .eq("id", true)
       .maybeSingle(),
     supabase.from("case_study").select("title, content_md, release_at, updated_at").eq("id", true).maybeSingle(),
@@ -35,6 +35,7 @@ export default async function SettingsPage() {
     <SettingsClient
       currentClosesAt={settings?.submission_closes_at ?? null}
       currentJuknisUrl={settings?.juknis_url ?? null}
+      currentContactWhatsapp={settings?.contact_whatsapp ?? null}
       updatedAt={settings?.updated_at ?? null}
       caseStudy={
         caseStudy

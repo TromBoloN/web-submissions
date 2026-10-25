@@ -39,13 +39,8 @@ const CHECKLIST_ITEMS = [
   },
 ] as const;
 
-type SubmissionChecklistProps = {
-  isSubmitted: boolean;
-};
-
-export function SubmissionChecklist({ isSubmitted }: SubmissionChecklistProps) {
-  // Ditutup secara default jika status sudah 'submitted'
-  const [isOpen, setIsOpen] = useState(!isSubmitted);
+export function SubmissionChecklist() {
+  const [isOpen, setIsOpen] = useState(false);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
   const checkedCount = CHECKLIST_ITEMS.filter((item) => checkedItems[item.id]).length;

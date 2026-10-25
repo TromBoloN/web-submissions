@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import Link from "next/link";
 
-import { Check, ClipboardCheck, FileEdit, FileQuestion, Layers, Search, Trophy } from "lucide-react";
+import { Check, ClipboardCheck, Eye, FileEdit, FileQuestion, Layers, Lock, Search, Trophy } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ export interface JudgeTeamItem {
   score: {
     total_weighted_score: number;
     updated_at: string;
+    locked_at: string | null;
   } | null;
 }
 
@@ -147,12 +148,21 @@ function StageSection({
                 <TableBody>
                   {filteredTeams.map((item) => {
                     const isScored = item.score !== null;
+                    const isLocked = Boolean(item.score?.locked_at);
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-mono font-medium">{item.team_code}</TableCell>
                         <TableCell className="font-medium">{item.team_name}</TableCell>
                         <TableCell>
-                          {isScored ? (
+                          {isLocked ? (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            >
+                              <Lock className="size-3" />
+                              Terkunci
+                            </Badge>
+                          ) : isScored ? (
                             <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
                               <Check className="size-3" />
                               Sudah dinilai
@@ -180,7 +190,12 @@ function StageSection({
                         <TableCell className="text-right">
                           <Button asChild size="sm" variant={isScored ? "outline" : "default"}>
                             <Link href={`/judge/nilai/${stage}/${item.id}`}>
-                              {isScored ? (
+                              {isLocked ? (
+                                <>
+                                  <Eye className="mr-1.5 size-3.5" />
+                                  Lihat nilai
+                                </>
+                              ) : isScored ? (
                                 <>
                                   <FileEdit className="mr-1.5 size-3.5" />
                                   Ubah nilai

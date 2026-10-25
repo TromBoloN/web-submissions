@@ -4,7 +4,16 @@ import { useState, useTransition } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { AlertTriangle, BookOpen, CalendarClock, Clock, ExternalLink, FileText, Info } from "lucide-react";
+import {
+  AlertTriangle,
+  BookOpen,
+  CalendarClock,
+  Clock,
+  ExternalLink,
+  FileText,
+  Info,
+  MessageCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { MarkdownContent } from "@/components/markdown-content";
@@ -15,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
 import {
   formatDeadlineWita,
   parseWitaInputToUtcIso,
@@ -22,7 +32,7 @@ import {
   toWitaDateTimeLocalStringExact,
 } from "@/lib/deadline";
 
-import { updateCaseStudy, updateCompetitionDeadline, updateJuknisUrl } from "./actions";
+import { updateCaseStudy, updateCompetitionDeadline, updateContactWhatsapp, updateJuknisUrl } from "./actions";
 
 type CaseStudyData = {
   title: string;
@@ -34,6 +44,7 @@ type CaseStudyData = {
 type SettingsClientProps = {
   currentClosesAt: string | null;
   currentJuknisUrl: string | null;
+  currentContactWhatsapp: string | null;
   updatedAt: string | null;
   caseStudy: CaseStudyData | null;
 };
@@ -49,7 +60,13 @@ function formatUpdatedAt(iso: string | null) {
   }).format(date)} WITA`;
 }
 
-export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, caseStudy }: SettingsClientProps) {
+export function SettingsClient({
+  currentClosesAt,
+  currentJuknisUrl,
+  currentContactWhatsapp,
+  updatedAt,
+  caseStudy,
+}: SettingsClientProps) {
   const router = useRouter();
   const [deadlineInput, setDeadlineInput] = useState(() => toWitaDateTimeLocalString(currentClosesAt));
   const [deadlineError, setDeadlineError] = useState<string>();
@@ -58,6 +75,10 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, c
   const [juknisInput, setJuknisInput] = useState(currentJuknisUrl ?? "");
   const [juknisError, setJuknisError] = useState<string>();
   const [isJuknisPending, startJuknisTransition] = useTransition();
+
+  const [contactInput, setContactInput] = useState(currentContactWhatsapp ?? "");
+  const [contactError, setContactError] = useState<string>();
+  const [isContactPending, startContactTransition] = useTransition();
 
   const [caseStudyTitle, setCaseStudyTitle] = useState(caseStudy?.title ?? "");
   const [caseStudyContent, setCaseStudyContent] = useState(caseStudy?.contentMd ?? "");
@@ -72,6 +93,7 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, c
   const formattedUpdatedAt = formatUpdatedAt(updatedAt);
   const formattedCaseStudyUpdatedAt = formatUpdatedAt(caseStudy?.updatedAt ?? null);
   const canOpenSavedUrl = Boolean(currentJuknisUrl?.startsWith("https://"));
+  const formattedCurrentContact = formatWhatsAppNumber(currentContactWhatsapp);
 
   const isReleaseAtInPast = Boolean(
     caseStudyReleaseAt &&
@@ -113,6 +135,22 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, c
     });
   };
 
+  const handleContactSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setContactError(undefined);
+    const form = new FormData(event.currentTarget);
+
+    startContactTransition(async () => {
+      const result = await updateContactWhatsapp(form);
+      if (!result.success) {
+        setContactError(result.error);
+        return;
+      }
+      toast.success("Nomor WhatsApp panitia berhasil diperbarui.");
+      router.refresh();
+    });
+  };
+
   const handleCaseStudySubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCaseStudyError(undefined);
@@ -139,7 +177,9 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, c
     <div className="space-y-6">
       <div>
         <h1 className="font-semibold text-2xl">Pengaturan</h1>
-        <p className="text-muted-foreground">Kelola konfigurasi, tautan juknis, dan studi kasus MIT-WEEK 2026.</p>
+        <p className="text-muted-foreground">
+          Kelola konfigurasi, tautan juknis, kontak bantuan, dan studi kasus MIT-WEEK 2026.
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -254,7 +294,64 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, c
             </form>
           </Card>
 
-          {/* 3. Studi Kasus */}
+          {/* 3. Kontak Bantuan */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="size-5 text-primary" />
+                    Kontak Bantuan
+                  </CardTitle>
+                  <CardDescription>
+                    Nomor WhatsApp panitia yang ditampilkan di halaman masuk dan dasbor peserta.
+                  </CardDescription>
+                </div>
+                {currentContactWhatsapp && (
+                  <Button asChild variant="outline" size="sm" className="shrink-0">
+                    <a href={toWhatsAppUrl(currentContactWhatsapp)} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-1.5 size-4" />
+                      Buka WhatsApp
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <form onSubmit={handleContactSubmit}>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="contact_whatsapp">Nomor WhatsApp Panitia</Label>
+                  <Input
+                    id="contact_whatsapp"
+                    name="contact_whatsapp"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="6281234567890"
+                    value={contactInput}
+                    onChange={(event) => setContactInput(event.target.value)}
+                    maxLength={30}
+                    className="max-w-md font-mono text-sm"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Format lokal <code>08...</code> atau internasional <code>628...</code>. Tanda +, spasi, titik, dan
+                    tanda hubung diperbolehkan. Kosongkan untuk menyembunyikan kontak bantuan.
+                  </p>
+                </div>
+
+                {contactError && <p className="text-destructive text-sm">{contactError}</p>}
+              </CardContent>
+              <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+                <div className="text-muted-foreground text-xs">
+                  {formattedCurrentContact ? `Tersimpan: ${formattedCurrentContact}` : "Belum ada nomor tersimpan."}
+                </div>
+                <Button type="submit" disabled={isContactPending}>
+                  {isContactPending ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+
+          {/* 4. Studi Kasus */}
           <Card>
             <CardHeader>
               <div>
@@ -396,6 +493,15 @@ export function SettingsClient({ currentClosesAt, currentJuknisUrl, updatedAt, c
                   <p className="mt-0.5 truncate font-mono text-foreground text-xs" title={currentJuknisUrl}>
                     {currentJuknisUrl}
                   </p>
+                ) : (
+                  <p className="mt-0.5 text-muted-foreground text-xs">Belum diatur</p>
+                )}
+              </div>
+
+              <div className="border-t pt-3">
+                <span className="text-muted-foreground text-xs">Kontak bantuan aktif:</span>
+                {formattedCurrentContact ? (
+                  <p className="mt-0.5 font-mono text-foreground text-xs">{formattedCurrentContact}</p>
                 ) : (
                   <p className="mt-0.5 text-muted-foreground text-xs">Belum diatur</p>
                 )}

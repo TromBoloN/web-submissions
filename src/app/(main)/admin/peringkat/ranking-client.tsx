@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import Link from "next/link";
 
-import { AlertTriangle, Award, CheckCircle2, Clock, Download, Eye, Info, Users } from "lucide-react";
+import { AlertTriangle, Award, CheckCircle2, Clock, Download, Eye, Info, Lock, Users } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ export interface JudgeScoreDetail {
   total_weighted_score: number | null;
   feedback: string | null;
   updated_at: string;
+  locked_at: string | null;
 }
 
 interface RankingClientProps {
@@ -492,10 +493,26 @@ export function RankingClient({
                     <CardHeader className="p-4 pb-2 bg-muted/30">
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="font-semibold text-sm">{score.judge_name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-sm">{score.judge_name}</p>
+                            {score.locked_at && (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300"
+                              >
+                                <Lock className="size-2.5" />
+                                Terkunci
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-[11px] text-muted-foreground">
                             Terakhir diubah: {formatWitaDateTime(score.updated_at)}
                           </p>
+                          {score.locked_at && (
+                            <p className="text-[11px] text-muted-foreground">
+                              Dikunci: {formatWitaDateTime(score.locked_at)}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Total Berbobot:</span>

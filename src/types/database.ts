@@ -45,18 +45,21 @@ export type Database = {
       };
       competition_settings: {
         Row: {
+          contact_whatsapp: string | null;
           id: boolean;
           juknis_url: string | null;
           submission_closes_at: string;
           updated_at: string;
         };
         Insert: {
+          contact_whatsapp?: string | null;
           id?: boolean;
           juknis_url?: string | null;
           submission_closes_at: string;
           updated_at?: string;
         };
         Update: {
+          contact_whatsapp?: string | null;
           id?: boolean;
           juknis_url?: string | null;
           submission_closes_at?: string;
@@ -101,6 +104,7 @@ export type Database = {
           functionality_score: number;
           id: string;
           judge_id: string;
+          locked_at: string | null;
           presentation_qa_score: number;
           team_id: string;
           total_weighted_score: number | null;
@@ -116,6 +120,7 @@ export type Database = {
           functionality_score: number;
           id?: string;
           judge_id: string;
+          locked_at?: string | null;
           presentation_qa_score: number;
           team_id: string;
           total_weighted_score?: number | null;
@@ -131,6 +136,7 @@ export type Database = {
           functionality_score?: number;
           id?: string;
           judge_id?: string;
+          locked_at?: string | null;
           presentation_qa_score?: number;
           team_id?: string;
           total_weighted_score?: number | null;
@@ -178,6 +184,7 @@ export type Database = {
           functionality_score: number;
           id: string;
           judge_id: string;
+          locked_at: string | null;
           team_id: string;
           total_weighted_score: number | null;
           ui_ux_score: number;
@@ -192,6 +199,7 @@ export type Database = {
           functionality_score: number;
           id?: string;
           judge_id: string;
+          locked_at?: string | null;
           team_id: string;
           total_weighted_score?: number | null;
           ui_ux_score: number;
@@ -206,6 +214,7 @@ export type Database = {
           functionality_score?: number;
           id?: string;
           judge_id?: string;
+          locked_at?: string | null;
           team_id?: string;
           total_weighted_score?: number | null;
           ui_ux_score?: number;
@@ -272,6 +281,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      submission_history: {
+        Row: {
+          changed_at: string;
+          changed_by: string | null;
+          github_url: string;
+          id: number;
+          live_demo_url: string;
+          notes_for_judges: string;
+          status: string;
+          submission_id: string;
+          team_id: string;
+          video_url: string;
+        };
+        Insert: {
+          changed_at?: string;
+          changed_by?: string | null;
+          github_url?: string;
+          id?: never;
+          live_demo_url?: string;
+          notes_for_judges?: string;
+          status: string;
+          submission_id: string;
+          team_id: string;
+          video_url?: string;
+        };
+        Update: {
+          changed_at?: string;
+          changed_by?: string | null;
+          github_url?: string;
+          id?: never;
+          live_demo_url?: string;
+          notes_for_judges?: string;
+          status?: string;
+          submission_id?: string;
+          team_id?: string;
+          video_url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "submission_history_changed_by_fkey";
+            columns: ["changed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "submission_history_submission_id_fkey";
+            columns: ["submission_id"];
+            isOneToOne: false;
+            referencedRelation: "submissions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       submissions: {
         Row: {
           first_submitted_at: string | null;
@@ -280,6 +343,7 @@ export type Database = {
           link_check: Json | null;
           link_checked_at: string | null;
           live_demo_url: string;
+          notes_for_judges: string;
           status: Database["public"]["Enums"]["submission_status_type"];
           submitted_at: string;
           team_id: string;
@@ -293,6 +357,7 @@ export type Database = {
           link_check?: Json | null;
           link_checked_at?: string | null;
           live_demo_url?: string;
+          notes_for_judges?: string;
           status?: Database["public"]["Enums"]["submission_status_type"];
           submitted_at?: string;
           team_id: string;
@@ -306,6 +371,7 @@ export type Database = {
           link_check?: Json | null;
           link_checked_at?: string | null;
           live_demo_url?: string;
+          notes_for_judges?: string;
           status?: Database["public"]["Enums"]["submission_status_type"];
           submitted_at?: string;
           team_id?: string;
@@ -418,6 +484,10 @@ export type Database = {
           message: string;
           published_at: string | null;
         }[];
+      };
+      get_public_contact_whatsapp: {
+        Args: never;
+        Returns: string | null;
       };
       judge_can_score_final: { Args: { p_team_id: string }; Returns: boolean };
       judge_can_score_preliminary: {

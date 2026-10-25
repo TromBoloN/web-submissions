@@ -19,6 +19,7 @@ const adminSubmissionSchema = z.object({
   github_url: z.string().trim().max(500, "URL repositori maksimal 500 karakter."),
   live_demo_url: z.string().trim().max(500, "URL live demo maksimal 500 karakter."),
   video_url: z.string().trim().max(500, "URL video demo maksimal 500 karakter."),
+  notes_for_judges: z.string().trim().max(1000, "Catatan untuk juri maksimal 1.000 karakter."),
   status: z.enum(["draft", "submitted"]),
 });
 
@@ -33,6 +34,7 @@ export async function adminUpdateSubmission(formData: FormData): Promise<AdminUp
     github_url: formData.get("github_url"),
     live_demo_url: formData.get("live_demo_url"),
     video_url: formData.get("video_url"),
+    notes_for_judges: formData.get("notes_for_judges"),
     status: formData.get("status"),
   });
 
@@ -40,7 +42,7 @@ export async function adminUpdateSubmission(formData: FormData): Promise<AdminUp
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Data submission tidak valid." };
   }
 
-  const { team_id, github_url, live_demo_url, video_url, status } = parsed.data;
+  const { team_id, github_url, live_demo_url, video_url, notes_for_judges, status } = parsed.data;
 
   // Validate URLs according to status
   if (status === "submitted") {
@@ -110,6 +112,7 @@ export async function adminUpdateSubmission(formData: FormData): Promise<AdminUp
         github_url,
         live_demo_url,
         video_url,
+        notes_for_judges,
         status,
       })
       .eq("team_id", team_id)
@@ -131,6 +134,7 @@ export async function adminUpdateSubmission(formData: FormData): Promise<AdminUp
         github_url,
         live_demo_url,
         video_url,
+        notes_for_judges,
         status,
       })
       .select();

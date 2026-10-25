@@ -20,6 +20,7 @@ const submissionInputSchema = z.object({
   github_url: z.string().trim().max(500, "URL repositori maksimal 500 karakter."),
   live_demo_url: z.string().trim().max(500, "URL live demo maksimal 500 karakter."),
   video_url: z.string().trim().max(500, "URL video demo maksimal 500 karakter."),
+  notes_for_judges: z.string().trim().max(1000, "Catatan untuk juri maksimal 1.000 karakter."),
   intent: z.enum(["draft", "submit"]),
 });
 
@@ -33,6 +34,7 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
     github_url: formData.get("github_url"),
     live_demo_url: formData.get("live_demo_url"),
     video_url: formData.get("video_url"),
+    notes_for_judges: formData.get("notes_for_judges"),
     intent: formData.get("intent"),
   });
 
@@ -40,7 +42,7 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Data submission tidak valid." };
   }
 
-  const { github_url, live_demo_url, video_url, intent } = parsed.data;
+  const { github_url, live_demo_url, video_url, notes_for_judges, intent } = parsed.data;
 
   const supabase = await createClient();
 
@@ -116,6 +118,7 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
         github_url,
         live_demo_url,
         video_url,
+        notes_for_judges,
         status: targetStatus,
       })
       .eq("team_id", team.id)
@@ -153,6 +156,7 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
       github_url,
       live_demo_url,
       video_url,
+      notes_for_judges,
       status: targetStatus,
     })
     .select();
@@ -166,6 +170,7 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
           github_url,
           live_demo_url,
           video_url,
+          notes_for_judges,
           status: targetStatus,
         })
         .eq("team_id", team.id)

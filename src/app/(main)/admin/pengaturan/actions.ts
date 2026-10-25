@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentProfile } from "@/lib/auth";
+import { normalizeWhatsAppNumber } from "@/lib/contact";
 import { parseWitaInputToExclusiveCutoff, parseWitaInputToUtcIso } from "@/lib/deadline";
 import { createClient } from "@/lib/supabase/server";
 
@@ -118,6 +119,74 @@ export async function updateJuknisUrl(formData: FormData): Promise<ActionResult>
   revalidatePath("/admin/pengaturan");
   revalidatePath("/team", "layout");
   revalidatePath("/judge", "layout");
+  return { success: true };
+}
+
+const contactWhatsappSchema = z.object({
+  contact_whatsapp: z.string().trim().max(30, "Nomor WhatsApp maksimal 30 karakter."),
+});
+
+export async function updateContactWhatsapp(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const raw = formData.get("contact_whatsapp");
+  const parsed = contactWhatsappSchema.safeParse({
+    contact_whatsapp: typeof raw === "string" ? raw : "",
+  });
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Nomor WhatsApp tidak valid." };
+  }
+
+  const rawNumber = parsed.data.contact_whatsapp;
+
+  if (rawNumber !== "" && !/^[0-9+\-\s().]+$/.test(rawNumber)) {
+    return {
+      success: false,
+      error: "Nomor WhatsApp hanya boleh berisi angka, spasi, +, tanda hubung, titik, atau kurung.",
+    };
+  }
+
+  const digits = normalizeWhatsAppNumber(rawNumber);
+
+  if (rawNumber !== "" && digits === "") {
+    return { success: false, error: "Nomor WhatsApp tidak valid." };
+  }
+
+  if (digits !== "" && (digits.length < 8 || digits.length > 15)) {
+    return {
+      success: false,
+      error: "Nomor WhatsApp harus terdiri dari 8-15 digit. Contoh: 6281234567890.",
+    };
+  }
+
+  const normalized = digits === "" ? null : digits;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("competition_settings")
+    .update({
+      contact_whatsapp: normalized,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true)
+    .select();
+
+  if (error) {
+    console.error("Failed to update contact whatsapp", error);
+    return { success: false, error: "Gagal menyimpan nomor WhatsApp. Coba lagi." };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
+  }
+
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/team");
+  revalidatePath("/login");
   return { success: true };
 }
 

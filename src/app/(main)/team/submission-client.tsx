@@ -17,7 +17,9 @@ import {
   FileText,
   Globe,
   HelpCircle,
+  MessageCircle,
   RotateCw,
+  StickyNote,
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +40,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
 import { formatDeadlineWita } from "@/lib/deadline";
 import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
@@ -57,6 +61,7 @@ type SubmissionClientProps = {
   serverNowIso: string;
   initialClosed: boolean;
   juknisUrl: string | null;
+  contactWhatsapp: string | null;
   finalistNotice: FinalistNoticeData | null;
 };
 
@@ -208,6 +213,7 @@ export function SubmissionClient({
   serverNowIso,
   initialClosed,
   juknisUrl,
+  contactWhatsapp,
   finalistNotice,
 }: SubmissionClientProps) {
   const router = useRouter();
@@ -218,6 +224,7 @@ export function SubmissionClient({
   const [githubUrl, setGithubUrl] = useState(submission?.github_url ?? "");
   const [liveDemoUrl, setLiveDemoUrl] = useState(submission?.live_demo_url ?? "");
   const [videoUrl, setVideoUrl] = useState(submission?.video_url ?? "");
+  const [notesForJudges, setNotesForJudges] = useState(submission?.notes_for_judges ?? "");
 
   const [fieldErrors, setFieldErrors] = useState<{
     github_url?: string;
@@ -331,6 +338,7 @@ export function SubmissionClient({
     form.set("github_url", githubUrl.trim());
     form.set("live_demo_url", liveDemoUrl.trim());
     form.set("video_url", videoUrl.trim());
+    form.set("notes_for_judges", notesForJudges.trim());
     form.set("intent", intent);
 
     startTransition(async () => {
@@ -434,8 +442,6 @@ export function SubmissionClient({
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
           {isSubmitted && submission && <SubmissionReceipt team={team} submission={submission} />}
-
-          <SubmissionChecklist isSubmitted={isSubmitted} />
 
           <Card>
             <CardHeader>
@@ -542,8 +548,36 @@ export function SubmissionClient({
               </div>
 
               <p className="text-muted-foreground text-xs italic">
-                * Pemeriksaan ini hanya peringatan dan tidak menghalangi pengiriman.
+                * Pemeriksaan tautan hanya peringatan dan tidak menghalangi pengiriman.
               </p>
+
+              <div className="space-y-2 border-t pt-5">
+                <Label htmlFor="notes_for_judges" className="flex items-center gap-1.5 font-medium">
+                  <StickyNote className="size-4 text-muted-foreground" />
+                  Catatan untuk Juri
+                  <span className="font-normal text-muted-foreground text-xs">(opsional)</span>
+                </Label>
+                <Textarea
+                  id="notes_for_judges"
+                  name="notes_for_judges"
+                  rows={4}
+                  maxLength={1000}
+                  value={notesForJudges}
+                  disabled={isReadOnly || isPending}
+                  onChange={(e) => setNotesForJudges(e.target.value)}
+                  placeholder="Contoh: akun demo yang dapat dipakai juri, langkah pengujian utama, atau batasan yang perlu diketahui."
+                  className="min-h-24 resize-y"
+                />
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-muted-foreground text-xs">
+                    Ditampilkan kepada dewan juri dan panitia. Gunakan akun demo khusus, jangan bagikan kata sandi
+                    pribadi.
+                  </p>
+                  <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
+                    {notesForJudges.length}/1000
+                  </span>
+                </div>
+              </div>
 
               {serverError && <p className="text-destructive text-sm">{serverError}</p>}
             </CardContent>
@@ -551,20 +585,22 @@ export function SubmissionClient({
             {!isReadOnly && (
               <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
                 <div className="flex flex-wrap items-center gap-2">
-                  {hasSubmissionRow && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isCheckingLinks || isPending}
-                      onClick={() => runLinkCheck(true)}
-                      className="gap-1.5"
-                    >
-                      <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
-                      {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
-                    </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!hasSubmissionRow || isCheckingLinks || isPending}
+                    onClick={() => runLinkCheck(true)}
+                    className="gap-1.5"
+                    title={hasSubmissionRow ? undefined : "Simpan draf terlebih dahulu untuk memeriksa tautan."}
+                  >
+                    <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
+                    {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
+                  </Button>
+                  {!hasSubmissionRow && (
+                    <span className="text-muted-foreground text-xs">Simpan draf dulu untuk memeriksa tautan.</span>
                   )}
-                  {linkCheckedAt && (
+                  {hasSubmissionRow && linkCheckedAt && (
                     <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
                   )}
                 </div>
@@ -601,6 +637,8 @@ export function SubmissionClient({
               </CardFooter>
             )}
           </Card>
+
+          <SubmissionChecklist />
         </div>
 
         <div className="space-y-6">
@@ -680,6 +718,33 @@ export function SubmissionClient({
                 <span className="text-muted-foreground text-xs">Anggota:</span>
                 <p className="text-foreground">{team.members.join(", ")}</p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageCircle className="size-4 text-primary" />
+                Butuh bantuan?
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p className="text-muted-foreground text-xs">
+                Mengalami kendala saat mengirim karya? Hubungi panitia melalui WhatsApp.
+              </p>
+              {contactWhatsapp ? (
+                <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
+                  <a href={toWhatsAppUrl(contactWhatsapp)} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="size-4 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      Chat panitia {formatWhatsAppNumber(contactWhatsapp) ?? contactWhatsapp}
+                    </span>
+                    <ExternalLink className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+                  </a>
+                </Button>
+              ) : (
+                <p className="text-muted-foreground text-xs">Nomor bantuan belum diatur oleh panitia.</p>
+              )}
             </CardContent>
           </Card>
 

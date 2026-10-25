@@ -131,6 +131,7 @@ export default async function AdminPeringkatPage() {
       total_weighted_score: s.total_weighted_score,
       feedback: s.feedback,
       updated_at: s.updated_at,
+      locked_at: s.locked_at,
     });
   }
 
@@ -152,6 +153,7 @@ export default async function AdminPeringkatPage() {
       total_weighted_score: s.total_weighted_score,
       feedback: s.feedback,
       updated_at: s.updated_at,
+      locked_at: s.locked_at,
     });
   }
 

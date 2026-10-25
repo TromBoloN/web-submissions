@@ -74,7 +74,7 @@ export async function saveScore(input: {
     // Look up existing row
     const { data: existing, error: fetchError } = await supabase
       .from("preliminary_scores")
-      .select("id")
+      .select("id, locked_at")
       .eq("judge_id", caller.id)
       .eq("team_id", team_id)
       .maybeSingle();
@@ -82,6 +82,10 @@ export async function saveScore(input: {
     if (fetchError) {
       console.error("Failed to check existing prelim score", fetchError);
       return { ok: false, message: "Gagal memproses penilaian. Coba lagi." };
+    }
+
+    if (existing?.locked_at) {
+      return { ok: false, message: "Nilai Anda sudah dikunci dan tidak dapat diubah lagi." };
     }
 
     const scoreData = {
@@ -191,7 +195,7 @@ export async function saveScore(input: {
 
   const { data: existing, error: fetchError } = await supabase
     .from("final_scores")
-    .select("id")
+    .select("id, locked_at")
     .eq("judge_id", caller.id)
     .eq("team_id", team_id)
     .maybeSingle();
@@ -199,6 +203,10 @@ export async function saveScore(input: {
   if (fetchError) {
     console.error("Failed to check existing final score", fetchError);
     return { ok: false, message: "Gagal memproses penilaian. Coba lagi." };
+  }
+
+  if (existing?.locked_at) {
+    return { ok: false, message: "Nilai Anda sudah dikunci dan tidak dapat diubah lagi." };
   }
 
   const scoreData = {
@@ -294,4 +302,73 @@ export async function saveScore(input: {
     total: Number(saved.total_weighted_score),
     updatedAt: saved.updated_at,
   };
+}
+
+export type LockScoreResult = { ok: true; lockedAt: string } | { ok: false; message: string };
+
+export async function lockScore(input: { tahap: "preliminary" | "final"; team_id: string }): Promise<LockScoreResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "judge") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const allowedStages = caller.judge_stage === "both" ? ["preliminary", "final"] : [caller.judge_stage];
+  if (!allowedStages.includes(input.tahap)) {
+    return { ok: false, message: "Tahap penilaian tidak sesuai dengan hak akses juri Anda." };
+  }
+
+  if (!input.team_id) {
+    return { ok: false, message: "ID tim tidak valid." };
+  }
+
+  const lockedAt = new Date().toISOString();
+  const supabase = await createClient();
+
+  if (input.tahap === "preliminary") {
+    const { data, error } = await supabase
+      .from("preliminary_scores")
+      .update({ locked_at: lockedAt })
+      .eq("judge_id", caller.id)
+      .eq("team_id", input.team_id)
+      .is("locked_at", null)
+      .select("locked_at")
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to lock prelim score", error);
+      return { ok: false, message: "Gagal mengunci nilai. Coba lagi." };
+    }
+
+    if (!data?.locked_at) {
+      return { ok: false, message: "Nilai belum tersimpan atau sudah dikunci sebelumnya." };
+    }
+
+    revalidatePath("/judge");
+    revalidatePath("/admin/peringkat");
+    revalidatePath(`/judge/nilai/preliminary/${input.team_id}`);
+    return { ok: true, lockedAt: data.locked_at };
+  }
+
+  const { data, error } = await supabase
+    .from("final_scores")
+    .update({ locked_at: lockedAt })
+    .eq("judge_id", caller.id)
+    .eq("team_id", input.team_id)
+    .is("locked_at", null)
+    .select("locked_at")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to lock final score", error);
+    return { ok: false, message: "Gagal mengunci nilai. Coba lagi." };
+  }
+
+  if (!data?.locked_at) {
+    return { ok: false, message: "Nilai belum tersimpan atau sudah dikunci sebelumnya." };
+  }
+
+  revalidatePath("/judge");
+  revalidatePath("/admin/peringkat");
+  revalidatePath(`/judge/nilai/final/${input.team_id}`);
+  return { ok: true, lockedAt: data.locked_at };
 }

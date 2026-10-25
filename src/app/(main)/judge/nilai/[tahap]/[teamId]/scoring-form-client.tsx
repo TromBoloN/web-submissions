@@ -4,10 +4,20 @@ import { useMemo, useState, useTransition } from "react";
 
 import Link from "next/link";
 
-import { ArrowLeft, Check, Code2, ExternalLink, Globe, Info, Save, Video } from "lucide-react";
+import { ArrowLeft, Check, Code2, ExternalLink, Globe, Info, Lock, Save, StickyNote, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { calcWeightedTotal, getRubricForStage, type ScoringStage } from "@/lib/rubric";
 
-import { saveScore } from "../../actions";
+import { lockScore, saveScore } from "../../actions";
 
 interface TeamData {
   id: string;
@@ -28,6 +38,7 @@ interface SubmissionData {
   github_url: string;
   live_demo_url: string;
   video_url: string;
+  notes_for_judges: string;
 }
 
 interface ExistingScoreData {
@@ -40,6 +51,7 @@ interface ExistingScoreData {
   total_weighted_score: number;
   feedback: string | null;
   updated_at: string;
+  locked_at: string | null;
 }
 
 interface ScoringFormClientProps {
@@ -121,8 +133,12 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
     initialScore ? Number(initialScore.total_weighted_score) : null,
   );
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialScore?.updated_at ?? null);
+  const [lockedAt, setLockedAt] = useState<string | null>(initialScore?.locked_at ?? null);
+  const [isLockConfirmOpen, setIsLockConfirmOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const isLocked = lockedAt !== null;
 
   const previewTotal = useMemo(() => {
     return calcWeightedTotal(tahap, scores);
@@ -133,29 +149,34 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
     setFormError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    // Validate that every criterion is filled
+  const validateScores = (): Record<string, number> | null => {
     const numericScores: Record<string, number> = {};
     for (const c of rubric) {
       const valStr = scores[c.column]?.trim();
       if (!valStr) {
         setFormError(`Kriteria "${c.label}" wajib diisi.`);
-        return;
+        return null;
       }
       const num = Number(valStr);
       if (Number.isNaN(num) || num < 0 || num > 100) {
         setFormError(`Nilai untuk "${c.label}" harus di antara 0 sampai 100.`);
-        return;
+        return null;
       }
       if (!/^\d{1,3}(\.\d{1,2})?$/.test(valStr)) {
         setFormError(`Nilai untuk "${c.label}" maksimal memiliki 2 angka di belakang koma.`);
-        return;
+        return null;
       }
       numericScores[c.column] = num;
     }
+    return numericScores;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    const numericScores = validateScores();
+    if (!numericScores) return;
 
     startTransition(async () => {
       const res = await saveScore({
@@ -177,6 +198,55 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
     });
   };
 
+  const handleLockRequest = () => {
+    setFormError(null);
+    if (!validateScores()) return;
+    setIsLockConfirmOpen(true);
+  };
+
+  const handleLockConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    const numericScores = validateScores();
+    if (!numericScores) {
+      setIsLockConfirmOpen(false);
+      return;
+    }
+
+    startTransition(async () => {
+      const saveRes = await saveScore({
+        tahap,
+        team_id: team.id,
+        scores: numericScores,
+        feedback: feedback.trim(),
+      });
+
+      if (!saveRes.ok) {
+        setFormError(saveRes.message);
+        toast.error(saveRes.message);
+        setIsLockConfirmOpen(false);
+        return;
+      }
+
+      const lockRes = await lockScore({ tahap, team_id: team.id });
+      if (!lockRes.ok) {
+        setConfirmedTotal(saveRes.total);
+        setLastSavedAt(saveRes.updatedAt);
+        setFormError(lockRes.message);
+        toast.error(lockRes.message);
+        setIsLockConfirmOpen(false);
+        return;
+      }
+
+      setConfirmedTotal(saveRes.total);
+      setLastSavedAt(saveRes.updatedAt);
+      setLockedAt(lockRes.lockedAt);
+      setIsLockConfirmOpen(false);
+      toast.success("Nilai berhasil disimpan dan dikunci.");
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -192,6 +262,15 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
             <Badge variant={tahap === "final" ? "default" : "secondary"}>
               {tahap === "final" ? "Babak Final" : "Babak Awal"}
             </Badge>
+            {isLocked && (
+              <Badge
+                variant="outline"
+                className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              >
+                <Lock className="size-3" />
+                Terkunci
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground text-sm font-medium pl-6">{team.team_name}</p>
         </div>
@@ -221,6 +300,21 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
         </CardContent>
       </Card>
 
+      {submission.notes_for_judges.trim() && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <StickyNote className="size-4 text-primary" />
+              Catatan dari Tim
+            </CardTitle>
+            <CardDescription>Ditulis peserta khusus untuk dewan juri.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{submission.notes_for_judges}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Scoring Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
@@ -242,6 +336,16 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
           </CardHeader>
 
           <CardContent className="space-y-5">
+            {isLocked && (
+              <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200">
+                <Lock className="size-4 text-emerald-600 dark:text-emerald-400" />
+                <AlertDescription>
+                  Nilai Anda dikunci pada {formatTimestampWita(lockedAt)} dan tidak dapat diubah lagi. Hubungi panitia
+                  jika membutuhkan perubahan.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               {rubric.map((criterion) => {
                 const val = scores[criterion.column] ?? "";
@@ -263,6 +367,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
                       max="100"
                       placeholder="0.00"
                       value={val}
+                      disabled={isLocked || isPending}
                       onChange={(e) => handleScoreChange(criterion.column, e.target.value)}
                       className="font-mono text-base"
                       required
@@ -286,6 +391,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
                 rows={4}
                 maxLength={2000}
                 value={feedback}
+                disabled={isLocked || isPending}
                 onChange={(e) => setFeedback(e.target.value)}
               />
             </div>
@@ -321,17 +427,54 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
             )}
           </CardContent>
 
-          <CardFooter className="flex justify-between border-t pt-4">
+          <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
             <Button variant="outline" type="button" asChild>
               <Link href="/judge">Kembali</Link>
             </Button>
-            <Button type="submit" disabled={isPending} className="gap-2">
-              <Save className="size-4" />
-              {isPending ? "Menyimpan..." : "Simpan nilai"}
-            </Button>
+            {isLocked ? (
+              <span className="flex items-center gap-1.5 text-emerald-700 text-xs dark:text-emerald-300">
+                <Lock className="size-3.5" />
+                Nilai sudah dikunci
+              </span>
+            ) : (
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={handleLockRequest}
+                  className="gap-2"
+                >
+                  <Lock className="size-4" />
+                  Simpan & kunci
+                </Button>
+                <Button type="submit" disabled={isPending} className="gap-2">
+                  <Save className="size-4" />
+                  {isPending ? "Menyimpan..." : "Simpan nilai"}
+                </Button>
+              </div>
+            )}
           </CardFooter>
         </Card>
       </form>
+
+      <AlertDialog open={isLockConfirmOpen} onOpenChange={setIsLockConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kunci nilai untuk tim ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nilai yang Anda isi akan disimpan lalu dikunci. Setelah dikunci, Anda tidak dapat mengubahnya sendiri.
+              Hubungi panitia jika perlu membuka kunci.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction disabled={isPending} onClick={handleLockConfirm}>
+              {isPending ? "Menyimpan..." : "Ya, simpan & kunci"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
