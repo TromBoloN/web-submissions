@@ -1,6 +1,7 @@
 import "server-only";
 
 import dns from "node:dns/promises";
+import { isIP } from "node:net";
 
 export type LinkCheckStatus = "ok" | "warning" | "unknown";
 
@@ -112,10 +113,11 @@ async function validateUrlHost(urlString: string): Promise<{ valid: boolean; url
     return { valid: false, reason: "Hostname lokal atau internal tidak diizinkan." };
   }
 
-  if (isPrivateOrReservedIp(hostname)) {
+  // Only treat the hostname as an IP if it IS an IP literal (e.g. 127.0.0.1 or [::1]).
+  // Domain names are validated after DNS resolution below.
+  if (isIP(cleanIp(hostname)) !== 0 && isPrivateOrReservedIp(hostname)) {
     return { valid: false, reason: "Alamat IP privat atau internal tidak diizinkan." };
   }
-
   try {
     const addresses = await dns.lookup(hostname, { all: true });
     if (!addresses || addresses.length === 0) {

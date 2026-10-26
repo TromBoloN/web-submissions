@@ -603,8 +603,8 @@ ${safeJsonData}
           waBtn.textContent = 'Kirim WhatsApp';
           if (team.isValidPhone) {
             waBtn.href = 'https://wa.me/' + team.phone + '?text=' + encodeURIComponent(team.message);
-            waBtn.target = '_blank';
-            waBtn.rel = 'noopener noreferrer';
+            // Reuse one named tab so repeated sends do not pile up browser tabs.
+            waBtn.target = 'mitweek-wa';
             waBtn.addEventListener('click', function () {
               cb.checked = true;
               setSent(team.team_code, true);
@@ -679,7 +679,7 @@ ${safeJsonData}
   console.log(`File HTML lokal   : ${outputPath}`);
   console.log("\nBuka file di atas langsung di browser (klik ganda atau open in browser).");
   console.log("Fitur:");
-  console.log("- Tombol 'Kirim WhatsApp' membuka chat dengan template pesan yang sudah diisi.");
+  console.log("- Tombol 'Kirim WhatsApp' membuka chat dengan template pesan yang sudah diisi di satu tab yang dipakai ulang.");
   console.log("- Tombol 'Salin Pesan' menyalin teks pesan langsung ke clipboard.");
   console.log("- Checkbox 'Terkirim' tersimpan otomatis di localStorage agar dapat dilanjutkan kapan saja.");
   console.log("- Pencarian cepat berdasarkan kode tim, nama tim, nama ketua, nomor HP, atau email.");
