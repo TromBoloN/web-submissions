@@ -1,98 +1,86 @@
 # AGENTS.md
 
-## Project overview
+Rules for AI agents. Project context is in `AI.md`. File locations are in `docs/MAP.md`.
 
-Studio Admin is a responsive admin dashboard built with Next.js 16, React 19, TypeScript, Tailwind CSS v4, and shadcn/ui.
+## What to read
 
-This repository uses the shadcn `radix-nova` style. The shadcn CLI reports `base: "radix"`, which refers to Radix UI. Always inspect the local components in `src/components/ui/` because individual wrappers may use different primitives.
+- `docs/documentation/MAP.md`: before searching the repo for where something lives.
+- `AI.md`: before touching scoring, deadlines, submissions, results, roles or exports, and whenever a decision is unclear. It lists the open decisions. Ask about them, never decide them.
+- `docs/development/*.md`: the current task. If it conflicts with these files, stop and ask.
 
-<!-- BEGIN:nextjs-agent-rules -->
+## Workflow
 
-# This is NOT the Next.js you know
+- One step per message. Then run lint and build on changed files only, stop and report. Do not start the next step.
+- Never run git. I review, test and commit.
+- Run Biome only on files you changed, never `--write` elsewhere. No unrelated refactors.
+- No new dependencies. No features, pages or columns that were not requested.
+- If something is ambiguous or touches an open decision, ask instead of guessing.
+- Report: files changed, what was done, deviations from the phase file, anything unsure, what I should test manually.
+- Update `docs/documentation/MAP.md` when you add, move or remove a screen or shared file.
+- after every major changes make a reccomended github commit message at the end but dont commit
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+## Security (never break)
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+Application
 
-<!-- END:nextjs-agent-rules -->
+- RLS is the security boundary. Route guards and hidden buttons are convenience only.
+- The service role key is server-only (`src/lib/supabase/admin.ts`, uses `server-only`). Never import it in client code, put it in `NEXT_PUBLIC_*`, or log it.
+- Every server action calls `getUser()` (never `getSession()`) and checks the role before touching data. `team_id` and `judge_id` come from the session, never from input.
+- Validate all input with Zod. Never return raw database or auth errors.
+- After UPDATE or DELETE use `.select()` and treat an empty result as failure. RLS blocks UPDATE silently with zero rows. A blocked INSERT raises 42501.
+- Never mutate data in a GET handler. Do not bypass Next.js server action Origin checks with custom POST handlers. No custom rate limiting (Supabase Auth limits are the baseline).
 
-## shadcn skill
+Roles
 
-Use the shadcn skill for all work involving shadcn/ui components, styling, composition, registries, presets, or `components.json`.
+- Roles are read only from `profiles` (via `current_user_role()` and similar helpers). Never from `user_metadata`, JWT claims or client input.
+- The `profiles` UPDATE policy must not let users change their own `role`, `judge_stage`, `team_id` or `is_active`. Only admins can.
+- Public sign-up stays disabled.
 
-If the skill is not available, install it with:
+Team-facing results
 
-```bash
-npx skills add shadcn/ui
-```
+- Expose team score and comment data only through `SECURITY DEFINER` functions with an empty `search_path`, deriving the team from `auth.uid()`. No team id parameter. No team SELECT policy on score tables.
+- Return aggregates and anonymous comments only. Never `judge_id`, name, or anything that identifies a judge, including through ordering or timestamps.
+- The function checks authorization in its own body (active team role, results released, caller owns the team).
+- Never expose other teams' scores or comments, rank, or per-judge raw scores.
 
-The skill contains the component, styling, composition, accessibility, and CLI rules. Do not duplicate those rules here. Always inspect the local component source before using it.
+Grants and functions
 
-Do not modify files inside `src/components/ui/` or `src/components/calendar/`. Keep these components intact and apply styling or customization where they are used.
+- RLS and grants are separate. Every table has RLS enabled and explicit least-privilege grants.
+- `anon` gets no privileges on application tables, views or sequences (`/login` is the only public page).
+- Every `SECURITY DEFINER` function: empty `search_path`, schema-qualified references, authorization checks inside its body, `REVOKE EXECUTE ... FROM PUBLIC, anon`, then a narrow `GRANT` (usually `authenticated`). Helpers clients never call should not be callable by clients at all.
 
-## Setup
+CSV exports
 
-This project uses npm.
+- Admin only: 401 if unauthenticated, 403 if not admin. Each export route checks this itself, since layouts do not guard route handlers.
+- UTF-8 with BOM. Neutralize leading `=`, `+`, `-`, `@`, tab and CR in every cell, plus normal CSV quoting. No emails. `Cache-Control: no-store`, correct `Content-Type` and `Content-Disposition`. Submission exports contain no personal data or scores.
 
-```bash
-npm install
-npm run dev
-```
+Secrets
 
-Available commands:
+- Never commit `.env` or `.env.local`. The service role key lives only in `.env.local` or Vercel env vars, never in `.env`. `SEED_PASSWORD` is for the seeder only.
 
-```bash
-npm run build
-npm run lint
-npm run format
-npm run check
-npm run check:fix
-npm run generate:presets
-```
+## Database
 
-There is currently no automated test command. Run build, lint, check, or other validation commands only when the user explicitly requests that validation.
+- `supabase/migrations/20261020000000_init_schema.sql` is applied. Never edit it. Do not touch anything in `supabase/` without my permission. Schema changes go in a new migration, only with my permission.
+- Rubric weights live in the database column and `src/lib/rubric.ts`. Change both or neither.
+- Types are in `src/types/database.ts` and must be UTF-8. On PowerShell 5.1 generate with `| Out-File -Encoding utf8`, never `>`.
+- Never run the seeder (`npm run seed`) against production data. Seed accounts use `@seed.mitweek.test`.
 
-## Co-location-based structure
+## UI
 
-Keep feature code close to the route that owns it.
+- All UI text is Indonesian, consistent with existing screens. Terms: Akun, Tim, Finalis, Pengaturan, Submission, Peringkat, Kata sandi, Studi kasus, Babak awal, Final, Nilai, Masukan, Draf, Terkirim.
+- Dates: `id-ID` locale, `Asia/Makassar`, shown as WITA. Servers run in UTC. Never rely on server local time or the device clock for deadlines.
+- Semantic theme tokens only (no hex, RGB, HSL, OKLCH). If a color is missing, use a named Tailwind default. Works in light and dark mode. Brand palette is not defined, do not invent one.
+- Match nearby screens (density, spacing, radius). Mobile-friendly.
+- Handle loading, empty, error, disabled and overflow states. Semantic HTML, labels, keyboard support, visible focus.
+- Friendly generic errors. Never show raw errors, SQL, table names or stack traces.
+- Never show judge identity, other teams' data, emails (outside admin) or internal ids.
+- Scores show two decimals. Only `http`/`https` links render as links, with `target="_blank"` and `rel="noopener noreferrer"`.
+- Do not modify `src/components/ui/`.
 
-- Dashboard routes: `src/app/(main)/dashboard/<screen>/page.tsx`
-- Screen-specific components, data, and schemas: `src/app/(main)/dashboard/<screen>/_components/`
-- Shared dashboard components: `src/app/(main)/dashboard/_components/`
-- Shared application components: `src/components/`
-- Local shadcn components: `src/components/ui/`
-- Shared hooks and utilities: `src/hooks/` and `src/lib/`
-- Theme presets: `src/styles/presets/`
+## Code
 
-Keep a component inside its route until it is reused by another feature. Do not move screen-specific code into a shared directory preemptively.
-
-## Creating or extending a screen
-
-1. Inspect the closest current screen before writing code. Finance, Infrastructure, CRM, and Analytics are useful references. Do not use routes under `(legacy)` as references for new screens unless maintaining a legacy route.
-2. When reproducing a UI from a screenshot or image, follow its visual direction closely, including layout, hierarchy, spacing, component structure, and important details. Implement it with the project's existing components and semantic theme tokens rather than copying raw color values. If the design needs a color that is not available through the existing theme tokens, or the user explicitly requests a non-theme color, use a named color from Tailwind's default palette. Do not use arbitrary hex, RGB, HSL, or OKLCH values.
-3. Reuse the existing dashboard shell, local components, layout controls, and theme tokens.
-4. Break each new page into focused components inside the route's `_components/` directory. Keep `page.tsx` small and focused on composing those pieces.
-5. Keep `page.tsx` as a Server Component by default. Move interactive or browser-dependent code into a dedicated Client Component.
-6. Add the screen to `src/navigation/sidebar/sidebar-items.ts` when it should appear in the dashboard navigation.
-7. Decide the information hierarchy before choosing widgets. Let the content determine the page structure.
-8. Keep the established visual rhythm where it fits: compact spacing, clear typography hierarchy, responsive action rows, and grids that collapse cleanly on smaller screens.
-9. Widget selection is not a fixed formula. Try different arrangements of cards, resource rows, meters, charts, tabs, empty states, and actions, then keep the version that communicates the content clearly and feels consistent with the project.
-10. Match nearby screens in card density, borders, radius, spacing, content width, and responsive behavior.
-11. Use semantic theme tokens so new screens work with light mode, dark mode, and the existing theme presets.
-12. Handle relevant loading, empty, error, disabled, and overflow states.
-13. Keep screens accessible with semantic HTML, keyboard support, visible focus states, labels, and appropriate ARIA attributes.
-
-## Code conventions
-
-- TypeScript strict mode is enabled. Use precise types and avoid `any`.
-- Use the existing `@/` import aliases.
-- Follow the Biome configuration: double quotes, semicolons, two-space indentation, sorted imports, and a 120-character line width.
-- Avoid unnecessary dependencies.
-- Keep changes focused and do not refactor unrelated files.
-
-## Contributions
-
-- Use conventional commit prefixes such as `feat:`, `fix:`, `refactor:`, `docs:`, and `chore:`.
-- Include screenshots for new screens and material visual changes. Include mobile and dark-theme states when relevant.
-- Explain new reusable patterns or dependencies in the pull request.
-- Follow `CONTRIBUTING.md` for the contribution workflow.
+- Next.js 16 App Router, React 19, strict TypeScript (no `any`), Tailwind v4, shadcn/ui (radix-nova), Supabase, Zod, React Hook Form, TanStack Table **v9** (differs from v8), Biome, npm. Windows PowerShell.
+- Next.js 16 uses `src/proxy.ts`, not `middleware.ts`. Check `node_modules/next/dist/docs/` before using a Next.js API from memory.
+- Each screen: `page.tsx` (server component, fetches data), `*-client.tsx` (client), `actions.ts` (server actions), side by side. Keep a component in its route until a second route needs it.
+- Add new screens to `src/navigation/sidebar/sidebar-items.ts`.
+- Use `@/` aliases. Biome style: double quotes, semicolons, two-space indent, sorted imports, 120-character lines.
