@@ -59,6 +59,7 @@ interface ScoringFormClientProps {
   team: TeamData;
   submission: SubmissionData;
   initialScore: ExistingScoreData | null;
+  isStageReleased?: boolean;
 }
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -116,7 +117,13 @@ function SafeExternalLink({ url, label, icon: Icon }: { url: string; label: stri
   );
 }
 
-export function ScoringFormClient({ tahap, team, submission, initialScore }: ScoringFormClientProps) {
+export function ScoringFormClient({
+  tahap,
+  team,
+  submission,
+  initialScore,
+  isStageReleased = false,
+}: ScoringFormClientProps) {
   const rubric = useMemo(() => getRubricForStage(tahap), [tahap]);
 
   const [scores, setScores] = useState<Record<string, string>>(() => {
@@ -139,6 +146,8 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
   const [isPending, startTransition] = useTransition();
 
   const isLocked = lockedAt !== null;
+  const isReadOnly = isLocked ? true : isStageReleased;
+  const isInputDisabled = isReadOnly ? true : isPending;
 
   const previewTotal = useMemo(() => {
     return calcWeightedTotal(tahap, scores);
@@ -173,6 +182,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setFormError(null);
 
     const numericScores = validateScores();
@@ -199,6 +209,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
   };
 
   const handleLockRequest = () => {
+    if (isReadOnly) return;
     setFormError(null);
     if (!validateScores()) return;
     setIsLockConfirmOpen(true);
@@ -206,6 +217,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
 
   const handleLockConfirm = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setFormError(null);
 
     const numericScores = validateScores();
@@ -262,7 +274,16 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
             <Badge variant={tahap === "final" ? "default" : "secondary"}>
               {tahap === "final" ? "Babak Final" : "Babak Awal"}
             </Badge>
-            {isLocked && (
+            {isStageReleased && (
+              <Badge
+                variant="outline"
+                className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              >
+                <Lock className="size-3" />
+                Hasil Dirilis
+              </Badge>
+            )}
+            {!isStageReleased && isLocked && (
               <Badge
                 variant="outline"
                 className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
@@ -336,7 +357,17 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
           </CardHeader>
 
           <CardContent className="space-y-5">
-            {isLocked && (
+            {isStageReleased && (
+              <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                <Lock className="size-4 text-amber-600 dark:text-amber-400" />
+                <AlertDescription>
+                  Penilaian {tahap === "final" ? "babak final" : "babak awal"} telah dikunci karena hasil penilaian
+                  sudah dirilis oleh panitia. Formulir berada dalam mode hanya-baca (read-only).
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!isStageReleased && isLocked && (
               <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200">
                 <Lock className="size-4 text-emerald-600 dark:text-emerald-400" />
                 <AlertDescription>
@@ -367,7 +398,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
                       max="100"
                       placeholder="0.00"
                       value={val}
-                      disabled={isLocked || isPending}
+                      disabled={isInputDisabled}
                       onChange={(e) => handleScoreChange(criterion.column, e.target.value)}
                       className="font-mono text-base"
                       required
@@ -391,7 +422,7 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
                 rows={4}
                 maxLength={2000}
                 value={feedback}
-                disabled={isLocked || isPending}
+                disabled={isInputDisabled}
                 onChange={(e) => setFeedback(e.target.value)}
               />
             </div>
@@ -431,10 +462,10 @@ export function ScoringFormClient({ tahap, team, submission, initialScore }: Sco
             <Button variant="outline" type="button" asChild>
               <Link href="/judge">Kembali</Link>
             </Button>
-            {isLocked ? (
-              <span className="flex items-center gap-1.5 text-emerald-700 text-xs dark:text-emerald-300">
+            {isReadOnly ? (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Lock className="size-3.5" />
-                Nilai sudah dikunci
+                {isStageReleased ? "Penilaian dikunci (hasil telah dirilis)" : "Nilai sudah dikunci"}
               </span>
             ) : (
               <div className="flex flex-col-reverse gap-2 sm:flex-row">

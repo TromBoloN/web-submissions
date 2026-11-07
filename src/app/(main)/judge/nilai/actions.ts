@@ -11,6 +11,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SaveScoreResult = { ok: true; total: number; updatedAt: string } | { ok: false; message: string };
 
+function handleScoreError(error: { code?: string; message?: string } | null, defaultMessage: string): string {
+  if (error?.code === "P0001" || error?.message?.includes("hasil penilaian telah dirilis")) {
+    return "Penilaian ini sudah dikunci karena hasil telah dirilis.";
+  }
+  if (error?.code === "42501") {
+    return "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini.";
+  }
+  return defaultMessage;
+}
+
 const criterionScoreSchema = z.coerce
   .number()
   .min(0, "Nilai minimal 0.")
@@ -107,11 +117,8 @@ export async function saveScore(input: {
         .select();
 
       if (error) {
-        if (error.code === "42501") {
-          return { ok: false, message: "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini." };
-        }
         console.error("Failed to update prelim score", error);
-        return { ok: false, message: "Gagal memperbarui nilai. Coba lagi." };
+        return { ok: false, message: handleScoreError(error, "Gagal memperbarui nilai. Coba lagi.") };
       }
 
       if (!data || data.length === 0) {
@@ -149,7 +156,10 @@ export async function saveScore(input: {
           .select();
 
         if (retryError || !retryData || retryData.length === 0) {
-          return { ok: false, message: "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini." };
+          return {
+            ok: false,
+            message: handleScoreError(retryError, "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini."),
+          };
         }
 
         const saved = retryData[0];
@@ -162,12 +172,8 @@ export async function saveScore(input: {
         };
       }
 
-      if (error.code === "42501") {
-        return { ok: false, message: "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini." };
-      }
-
       console.error("Failed to insert prelim score", error);
-      return { ok: false, message: "Gagal menyimpan nilai. Coba lagi." };
+      return { ok: false, message: handleScoreError(error, "Gagal menyimpan nilai. Coba lagi.") };
     }
 
     if (!data || data.length === 0) {
@@ -228,11 +234,8 @@ export async function saveScore(input: {
       .select();
 
     if (error) {
-      if (error.code === "42501") {
-        return { ok: false, message: "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini." };
-      }
       console.error("Failed to update final score", error);
-      return { ok: false, message: "Gagal memperbarui nilai. Coba lagi." };
+      return { ok: false, message: handleScoreError(error, "Gagal memperbarui nilai. Coba lagi.") };
     }
 
     if (!data || data.length === 0) {
@@ -269,7 +272,10 @@ export async function saveScore(input: {
         .select();
 
       if (retryError || !retryData || retryData.length === 0) {
-        return { ok: false, message: "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini." };
+        return {
+          ok: false,
+          message: handleScoreError(retryError, "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini."),
+        };
       }
 
       const saved = retryData[0];
@@ -282,12 +288,8 @@ export async function saveScore(input: {
       };
     }
 
-    if (error.code === "42501") {
-      return { ok: false, message: "Penilaian ditolak. Tim tidak dapat dinilai pada tahap ini." };
-    }
-
     console.error("Failed to insert final score", error);
-    return { ok: false, message: "Gagal menyimpan nilai. Coba lagi." };
+    return { ok: false, message: handleScoreError(error, "Gagal menyimpan nilai. Coba lagi.") };
   }
 
   if (!data || data.length === 0) {
@@ -336,7 +338,7 @@ export async function lockScore(input: { tahap: "preliminary" | "final"; team_id
 
     if (error) {
       console.error("Failed to lock prelim score", error);
-      return { ok: false, message: "Gagal mengunci nilai. Coba lagi." };
+      return { ok: false, message: handleScoreError(error, "Gagal mengunci nilai. Coba lagi.") };
     }
 
     if (!data?.locked_at) {
@@ -360,7 +362,7 @@ export async function lockScore(input: { tahap: "preliminary" | "final"; team_id
 
   if (error) {
     console.error("Failed to lock final score", error);
-    return { ok: false, message: "Gagal mengunci nilai. Coba lagi." };
+    return { ok: false, message: handleScoreError(error, "Gagal mengunci nilai. Coba lagi.") };
   }
 
   if (!data?.locked_at) {

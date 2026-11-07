@@ -37,32 +37,46 @@ export default async function JudgeScoringPage({ params }: PageProps) {
 
   const supabase = await createClient();
 
-  // Load team
-  const { data: team, error: teamError } = await supabase
-    .from("teams")
-    .select("id, team_code, team_name, is_finalist, is_disqualified")
-    .eq("id", teamId)
-    .maybeSingle();
+  // Load team, submission, and competition settings
+  const [teamRes, submissionRes, settingsRes] = await Promise.all([
+    supabase
+      .from("teams")
+      .select("id, team_code, team_name, is_finalist, is_disqualified")
+      .eq("id", teamId)
+      .maybeSingle(),
+    supabase
+      .from("submissions")
+      .select("status, github_url, live_demo_url, video_url, notes_for_judges")
+      .eq("team_id", teamId)
+      .maybeSingle(),
+    supabase
+      .from("competition_settings")
+      .select("preliminary_results_released, final_results_released")
+      .eq("id", true)
+      .maybeSingle(),
+  ]);
 
-  if (teamError || !team || team.is_disqualified) {
+  if (teamRes.error || !teamRes.data || teamRes.data.is_disqualified) {
     redirect("/judge");
   }
+
+  const team = teamRes.data;
 
   // Final stage requires the team to be a finalist
   if (tahap === "final" && !team.is_finalist) {
     redirect("/judge");
   }
 
-  // Load submission (must be 'submitted')
-  const { data: submission, error: submissionError } = await supabase
-    .from("submissions")
-    .select("status, github_url, live_demo_url, video_url, notes_for_judges")
-    .eq("team_id", teamId)
-    .maybeSingle();
-
-  if (submissionError || !submission || submission.status !== "submitted") {
+  if (submissionRes.error || !submissionRes.data || submissionRes.data.status !== "submitted") {
     redirect("/judge");
   }
+
+  const submission = submissionRes.data;
+  const settings = settingsRes.data;
+
+  const isStageReleased = Boolean(
+    tahap === "preliminary" ? settings?.preliminary_results_released : settings?.final_results_released,
+  );
 
   // Load judge's existing score for this team (if any)
   let initialScore = null;
@@ -126,6 +140,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
         notes_for_judges: submission.notes_for_judges ?? "",
       }}
       initialScore={initialScore}
+      isStageReleased={isStageReleased}
     />
   );
 }

@@ -75,3 +75,4 @@ CREATE TRIGGER trg_final_scores_release_lock
   BEFORE INSERT OR UPDATE OR DELETE ON public.final_scores
   FOR EACH ROW
   EXECUTE FUNCTION public.check_final_scores_not_released();
+
