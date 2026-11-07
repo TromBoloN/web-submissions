@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { cn } from "cn";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -206,13 +207,54 @@ function CountdownTimer({
   );
 }
 
-function NextStepsCard() {
+function NextStepsCard({ serverNowIso }: { serverNowIso: string }) {
   const steps = [
-    { dates: "11–17 Nov", title: "Penilaian Babak Awal", desc: "Dewan juri mengevaluasi seluruh karya terkirim." },
-    { dates: "18 Nov", title: "Pengumuman Top 5", desc: "Daftar finalis resmi diumumkan di portal & media." },
-    { dates: "21 Nov", title: "Babak Final", desc: "Sesi presentasi karya (10m presentasi + 10m Q&A)." },
-    { dates: "25 Nov", title: "Pengumuman Juara", desc: "Penetapan dan selebrasi pemenang MIT-WEEK 2026." },
+    { start: "2026-11-10", end: "2026-11-10", dates: "10 Nov", title: "Batas pengumpulan karya", desc: "23.59 WITA" },
+    {
+      start: "2026-11-11",
+      end: "2026-11-17",
+      dates: "11–17 Nov",
+      title: "Penilaian Babak Awal",
+      desc: "Dewan juri mengevaluasi seluruh karya terkirim.",
+    },
+    {
+      start: "2026-11-18",
+      end: "2026-11-18",
+      dates: "18 Nov",
+      title: "Pengumuman Top 5",
+      desc: "Daftar finalis resmi diumumkan di portal & media.",
+    },
+    {
+      start: "2026-11-21",
+      end: "2026-11-21",
+      dates: "21 Nov",
+      title: "Babak Final",
+      desc: "Sesi presentasi karya (10m presentasi + 10m Q&A).",
+    },
+    {
+      start: "2026-11-25",
+      end: "2026-11-25",
+      dates: "25 Nov",
+      title: "Pengumuman Juara",
+      desc: "Penetapan dan selebrasi pemenang MIT-WEEK 2026.",
+    },
   ];
+  const serverDate = new Date(serverNowIso);
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(serverDate);
+  const today = `${dateParts.find((part) => part.type === "year")?.value}-${dateParts.find((part) => part.type === "month")?.value}-${dateParts.find((part) => part.type === "day")?.value}`;
+  const todayLabel = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Makassar",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(serverDate);
+  const firstFutureIndex = steps.findIndex((step) => step.start > today);
+  const markerIndex = firstFutureIndex === -1 ? steps.length : firstFutureIndex;
 
   return (
     <Card className="gap-0 py-0">
@@ -227,26 +269,39 @@ function NextStepsCard() {
       </CardHeader>
       <CardContent className="relative space-y-4 p-4 pl-8">
         <div className="absolute top-0 bottom-0 left-3 w-px bg-border" />
-        {steps.map((st, index) => (
-          <Fragment key={st.title}>
-            {index === 1 && (
-              <div className="flex items-center gap-2 font-medium text-[10px] text-muted-foreground">
-                <span className="size-2.5 rounded-full border-2 border-background bg-primary" />
-                <span>Hari ini</span>
+        {steps.map((st, index) => {
+          const isPast = st.end < today;
+          const isActive = !isPast && st.start <= today && today <= st.end;
+
+          return (
+            <Fragment key={st.title}>
+              {index === markerIndex && (
+                <div className="flex items-center gap-2 font-medium text-[10px] text-muted-foreground">
+                  <span className="size-2.5 rounded-full border-2 border-background bg-primary" />
+                  <span>Hari ini · {todayLabel}</span>
+                </div>
+              )}
+              <div className={cn("relative flex items-start gap-3 text-xs", isPast && "text-muted-foreground")}>
+                <span className="absolute top-1.5 -left-[1.4rem] size-2.5 rounded-full border-2 border-background bg-primary" />
+                <div className="min-w-0">
+                  <p className={cn("font-medium", !isPast && "text-foreground")}>
+                    <span className="mr-2 font-sans text-[11px] text-muted-foreground tabular-nums">{st.dates}</span>
+                    {isPast && <CheckCircle2 className="mr-1 inline size-3.5 text-emerald-600 dark:text-emerald-400" />}
+                    {st.title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground leading-normal">{st.desc}</p>
+                  {isActive && <p className="mt-0.5 font-medium text-[11px] text-primary">Sedang berlangsung</p>}
+                </div>
               </div>
-            )}
-            <div className="relative flex items-start gap-3 text-xs">
-              <span className="absolute top-1.5 -left-[1.4rem] size-2.5 rounded-full border-2 border-background bg-primary" />
-              <div className="min-w-0">
-                <p className="font-medium text-foreground">
-                  <span className="mr-2 font-sans text-[11px] text-muted-foreground tabular-nums">{st.dates}</span>
-                  {st.title}
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground leading-normal">{st.desc}</p>
-              </div>
-            </div>
-          </Fragment>
-        ))}
+            </Fragment>
+          );
+        })}
+        {markerIndex === steps.length && (
+          <div className="flex items-center gap-2 font-medium text-[10px] text-muted-foreground">
+            <span className="size-2.5 rounded-full border-2 border-background bg-primary" />
+            <span>Hari ini · {todayLabel}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1002,7 +1057,7 @@ export function SubmissionClient({
           {!isSubmitted && <SubmissionChecklist />}
 
           {/* 3. Next Steps Timeline */}
-          <NextStepsCard />
+          <NextStepsCard serverNowIso={serverNowIso} />
 
           {/* 3. Compact Team Info (No duplicate team code!) */}
           <Card className="gap-0 py-0">
