@@ -46,22 +46,28 @@ export type Database = {
       competition_settings: {
         Row: {
           contact_whatsapp: string | null;
+          final_results_released: boolean;
           id: boolean;
           juknis_url: string | null;
+          preliminary_results_released: boolean;
           submission_closes_at: string;
           updated_at: string;
         };
         Insert: {
           contact_whatsapp?: string | null;
+          final_results_released?: boolean;
           id?: boolean;
           juknis_url?: string | null;
+          preliminary_results_released?: boolean;
           submission_closes_at: string;
           updated_at?: string;
         };
         Update: {
           contact_whatsapp?: string | null;
+          final_results_released?: boolean;
           id?: boolean;
           juknis_url?: string | null;
+          preliminary_results_released?: boolean;
           submission_closes_at?: string;
           updated_at?: string;
         };
@@ -484,6 +490,10 @@ export type Database = {
           message: string;
           published_at: string | null;
         }[];
+      };
+      get_my_results: {
+        Args: never;
+        Returns: Json;
       };
       get_public_contact_whatsapp: {
         Args: never;

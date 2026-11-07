@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 
 import {
   AlertTriangle,
+  Award,
   BookOpen,
   CalendarClock,
+  CheckCircle2,
   Clock,
   ExternalLink,
   FileText,
@@ -18,10 +20,23 @@ import { toast } from "sonner";
 
 import { MarkdownContent } from "@/components/markdown-content";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
@@ -32,7 +47,13 @@ import {
   toWitaDateTimeLocalStringExact,
 } from "@/lib/deadline";
 
-import { updateCaseStudy, updateCompetitionDeadline, updateContactWhatsapp, updateJuknisUrl } from "./actions";
+import {
+  updateCaseStudy,
+  updateCompetitionDeadline,
+  updateContactWhatsapp,
+  updateJuknisUrl,
+  updateResultsRelease,
+} from "./actions";
 
 type CaseStudyData = {
   title: string;
@@ -41,11 +62,29 @@ type CaseStudyData = {
   updatedAt: string | null;
 };
 
+export type StageJudgingProgress = {
+  totalJudges: number;
+  completedJudges: number;
+  incompleteJudges: number;
+  totalExpectedScores: number;
+  completedScores: number;
+  isAllCompleted: boolean;
+  eligibleTeamsCount: number;
+};
+
+export type JudgingProgressStats = {
+  preliminary: StageJudgingProgress;
+  final: StageJudgingProgress;
+};
+
 type SettingsClientProps = {
   currentClosesAt: string | null;
   currentJuknisUrl: string | null;
   currentContactWhatsapp: string | null;
   updatedAt: string | null;
+  preliminaryResultsReleased: boolean;
+  finalResultsReleased: boolean;
+  judgingStats: JudgingProgressStats;
   caseStudy: CaseStudyData | null;
 };
 
@@ -65,12 +104,21 @@ export function SettingsClient({
   currentJuknisUrl,
   currentContactWhatsapp,
   updatedAt,
+  preliminaryResultsReleased,
+  finalResultsReleased,
+  judgingStats,
   caseStudy,
 }: SettingsClientProps) {
   const router = useRouter();
   const [deadlineInput, setDeadlineInput] = useState(() => toWitaDateTimeLocalString(currentClosesAt));
   const [deadlineError, setDeadlineError] = useState<string>();
   const [isDeadlinePending, startDeadlineTransition] = useTransition();
+
+  const [isReleasePending, startReleaseTransition] = useTransition();
+  const [confirmDialog, setConfirmDialog] = useState<{
+    stage: "preliminary" | "final";
+    targetState: boolean;
+  } | null>(null);
 
   const [juknisInput, setJuknisInput] = useState(currentJuknisUrl ?? "");
   const [juknisError, setJuknisError] = useState<string>();
@@ -102,6 +150,31 @@ export function SettingsClient({
         return iso ? new Date(iso).getTime() <= Date.now() : false;
       })(),
   );
+
+  const handleRequestToggle = (stage: "preliminary" | "final", targetState: boolean) => {
+    setConfirmDialog({ stage, targetState });
+  };
+
+  const handleConfirmToggle = () => {
+    if (!confirmDialog) return;
+    const { stage, targetState } = confirmDialog;
+    setConfirmDialog(null);
+
+    startReleaseTransition(async () => {
+      const result = await updateResultsRelease(stage, targetState);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      const stageLabel = stage === "preliminary" ? "Babak awal" : "Babak final";
+      if (targetState) {
+        toast.success(`Hasil penilaian ${stageLabel} berhasil dirilis.`);
+      } else {
+        toast.success(`Hasil penilaian ${stageLabel} berhasil dinonaktifkan.`);
+      }
+      router.refresh();
+    });
+  };
 
   const handleDeadlineSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -230,6 +303,159 @@ export function SettingsClient({
                 </Button>
               </CardFooter>
             </form>
+          </Card>
+
+          {/* Rilis Hasil Penilaian */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="size-5 text-primary" />
+                Rilis Hasil Penilaian
+              </CardTitle>
+              <CardDescription>
+                Buka akses pengumuman nilai, kriteria, dan masukan anonim juri kepada tim peserta. Setiap perubahan
+                status wajib melalui dialog konfirmasi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Switch 1: Babak Awal */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="switch-prelim-release" className="cursor-pointer font-semibold text-base">
+                        Babak Awal
+                      </Label>
+                      {preliminaryResultsReleased ? (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-xs"
+                        >
+                          Dirilis
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-muted text-muted-foreground text-xs">
+                          Nonaktif
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Peserta dapat melihat rata-rata nilai kriteria, total nilai, dan masukan anonim babak awal.
+                    </p>
+                  </div>
+                  <Switch
+                    id="switch-prelim-release"
+                    checked={preliminaryResultsReleased}
+                    onCheckedChange={(checked) => handleRequestToggle("preliminary", checked)}
+                    disabled={isReleasePending}
+                  />
+                </div>
+
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progres Penilaian Juri:</span>
+                    <span className="font-medium font-mono">
+                      {judgingStats.preliminary.completedScores} / {judgingStats.preliminary.totalExpectedScores} nilai
+                      ({judgingStats.preliminary.completedJudges} dari {judgingStats.preliminary.totalJudges} juri
+                      selesai)
+                    </span>
+                  </div>
+                  <Progress
+                    value={
+                      judgingStats.preliminary.totalExpectedScores > 0
+                        ? Math.round(
+                            (judgingStats.preliminary.completedScores / judgingStats.preliminary.totalExpectedScores) *
+                              100,
+                          )
+                        : 0
+                    }
+                    className="h-2"
+                  />
+                  {judgingStats.preliminary.incompleteJudges > 0 ? (
+                    <div className="flex items-start gap-1.5 text-amber-600 text-xs dark:text-amber-400">
+                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                      <span>
+                        Peringatan: {judgingStats.preliminary.incompleteJudges} juri belum menyelesaikan penilaian babak
+                        awal. Anda tetap dapat merilis hasil tanpa diblokir.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-emerald-600 text-xs dark:text-emerald-400">
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      <span>Seluruh juri babak awal telah menyelesaikan penilaian.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Switch 2: Final */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="switch-final-release" className="cursor-pointer font-semibold text-base">
+                        Babak Final
+                      </Label>
+                      {finalResultsReleased ? (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-xs"
+                        >
+                          Dirilis
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-muted text-muted-foreground text-xs">
+                          Nonaktif
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Finalis dapat melihat rata-rata nilai kriteria, total nilai, dan masukan anonim babak final.
+                    </p>
+                  </div>
+                  <Switch
+                    id="switch-final-release"
+                    checked={finalResultsReleased}
+                    onCheckedChange={(checked) => handleRequestToggle("final", checked)}
+                    disabled={isReleasePending}
+                  />
+                </div>
+
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progres Penilaian Juri:</span>
+                    <span className="font-medium font-mono">
+                      {judgingStats.final.completedScores} / {judgingStats.final.totalExpectedScores} nilai (
+                      {judgingStats.final.completedJudges} dari {judgingStats.final.totalJudges} juri selesai)
+                    </span>
+                  </div>
+                  <Progress
+                    value={
+                      judgingStats.final.totalExpectedScores > 0
+                        ? Math.round(
+                            (judgingStats.final.completedScores / judgingStats.final.totalExpectedScores) * 100,
+                          )
+                        : 0
+                    }
+                    className="h-2"
+                  />
+                  {judgingStats.final.incompleteJudges > 0 ? (
+                    <div className="flex items-start gap-1.5 text-amber-600 text-xs dark:text-amber-400">
+                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                      <span>
+                        Peringatan: {judgingStats.final.incompleteJudges} juri belum menyelesaikan penilaian babak
+                        final. Anda tetap dapat merilis hasil tanpa diblokir.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-emerald-600 text-xs dark:text-emerald-400">
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      <span>Seluruh juri babak final telah menyelesaikan penilaian.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
           {/* 2. Tautan Juknis */}
@@ -525,6 +751,28 @@ export function SettingsClient({
                 )}
               </div>
 
+              <div className="border-t pt-3">
+                <span className="text-muted-foreground text-xs">Status Rilis Babak Awal:</span>
+                <p className="mt-0.5 font-medium text-xs">
+                  {preliminaryResultsReleased ? (
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Telah Dirilis</span>
+                  ) : (
+                    <span className="text-muted-foreground">Belum Dirilis (Nonaktif)</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="border-t pt-3">
+                <span className="text-muted-foreground text-xs">Status Rilis Babak Final:</span>
+                <p className="mt-0.5 font-medium text-xs">
+                  {finalResultsReleased ? (
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Telah Dirilis</span>
+                  ) : (
+                    <span className="text-muted-foreground">Belum Dirilis (Nonaktif)</span>
+                  )}
+                </p>
+              </div>
+
               {formattedUpdatedAt && (
                 <div className="border-t pt-3">
                   <span className="text-muted-foreground text-xs">Pengaturan diperbarui:</span>
@@ -535,6 +783,90 @@ export function SettingsClient({
           </Card>
         </div>
       </div>
+
+      {/* Confirmation Dialog for Results Release */}
+      <AlertDialog
+        open={Boolean(confirmDialog)}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDialog(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDialog?.targetState
+                ? `Rilis Hasil Penilaian ${confirmDialog?.stage === "preliminary" ? "Babak Awal" : "Babak Final"}?`
+                : `Sembunyikan Hasil Penilaian ${confirmDialog?.stage === "preliminary" ? "Babak Awal" : "Babak Final"}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2 text-muted-foreground text-sm">
+                {confirmDialog?.targetState ? (
+                  <>
+                    <p>
+                      Tindakan ini akan mengaktifkan visibilitas hasil penilaian{" "}
+                      <strong className="text-foreground">
+                        {confirmDialog.stage === "preliminary" ? "Babak Awal" : "Babak Final"}
+                      </strong>{" "}
+                      kepada seluruh tim peserta {confirmDialog.stage === "final" ? "(khusus finalis)" : ""}.
+                    </p>
+                    <div className="space-y-1.5 rounded-md border bg-muted/40 p-3 text-foreground text-xs">
+                      <p className="font-semibold">Informasi yang akan dapat dilihat tim:</p>
+                      <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
+                        <li>
+                          Nilai rata-rata kriteria (
+                          {confirmDialog.stage === "preliminary"
+                            ? "Fungsionalitas, Kesesuaian studi kasus, UI/UX, Kualitas kode, Dokumentasi"
+                            : "Fungsionalitas, Kesesuaian studi kasus, UI/UX, Kualitas kode, Dokumentasi, Presentasi & Tanya Jawab"}
+                          )
+                        </li>
+                        <li>Total nilai akhir berbobot</li>
+                        <li>Jumlah juri yang telah memberikan nilai</li>
+                        <li>Masukan tertulis (feedback) dari juri secara anonim tanpa identitas</li>
+                      </ul>
+                    </div>
+                    {confirmDialog && judgingStats[confirmDialog.stage].incompleteJudges > 0 && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-amber-700 text-xs dark:text-amber-400">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                        <span>
+                          <strong>Peringatan progres juri:</strong> Masih ada{" "}
+                          {judgingStats[confirmDialog.stage].incompleteJudges} juri yang belum menyelesaikan penilaian
+                          (baru {judgingStats[confirmDialog.stage].completedScores} dari{" "}
+                          {judgingStats[confirmDialog.stage].totalExpectedScores} penilaian masuk). Tim akan melihat
+                          rata-rata dari nilai yang sudah masuk.
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p>
+                    Hasil penilaian{" "}
+                    <strong className="text-foreground">
+                      {confirmDialog?.stage === "preliminary" ? "Babak Awal" : "Babak Final"}
+                    </strong>{" "}
+                    akan dinonaktifkan kembali. Tim peserta tidak akan dapat melihat nilai maupun masukan juri sampai
+                    hasil dirilis ulang oleh panitia.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReleasePending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmToggle}
+              disabled={isReleasePending}
+              className={
+                confirmDialog?.targetState ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              }
+            >
+              {(() => {
+                if (isReleasePending) return "Menyimpan...";
+                return confirmDialog?.targetState ? "Ya, Rilis Hasil" : "Ya, Sembunyikan Hasil";
+              })()}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

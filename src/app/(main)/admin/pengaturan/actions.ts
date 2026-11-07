@@ -270,3 +270,53 @@ export async function updateCaseStudy(formData: FormData): Promise<ActionResult>
 
   return { success: true };
 }
+
+const updateResultsReleaseSchema = z.object({
+  stage: z.enum(["preliminary", "final"], {
+    message: "Tahap kompetisi tidak valid.",
+  }),
+  released: z.boolean({
+    message: "Status rilis harus berupa nilai boolean.",
+  }),
+});
+
+export async function updateResultsRelease(stage: "preliminary" | "final", released: boolean): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = updateResultsReleaseSchema.safeParse({ stage, released });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data rilis hasil tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const updatePayload =
+    parsed.data.stage === "preliminary"
+      ? {
+          preliminary_results_released: parsed.data.released,
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          final_results_released: parsed.data.released,
+          updated_at: new Date().toISOString(),
+        };
+
+  const { data, error } = await supabase.from("competition_settings").update(updatePayload).eq("id", true).select();
+
+  if (error) {
+    console.error("Failed to update results release status", error);
+    return { success: false, error: "Gagal memperbarui status rilis hasil. Silakan coba lagi." };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/team");
+  revalidatePath("/team", "layout");
+  return { success: true };
+}
