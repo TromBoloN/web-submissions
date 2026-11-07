@@ -13,13 +13,13 @@ An all-in-one competition management and submission platform developed specifica
 
 ## 📌 Context: About MIT-WEEK 2026
 
-**MIT-WEEK (Mulawarman Informatics Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines run by Association of Informatics, Faculty of Engineering, Mulawarman University.
+**MIT-WEEK (Mulawarman Informatics Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines run by the Association of Informatics, Faculty of Engineering, Mulawarman University.
 
 This web application serves as the **official competition platform for the Web Development Competition** branch of MIT-WEEK 2026. It manages the full lifecycle of the contest:
 
-- **Participant Onboarding & Submissions:** Contestants submit and refine their web projects within tight deadlines.
-- **Multi-Stage Adjudication:** Preliminary and final rounds scored independently by an expert panel of judges.
-- **Committee Operations:** Organizers oversee teams, manage schedules, monitor deliverables, and export results.
+- **Participant Onboarding & Submissions:** Contestants submit deliverables, study competition briefs, and inspect official rubrics and scores.
+- **Multi-Stage Adjudication:** Preliminary and final rounds scored independently by an expert panel of judges with real-time weighted rubrics and blind scoring.
+- **Committee Operations:** Organizers oversee teams, manage schedules, configure case studies, monitor judging progress, release results, and export rankings.
 
 ---
 
@@ -29,112 +29,151 @@ This web application serves as the **official competition platform for the Web D
 
 Designed to give teams an intuitive and distraction-free submission experience:
 
-- **Team Dashboard:** Displays verified team code (`MIT-XXX`), registered team name, educational institution, team leader, and member roster.
-- **Copy Helper:** One-click copy for the unique team code, used for official communications and fallback backup forms.
-- **Real-Time Deadline Countdown:** Dynamic countdown timer calculating clock offsets between client and server time to prevent local clock tampering.
-- **Link-Based Submission System:** Fields for project deliverables:
-  - GitHub Repository URL (restricted to valid `https://github.com/` repositories)
-  - Live Demo Deployment URL (`http://` or `https://`)
-  - Video Demonstration / Walkthrough URL (`http://` or `https://`)
+- **Team Dashboard (`/team`):**
+  - Displays verified team code (`MIT-XXX`), registered team name, educational institution, team leader, and member roster.
+  - One-click copy for the unique team code, used for official communications and fallback backup forms.
+  - Real-time deadline countdown calculating clock offsets between client and server time to prevent local clock tampering.
+- **Deliverable Submission System:**
+  - Repositories: GitHub URL (`https://github.com/...`).
+  - Deployments: Live Demo URL (`http://` or `https://`).
+  - Demonstrations: Video Walkthrough URL (`http://` or `https://`).
+  - Team notes dedicated for the judges.
 - **Draft & Submit Workflow:**
-  - **Simpan Draf:** Save incomplete or in-progress URLs anytime before the deadline.
-  - **Kirim Submission:** Validates all three links and transitions status to `Terkirim` (Submitted).
-  - **Perbarui Submission:** Allows post-submission updates without reverting status to draft.
-- **Automatic Read-Only Locking:** When the deadline expires or if a team is disqualified, the form converts into a read-only review view with clear status alert banners.
-- **Submission Timestamps:** Transparent display of first save (`Pertama disimpan`) and last modified (`Terakhir diubah`) in Central Indonesia Time (WITA / UTC+8).
+  - *Simpan Draf:* Save partial deliverables anytime before the deadline.
+  - *Kirim Submission:* Validates all required links and transitions status to `Terkirim` (Submitted).
+  - *Perbarui Submission:* Allows post-submission updates without reverting status to draft.
+- **Case Study Viewer (`/team/studi-kasus`):**
+  - Direct in-app access to the official case study and problem statement rendered from Markdown.
+- **Team Results & Feedback (`/team/hasil`):**
+  - Conditionally enabled in navigation once the committee officially releases results.
+  - Prominent total weighted score with panel count indicator (*"Dinilai oleh N juri"*).
+  - Rubric criterion breakdown table showing Juknis indicators, average judge scores, rubric weights, and final contributions.
+  - Anonymized judicial feedback list with zero identifiable judge metadata.
+  - Dynamic Finalist tab exclusively unlocked for Top 5 Finalist teams.
+  - Graceful edge-case handling for unsubmitted entries, disqualifications, and unreleased stages.
+- **Account Security (`/team/kata-sandi`):**
+  - Self-service password updates with current password verification.
+
+---
 
 ### ⚖️ 2. Judicial Evaluation Panel (`/judge`)
 
 Built for fair, confidential, and structured evaluation:
 
-- **Two-Stage Judging Pipeline:**
-  - **Preliminary Round (_Babak Penyisihan_):** Assessment of all active submissions against core judging criteria.
-  - **Final Round (_Babak Final_):** Restricted evaluation exclusively for the Top 5 Finalist teams.
-- **Strict Blind Judging & Privacy:** Judges evaluate submissions independently; no judge can view or edit scorecards filled by other judges.
-- **Eligible Submission Feeds:** Automatically displays only teams with completed submissions (`submitted`) who have not been disqualified.
+- **Judging Queue (`/judge`):**
+  - Filterable by stage (*Babak Awal* / *Babak Final*) and scoring progress (*Belum dinilai*, *Draf*, *Terkunci*).
+  - High-level progress counter showing completed evaluations versus assigned queue.
+  - Strict blind judging: Judges evaluate submissions independently; scorecards from peer judges remain completely invisible.
+  - Eligible feed: Displays only active, non-disqualified teams with submitted deliverables.
+- **Scoring Interface (`/judge/nilai/[tahap]/[teamId]`):**
+  - Project showcase card with safe external openers for GitHub repository, live demo, and demo video, alongside contestant notes.
+  - Formal rubric entry inputs:
+    - **Preliminary Stage:** Functionality (30%), Case Study Fit (25%), UI/UX (20%), Code Quality (15%), Documentation (10%).
+    - **Final Stage:** Functionality (25%), Case Study Fit (20%), UI/UX (15%), Code Quality (15%), Presentation & Q&A (15%), Documentation (10%).
+  - Live client-side weighted preview calculation with strict two-decimal precision.
+  - *Simpan Nilai* (draft) vs. *Simpan & Kunci* (lock) with confirmation dialog.
+- **Release-Driven Read-Only Enforcement:**
+  - When stage results are released by the committee, the scoring form automatically locks into a read-only view with alert banners.
+  - Backed by database triggers preventing `INSERT`, `UPDATE`, or `DELETE` writes once released.
+- **Case Study Viewer (`/judge/studi-kasus`):**
+  - In-portal reference for the competition brief and rubrics.
+- **Account Security (`/judge/kata-sandi`):**
+  - Self-service password updates.
+
+---
 
 ### 🛡️ 3. Administrative Control Center (`/admin`)
 
 Full-spectrum operational management for the organizing committee:
 
 - **Dashboard Overview (`/admin`):**
-  - KPI metric cards: Total Teams, Finalist Count, Active Judges, and Submissions count.
-  - Active competition deadline status with last-accepted-minute precision.
+  - KPI metric cards: Total Teams, Finalists, Active Judges, and Submissions count.
+  - Active competition deadline status with last-accepted-minute boundary precision.
   - Quick action links to all administrative workflows.
 - **Account Management (`/admin/akun`):**
-  - Provision accounts for Admins, Judges (with stage assignment: `preliminary`, `final`, or `both`), and Teams.
-  - Account status toggle: Instant activation and deactivation with server-side revocation.
-  - Administrative password resets.
-  - Multi-attribute search and role filtering.
+  - Provision accounts for Admins, Judges (with stage assignments: `preliminary`, `final`, or `both`), and Teams.
+  - Instant status toggle: Immediate activation and deactivation with server-side revocation.
+  - Administrative password resets and multi-attribute search/filtering.
 - **Team Management (`/admin/tim`):**
-  - Team directory with member rosters and institutions.
-  - Finalist selection toggles (Top 5 lock with counter warning).
+  - Team directory with member rosters, institutions, and WhatsApp contact links.
   - Disqualification toggle with immediate contestant access revocation.
-- **Submission Monitoring (`/admin/submission`):**
-  - Real-time TanStack Table displaying all teams (including teams with no submission yet).
-  - Summary badges: `Terkirim` (green), `Draf` (amber), and `Belum dikirim` (dashed).
+- **Finalist Selection (`/admin/finalis`):**
+  - Dedicated finalist management interface for locking in the Top 5 Finalist teams.
+  - Counter guards and confirmation dialogs preventing over-assignment.
+- **Submission Monitoring & Admin Overrides (`/admin/submission`):**
+  - Real-time TanStack Table displaying all registered teams.
+  - Status badges: `Terkirim` (green), `Draf` (amber), and `Belum dikirim` (neutral).
   - Safe link openers with `rel="noopener noreferrer"` and visual URL truncation.
-  - Filter by status (`Semua`, `Terkirim`, `Draf`, `Belum dikirim`) and keyword search.
-  - **Admin Submission Override:** Modal dialog enabling committee members to manually update or input team links (e.g., synchronizing emergency Google Form submissions) unrestricted by deadlines.
-- **CSV Data Export (`/admin/submission/export`):**
-  - Instant one-click download of `submissions-YYYY-MM-DD.csv`.
-  - Formatted with UTF-8 BOM (`\uFEFF`) for immediate, seamless opening in Microsoft Excel without encoding glitches.
-  - Includes full team details, submission links, timestamps (in WITA), finalist status, and disqualification status.
-  - Fully excludes passwords, sensitive account emails, and judicial scores.
+  - *Admin Override Modal:* Enables committee members to manually update or input team links (e.g., synchronizing emergency fallback submissions) unrestricted by deadlines.
+  - *CSV Data Export (`/admin/submission/export`):* Instant UTF-8 BOM spreadsheet export with sanitization against formula injection.
+- **Leaderboard & Rankings (`/admin/peringkat`):**
+  - Real-time aggregate rankings powered by PostgreSQL views (`preliminary_ranking`, `final_ranking`).
+  - Stage tabs for Preliminary and Final rounds with rank badges, judge count, criteria averages, and total scores.
+  - *Rankings CSV Export (`/admin/peringkat/export`):* Downloadable rankings spreadsheet for jury review and archival.
 - **Competition Settings (`/admin/pengaturan`):**
-  - Dynamic deadline configuration interface with WITA timezone input.
-  - Strict "last accepted minute" time boundary calculation.
-
-### 🎨 4. Theme & Layout Personalization
-
-- **Theme Presets:** Integrated theme switcher supporting Light Mode, Dark Mode, and distinct aesthetic presets (Default Neutral, Tangerine, Neo Brutalism, Soft Pop).
-- **Responsive Layout:** Adaptive sidebar navigation with collapsed icon-only mode for mobile and compact desktop screens.
+  - Dynamic deadline configuration interface in WITA (UTC+8) with strict "+1 minute" boundary rule.
+  - Guidebook (*Juknis*) URL configuration.
+  - Case study Markdown editor.
+  - **Results Release Toggles ("Rilis Hasil"):**
+    - Independent switches for Preliminary and Final stage results.
+    - Live judging progress indicators with warning alerts if judges have unfinished scorecards.
+    - Confirmation modals outlining participant visibility before release.
 
 ---
 
 ## 🔒 Security & Data Integrity
 
 - **Database-Level Row Level Security (RLS):** All tables (`profiles`, `teams`, `submissions`, `competition_settings`, `preliminary_scores`, `final_scores`) enforce RLS policies directly in PostgreSQL. Client UI checks are treated solely as UX enhancements.
-- **Server-Side Session Validation:** Every Server Action and Route Handler strictly invokes `getCurrentProfile()`, verifying the user's role and `is_active` status before performing any operation.
-- **IDOR Immunity:** Team submission actions resolve team IDs purely from the authenticated server session (`auth.uid()`), never accepting user-supplied team IDs from client payloads.
-- **Database Trigger Locks:** PostgreSQL triggers prevent tampering with `submitted_at` timestamps and ensure `team_id` immutability upon updates.
-- **Spreadsheet Formula Injection Defense:** CSV export cells starting with formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) are automatically prefixed with a single quote (`'`) to neutralize Dynamic Data Exchange (DDE) exploits.
-- **Tab-Nabbing Protection:** All external contestant links render with `rel="noopener noreferrer"` and `target="_blank"`.
+- **Server-Side Session Validation:** Every Server Action strictly invokes `getCurrentProfile()`, verifying the user's role and `is_active` status before performing any operation.
+- **IDOR Immunity:** Team and judge actions resolve IDs purely from the authenticated server session (`auth.uid()`), never accepting user-supplied IDs from client payloads.
+- **Secure Results Exposure (RPC):** Team score summaries and comments are delivered exclusively through `SECURITY DEFINER` function `public.get_my_results()` with an empty `search_path`. Direct `SELECT` policies on score tables are prohibited for contestants. Comments are randomly sorted (`md5(feedback)`) with judge identities, timestamps, and raw peer scores stripped.
+- **Database Trigger Locks:**
+  - Timestamp immutability triggers on submissions.
+  - Pre-release score locks: Triggers `trg_preliminary_scores_release_lock` and `trg_final_scores_release_lock` block `INSERT`, `UPDATE`, and `DELETE` on score tables whenever a stage is released.
+- **Spreadsheet Formula Injection Defense:** CSV export cells starting with formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) are automatically neutralized to prevent Dynamic Data Exchange (DDE) exploits.
+- **Tab-Nabbing Protection:** All external links render with `rel="noopener noreferrer"` and `target="_blank"`.
 
 ---
 
 ## 📂 Project Architecture
 
 ```
-mit-week-portal/
+web-submissions/
+├── docs/                            # Developer manuals, architecture map, and phase plans
+│   ├── documentation/MAP.md         # Source-code routing and architectural map
+│   └── development/                 # Step-by-step feature implementation specifications
 ├── src/
+│   ├── proxy.ts                     # Session refresh & route redirect (Next.js 16)
 │   ├── app/
+│   │   ├── (auth)/login/            # Authentication & sign-in screens
 │   │   ├── (main)/
-│   │   │   ├── admin/               # Administrator routes
+│   │   │   ├── admin/               # Administrator control center
 │   │   │   │   ├── akun/            # Account provisioning & management
-│   │   │   │   ├── pengaturan/      # Competition deadline settings
-│   │   │   │   ├── submission/      # Submission monitoring & admin edits
-│   │   │   │   │   └── export/      # CSV export Route Handler
-│   │   │   │   └── tim/             # Team management & finalist toggling
-│   │   │   ├── dashboard/           # Shared shell & layout components
-│   │   │   ├── judge/               # Judging & score entry panel
+│   │   │   │   ├── finalis/         # Finalist selection & lock
+│   │   │   │   ├── pengaturan/      # Deadlines, case study & results release
+│   │   │   │   ├── peringkat/       # Aggregate leaderboard & CSV export
+│   │   │   │   ├── submission/      # Deliverable monitoring, admin edit & export
+│   │   │   │   └── tim/             # Team roster & disqualification management
+│   │   │   ├── dashboard/           # Shared dashboard shell & navigation
+│   │   │   ├── judge/               # Judging queue & rubric scoring interface
+│   │   │   │   ├── nilai/           # Stage-based scoring forms ([tahap]/[teamId])
+│   │   │   │   └── studi-kasus/     # Case study reference
 │   │   │   └── team/                # Contestant submission portal
-│   │   ├── login/                   # Authentication screen
-│   │   ├── layout.tsx               # Root application layout
-│   │   └── page.tsx                 # Role-based route dispatcher
+│   │   │       ├── hasil/           # Official released results & feedback
+│   │   │       └── studi-kasus/     # Contestant case study brief
 │   ├── components/
-│   │   └── ui/                      # Reusable shadcn/ui components
+│   │   ├── ui/                      # Reusable shadcn/ui components (radix-nova)
+│   │   └── change-password-form.tsx # Shared password update component
 │   ├── lib/
-│   │   ├── supabase/                # Client, Server, and Admin Supabase clients
-│   │   ├── auth.ts                  # Auth helpers (getCurrentProfile, requireRole)
-│   │   ├── deadline.ts              # WITA timezone & deadline calculations
-│   │   └── user-display.ts          # Profile presentation utilities
-│   ├── navigation/
-│   │   └── sidebar/                 # Role-dependent navigation configuration
-│   └── types/
-│       └── database.ts              # Generated Supabase database TypeScript definitions
+│   │   ├── auth.ts                  # Server-side auth helpers (getCurrentProfile, requireRole)
+│   │   ├── rubric.ts                # Competition rubric weights & calculations
+│   │   ├── deadline.ts              # WITA timezone calculations & boundary rules
+│   │   ├── csv.ts                   # CSV serialization & formula injection guards
+│   │   └── supabase/                # Client, Server, and Admin Supabase instances
+│   ├── navigation/sidebar/          # Role-based dynamic sidebar item registry
+│   └── types/database.ts            # Supabase database TypeScript definitions
 ├── supabase/
-│   └── migrations/                  # Schema, RLS policies, views & triggers SQL
+│   └── migrations/                  # Schema, RLS, functions, views & triggers SQL
 ├── package.json
 └── README.md
 ```
@@ -190,11 +229,11 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 ### 4. Database Setup
 
-Apply the initial schema, functions, triggers, and RLS policies using the Supabase CLI or by executing the SQL script located at:
+Apply the schema migrations located in `supabase/migrations/` sequentially via the Supabase CLI or the Supabase SQL Editor:
 
-```
-supabase/migrations/20261020000000_init_schema.sql
-```
+1. `20261020000000_init_schema.sql` — Initial schema, RLS, functions, and ranking views.
+2. `20261026000000_team_results.sql` — Results release flags and secure `get_my_results()` RPC function.
+3. `20261027000000_score_release_lock.sql` — Database triggers enforcing score freeze upon results release.
 
 ### 5. Run the Development Server
 

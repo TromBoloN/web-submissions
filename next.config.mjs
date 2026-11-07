@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  devIndicators: {
+    position: "bottom-right",
+  },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },

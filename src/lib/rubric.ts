@@ -19,7 +19,7 @@ export const PRELIMINARY_RUBRIC: readonly RubricCriterion[] = [
   },
   {
     column: "case_study_fit_score",
-    label: "Kesesuaian studi kasus",
+    label: "Kesesuaian Studi Kasus",
     weight: 25,
     indicator: "Kesesuaian dan efektivitas solusi web terhadap permasalahan pada studi kasus.",
   },
@@ -31,7 +31,7 @@ export const PRELIMINARY_RUBRIC: readonly RubricCriterion[] = [
   },
   {
     column: "code_quality_score",
-    label: "Kualitas kode & maintainability",
+    label: "Kualitas Kode & Pemeliharaan",
     weight: 10,
     indicator: "Struktur kerapian kode sumber, modularitas, dan kemudahan pemeliharaan (maintainability).",
   },
@@ -52,7 +52,7 @@ export const FINAL_RUBRIC: readonly RubricCriterion[] = [
   },
   {
     column: "case_study_fit_score",
-    label: "Kesesuaian studi kasus",
+    label: "Kesesuaian Studi Kasus",
     weight: 20,
     indicator: "Kesesuaian dan efektivitas solusi web terhadap permasalahan pada studi kasus.",
   },
@@ -64,7 +64,7 @@ export const FINAL_RUBRIC: readonly RubricCriterion[] = [
   },
   {
     column: "code_quality_score",
-    label: "Kualitas kode & maintainability",
+    label: "Kualitas Kode & Pemeliharaan",
     weight: 10,
     indicator: "Struktur kerapian kode sumber, modularitas, dan kemudahan pemeliharaan (maintainability).",
   },

@@ -22,6 +22,55 @@ export function formatDeadlineWita(exclusiveCutoffIso: string | null): string {
   }).format(lastAccepted)} WITA`;
 }
 
+export interface MultiZoneDeadline {
+  wita: string;
+  wib: string;
+  wit: string;
+  summary: string;
+}
+
+export function formatDeadlineMultiZone(exclusiveCutoffIso: string | null): MultiZoneDeadline | null {
+  const lastAccepted = toLastAcceptedMoment(exclusiveCutoffIso);
+  if (!lastAccepted) return null;
+
+  const witaFull = `${new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Makassar",
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(lastAccepted)} WITA`;
+
+  const wibTime = `${new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    timeStyle: "short",
+  }).format(lastAccepted)} WIB`;
+
+  const witaDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar", day: "numeric" }).format(lastAccepted);
+  const witParts = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jayapura",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(lastAccepted);
+
+  const witDay = witParts.find((p) => p.type === "day")?.value ?? "";
+  const witMonth = witParts.find((p) => p.type === "month")?.value ?? "";
+  const witHour = witParts.find((p) => p.type === "hour")?.value ?? "";
+  const witMin = witParts.find((p) => p.type === "minute")?.value ?? "";
+  const witTime = `${witHour}.${witMin}`;
+
+  const isNextDay = witDay !== witaDay;
+  const witFormatted = isNextDay ? `${witTime} WIT (${witDay} ${witMonth})` : `${witTime} WIT`;
+
+  return {
+    wita: witaFull,
+    wib: wibTime,
+    wit: witFormatted,
+    summary: `${witaFull} · ${wibTime} · ${witFormatted}`,
+  };
+}
+
 export function toWitaDateTimeLocalString(exclusiveCutoffIso: string | null): string {
   const lastAccepted = toLastAcceptedMoment(exclusiveCutoffIso);
   if (!lastAccepted) return "";

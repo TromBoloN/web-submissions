@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,11 @@ import {
   AlertOctagon,
   AlertTriangle,
   BookOpen,
+  Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  ClipboardPaste,
   Clock,
   Code2,
   Copy,
@@ -17,9 +21,12 @@ import {
   FileText,
   Globe,
   HelpCircle,
+  Info,
   MessageCircle,
   RotateCw,
+  ShieldCheck,
   StickyNote,
+  Trash2,
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -42,7 +49,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
-import { formatDeadlineWita } from "@/lib/deadline";
+import { formatDeadlineMultiZone, formatDeadlineWita } from "@/lib/deadline";
 import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
@@ -118,6 +125,7 @@ function CountdownTimer({
     hours: number;
     minutes: number;
     seconds: number;
+    totalMs: number;
     isPast: boolean;
   } | null>(null);
 
@@ -126,11 +134,10 @@ function CountdownTimer({
     const target = new Date(deadlineIso).getTime();
 
     const calculate = () => {
-      // Current estimated server time
       const now = Date.now() + clockOffset;
       const diff = target - now;
       if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true });
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0, isPast: true });
         onExpire();
         return;
       }
@@ -138,7 +145,7 @@ function CountdownTimer({
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeLeft({ days, hours, minutes, seconds, isPast: false });
+      setTimeLeft({ days, hours, minutes, seconds, totalMs: diff, isPast: false });
     };
 
     calculate();
@@ -147,19 +154,231 @@ function CountdownTimer({
   }, [deadlineIso, clockOffset, onExpire]);
 
   if (!timeLeft) {
-    return <span className="text-muted-foreground text-sm">Menghitung sisa waktu...</span>;
+    return <span className="text-muted-foreground text-xs">Menghitung sisa waktu...</span>;
   }
 
   if (timeLeft.isPast) {
-    return <span className="font-medium text-destructive text-sm">Waktu telah habis</span>;
+    return (
+      <div className="flex items-center gap-1.5 font-medium text-destructive text-xs">
+        <Clock className="size-3.5" />
+        <span>Batas waktu telah berakhir (Ditutup)</span>
+      </div>
+    );
   }
 
-  let durationText = `${timeLeft.hours} jam ${timeLeft.minutes} menit ${timeLeft.seconds} detik`;
-  if (timeLeft.days > 0) {
-    durationText = `${timeLeft.days} hari ${durationText}`;
+  const isCritical = timeLeft.totalMs <= 3600 * 1000; // <= 1 hour
+  const isUrgent = timeLeft.totalMs <= 24 * 3600 * 1000; // <= 24 hours
+
+  const segments = [
+    { label: "Hari", value: String(timeLeft.days).padStart(2, "0") },
+    { label: "Jam", value: String(timeLeft.hours).padStart(2, "0") },
+    { label: "Menit", value: String(timeLeft.minutes).padStart(2, "0") },
+    { label: "Detik", value: String(timeLeft.seconds).padStart(2, "0") },
+  ];
+
+  const getUrgencyClass = () => {
+    if (isCritical) {
+      return "border-destructive/40 bg-destructive/10 text-destructive motion-safe:animate-pulse";
+    }
+    if (isUrgent) {
+      return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+    }
+    return "border-primary/20 bg-primary/5 text-primary";
+  };
+
+  const urgencyClass = getUrgencyClass();
+
+  return (
+    <div className="space-y-1.5">
+      <div className="sr-only" aria-live="polite">
+        Sisa waktu pengiriman: {timeLeft.days} hari {timeLeft.hours} jam {timeLeft.minutes} menit.
+      </div>
+      <div className="grid grid-cols-4 gap-1.5" aria-live="off">
+        {segments.map((seg) => (
+          <div
+            key={seg.label}
+            className={`flex flex-col items-center justify-center rounded-md border p-1.5 text-center ${urgencyClass}`}
+          >
+            <span className="font-bold text-lg tabular-nums tracking-tight sm:text-xl">{seg.value}</span>
+            <span className="text-[10px] uppercase tracking-wider opacity-75">{seg.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NextStepsCard() {
+  const steps = [
+    { dates: "11–17 Nov", title: "Penilaian Babak Awal", desc: "Dewan juri mengevaluasi seluruh karya terkirim." },
+    { dates: "18 Nov", title: "Pengumuman Top 5", desc: "Daftar finalis resmi diumumkan di portal & media." },
+    { dates: "21 Nov", title: "Babak Final", desc: "Sesi presentasi karya (10m presentasi + 10m Q&A)." },
+    { dates: "25 Nov", title: "Pengumuman Juara", desc: "Penetapan dan selebrasi pemenang MIT-WEEK 2026." },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Calendar className="size-4 text-primary" />
+          Langkah Berikutnya
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Linimasa penting kompetisi setelah tahap pengumpulan karya.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2.5">
+        {steps.map((st) => (
+          <div key={st.title} className="flex items-start gap-2.5 rounded-md border bg-muted/20 p-2 text-xs">
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-[10px] text-primary font-mono">
+              {st.dates}
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-foreground">{st.title}</p>
+              <p className="text-[11px] text-muted-foreground leading-normal">{st.desc}</p>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SubmissionStatusHero({
+  team,
+  submission,
+  isClosed,
+  isDisqualified,
+}: {
+  team: Team;
+  submission: Submission | null;
+  isClosed: boolean;
+  isDisqualified: boolean;
+}) {
+  const isSubmitted = submission?.status === "submitted";
+  const hasDraft = Boolean(submission && !isSubmitted);
+  const githubFilled = Boolean(submission?.github_url?.trim());
+  const liveDemoFilled = Boolean(submission?.live_demo_url?.trim());
+  const videoFilled = Boolean(submission?.video_url?.trim());
+
+  let currentStep = 0;
+  if (isSubmitted) {
+    currentStep = 3;
+  } else if (githubFilled && liveDemoFilled && videoFilled) {
+    currentStep = 2;
+  } else if (hasDraft) {
+    currentStep = 1;
   }
 
-  return <span className="font-semibold text-primary text-sm sm:text-base">Sisa waktu: {durationText}</span>;
+  const missing: string[] = [];
+  if (!githubFilled) missing.push("GitHub");
+  if (!liveDemoFilled) missing.push("Live Demo");
+  if (!videoFilled) missing.push("Video Demo");
+
+  const heroTitle = (() => {
+    if (isDisqualified) return "Tim Didiskualifikasi";
+    if (isClosed && isSubmitted) return "Pengiriman Ditutup (Karya Tercatat)";
+    if (isClosed && !isSubmitted) return "Pengiriman Ditutup (Tidak Ada Berkas)";
+    if (isSubmitted) return "Karya Berhasil Terkirim Resmi";
+    if (hasDraft) return "Draf Tersimpan Sementara";
+    return "Belum Ada Karya Tersimpan";
+  })();
+
+  const heroDescription = (() => {
+    if (isDisqualified) {
+      return "Akun tim Anda dinonaktifkan oleh panitia. Hubungi panitia untuk informasi lebih lanjut.";
+    }
+    if (isClosed && isSubmitted) {
+      return "Batas waktu telah berakhir. Karya tim Anda telah tercatat dan siap untuk dinilai oleh dewan juri.";
+    }
+    if (isClosed && !isSubmitted) {
+      return "Batas waktu pengiriman telah berakhir dan tim Anda belum mengumpulkan karya resmi.";
+    }
+    if (isSubmitted) {
+      return "Submission Anda telah terdaftar. Anda masih dapat memperbarui tautan sampai batas akhir kompetisi.";
+    }
+    if (hasDraft) {
+      if (missing.length > 0) {
+        return `Lengkapi ${missing.join(", ")} untuk menyelesaikan pengiriman resmi.`;
+      }
+      return "Seluruh tautan telah terisi. Klik tombol 'Kirim submission' untuk verifikasi akhir.";
+    }
+    return "Silakan isi tautan proyek Anda di bawah ini dan simpan draf berkala sebelum batas waktu.";
+  })();
+
+  return (
+    <div className="rounded-xl border bg-card p-5 shadow-xs sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-lg sm:text-xl">{heroTitle}</span>
+            {isSubmitted && (
+              <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600/90">
+                <ShieldCheck className="size-3" />
+                Terkirim
+              </Badge>
+            )}
+            {hasDraft && !isClosed && (
+              <Badge
+                variant="secondary"
+                className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              >
+                Draf
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground text-xs sm:text-sm">{heroDescription}</p>
+        </div>
+
+        {/* Copyable team code chip */}
+        <div className="flex items-center gap-2 self-start rounded-lg border bg-muted/50 px-3 py-1.5 shrink-0">
+          <div className="text-left">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground font-sans">Kode Tim</span>
+            <span className="font-bold font-mono text-sm text-foreground">{team.team_code}</span>
+          </div>
+          <CopyButton value={team.team_code} />
+        </div>
+      </div>
+
+      {/* Stepper */}
+      {!isDisqualified && !(isClosed && !isSubmitted) && (
+        <div className="mt-5 border-t pt-4">
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div
+              className={`flex flex-col items-center gap-1 ${currentStep >= 1 ? "text-primary font-medium" : "text-muted-foreground"}`}
+            >
+              <div
+                className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${currentStep >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+              >
+                {currentStep > 1 ? "✓" : "1"}
+              </div>
+              <span className="text-[11px] sm:text-xs">Draf Tersimpan</span>
+            </div>
+            <div
+              className={`flex flex-col items-center gap-1 ${currentStep >= 2 ? "text-primary font-medium" : "text-muted-foreground"}`}
+            >
+              <div
+                className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${currentStep >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+              >
+                {currentStep > 2 ? "✓" : "2"}
+              </div>
+              <span className="text-[11px] sm:text-xs">Tautan Terisi</span>
+            </div>
+            <div
+              className={`flex flex-col items-center gap-1 ${currentStep >= 3 ? "text-emerald-700 font-medium dark:text-emerald-400" : "text-muted-foreground"}`}
+            >
+              <div
+                className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${currentStep >= 3 ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"}`}
+              >
+                {currentStep >= 3 ? "✓" : "3"}
+              </div>
+              <span className="text-[11px] sm:text-xs">Terkirim Resmi</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function LinkCheckBadge({ item, isChecking }: { item?: LinkCheckItem; isChecking?: boolean }) {
@@ -220,6 +439,7 @@ export function SubmissionClient({
   // Closed state is only applied when page is loaded after deadline
   const isClosed = initialClosed;
   const [isCountdownZero, setIsCountdownZero] = useState(false);
+  const multiZoneDeadline = useMemo(() => formatDeadlineMultiZone(deadlineIso), [deadlineIso]);
 
   const [githubUrl, setGithubUrl] = useState(submission?.github_url ?? "");
   const [liveDemoUrl, setLiveDemoUrl] = useState(submission?.live_demo_url ?? "");
@@ -255,6 +475,19 @@ export function SubmissionClient({
   const isReadOnly = isClosed || isDisqualified;
   const isSubmitted = submission?.status === "submitted";
   const hasSubmissionRow = Boolean(submission);
+  const [isFormExpanded, setIsFormExpanded] = useState(!isSubmitted);
+
+  const handlePaste = async (setter: (val: string) => void) => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setter(text.trim());
+        toast.success("Tautan berhasil ditempel.");
+      }
+    } catch {
+      toast.error("Gagal membaca papan klip.");
+    }
+  };
 
   const runLinkCheck = async (showToast = false) => {
     setIsCheckingLinks(true);
@@ -372,33 +605,24 @@ export function SubmissionClient({
     setIsConfirmOpen(true);
   };
 
-  let statusBadge = (
-    <Badge variant="outline" className="border-dashed text-muted-foreground">
-      Belum dikirim
-    </Badge>
-  );
-  if (hasSubmissionRow) {
-    if (isSubmitted) {
-      statusBadge = <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Terkirim</Badge>;
-    } else {
-      statusBadge = <Badge variant="secondary">Draf</Badge>;
-    }
-  }
-
   return (
     <div className="space-y-6">
       <FinalistBanner notice={finalistNotice} />
 
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-semibold text-2xl">Portal Submission</h1>
-          {statusBadge}
-        </div>
-        <p className="text-muted-foreground">
-          Kelola berkas dan tautan hasil karya proyek tim Anda untuk kompetisi MIT-WEEK 2026.
-        </p>
+      {/* 1. State-Driven Hero with Stepper & Team Code Chip */}
+      <SubmissionStatusHero team={team} submission={submission} isClosed={isClosed} isDisqualified={isDisqualified} />
+
+      {/* 2. Official Channel Announcement */}
+      <div className="flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs text-muted-foreground sm:text-sm">
+        <Info className="size-4 shrink-0 text-primary" />
+        <span>
+          <strong className="font-semibold text-foreground">Jalur Pengiriman Utama:</strong> Portal ini adalah jalur
+          resmi pengumpulan karya MIT-WEEK 2026. Seluruh draf, tautan karya, dan submission dinilai langsung melalui
+          portal ini.
+        </span>
       </div>
 
+      {/* 3. Urgent State Alerts */}
       {isDisqualified && (
         <Alert variant="destructive">
           <AlertOctagon className="size-4" />
@@ -439,210 +663,348 @@ export function SubmissionClient({
         </Alert>
       )}
 
+      {/* 4. Main Two-Column Layout */}
       <div className="grid gap-6 md:grid-cols-3">
+        {/* Left Column (col-span-2) */}
         <div className="space-y-6 md:col-span-2">
+          {/* If already submitted, receipt is shown prominently */}
           {isSubmitted && submission && <SubmissionReceipt team={team} submission={submission} />}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Formulir Pengiriman Berkas</CardTitle>
-              <CardDescription>
-                Masukkan tautan repositori GitHub, URL live demo aplikasi, dan video presentasi proyek tim Anda.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="github_url" className="flex items-center gap-1.5 font-medium">
-                  <Code2 className="size-4 text-muted-foreground" />
-                  Repositori GitHub
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="github_url"
-                  name="github_url"
-                  type="url"
-                  value={githubUrl}
-                  disabled={isReadOnly || isPending}
-                  onChange={(e) => {
-                    setGithubUrl(e.target.value);
-                    if (fieldErrors.github_url) {
-                      setFieldErrors((prev) => ({ ...prev, github_url: undefined }));
-                    }
-                  }}
-                  placeholder="https://github.com/organisasi/nama-proyek"
-                  className={fieldErrors.github_url ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {fieldErrors.github_url ? (
-                  <p className="text-destructive text-xs">{fieldErrors.github_url}</p>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    Tautan repositori publik GitHub yang berisi kode sumber proyek. Wajib diawali{" "}
-                    <code>https://github.com/</code>.
-                  </p>
-                )}
-                <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} />
+          {/* If already submitted, collapse the form behind an expander */}
+          {isSubmitted && !isReadOnly && (
+            <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3.5">
+              <div>
+                <p className="font-semibold text-sm text-foreground">Perbarui Tautan Karya</p>
+                <p className="text-muted-foreground text-xs">
+                  Karya tim Anda telah terkirim resmi. Buka formulir jika ingin memperbarui tautan sebelum tenggat
+                  waktu.
+                </p>
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFormExpanded((prev) => !prev)}
+                className="gap-1.5 shrink-0"
+              >
+                <span>{isFormExpanded ? "Tutup formulir" : "Perbarui karya"}</span>
+                {isFormExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+              </Button>
+            </div>
+          )}
 
-              <div className="space-y-2">
-                <Label htmlFor="live_demo_url" className="flex items-center gap-1.5 font-medium">
-                  <Globe className="size-4 text-muted-foreground" />
-                  URL Live Demo
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="live_demo_url"
-                  name="live_demo_url"
-                  type="url"
-                  value={liveDemoUrl}
-                  disabled={isReadOnly || isPending}
-                  onChange={(e) => {
-                    setLiveDemoUrl(e.target.value);
-                    if (fieldErrors.live_demo_url) {
-                      setFieldErrors((prev) => ({ ...prev, live_demo_url: undefined }));
-                    }
-                  }}
-                  placeholder="https://proyek-mitweek.vercel.app"
-                  className={fieldErrors.live_demo_url ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {fieldErrors.live_demo_url ? (
-                  <p className="text-destructive text-xs">{fieldErrors.live_demo_url}</p>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel,
-                    Netlify, dsb).
-                  </p>
-                )}
-                <LinkCheckBadge item={linkCheck?.liveDemo} isChecking={isCheckingLinks} />
-              </div>
+          {/* Checklist only visible before submission */}
+          {!isSubmitted && <SubmissionChecklist />}
 
-              <div className="space-y-2">
-                <Label htmlFor="video_url" className="flex items-center gap-1.5 font-medium">
-                  <Video className="size-4 text-muted-foreground" />
-                  URL Video Demo
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="video_url"
-                  name="video_url"
-                  type="url"
-                  value={videoUrl}
-                  disabled={isReadOnly || isPending}
-                  onChange={(e) => {
-                    setVideoUrl(e.target.value);
-                    if (fieldErrors.video_url) {
-                      setFieldErrors((prev) => ({ ...prev, video_url: undefined }));
-                    }
-                  }}
-                  placeholder="https://youtube.com/watch?v=... atau https://drive.google.com/..."
-                  className={fieldErrors.video_url ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {fieldErrors.video_url ? (
-                  <p className="text-destructive text-xs">{fieldErrors.video_url}</p>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    Tautan video demonstrasi proyek berdurasi sesuai ketentuan (YouTube atau Google Drive dengan izin
-                    akses publik).
-                  </p>
-                )}
-                <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} />
-              </div>
-
-              <p className="text-muted-foreground text-xs italic">
-                * Pemeriksaan tautan hanya peringatan dan tidak menghalangi pengiriman.
-              </p>
-
-              <div className="space-y-2 border-t pt-5">
-                <Label htmlFor="notes_for_judges" className="flex items-center gap-1.5 font-medium">
-                  <StickyNote className="size-4 text-muted-foreground" />
-                  Catatan untuk Juri
-                  <span className="font-normal text-muted-foreground text-xs">(opsional)</span>
-                </Label>
-                <Textarea
-                  id="notes_for_judges"
-                  name="notes_for_judges"
-                  rows={4}
-                  maxLength={1000}
-                  value={notesForJudges}
-                  disabled={isReadOnly || isPending}
-                  onChange={(e) => setNotesForJudges(e.target.value)}
-                  placeholder="Contoh: akun demo yang dapat dipakai juri, langkah pengujian utama, atau batasan yang perlu diketahui."
-                  className="min-h-24 resize-y"
-                />
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-muted-foreground text-xs">
-                    Ditampilkan kepada dewan juri dan panitia. Gunakan akun demo khusus, jangan bagikan kata sandi
-                    pribadi.
-                  </p>
-                  <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
-                    {notesForJudges.length}/1000
-                  </span>
+          {/* Form Card */}
+          {(!isSubmitted || isFormExpanded) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Formulir Pengiriman Berkas</CardTitle>
+                <CardDescription>
+                  Masukkan tautan repositori GitHub, URL live demo aplikasi, dan video presentasi proyek tim Anda.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* GitHub URL */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="github_url" className="flex items-center gap-1.5 font-medium">
+                      <Code2 className="size-4 text-muted-foreground" />
+                      Repositori GitHub
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() => handlePaste(setGithubUrl)}
+                          className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                        >
+                          <ClipboardPaste className="size-3" />
+                          <span>Tempel</span>
+                        </Button>
+                        {githubUrl && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => setGithubUrl("")}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-3" />
+                            <span>Hapus</span>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    id="github_url"
+                    name="github_url"
+                    type="url"
+                    inputMode="url"
+                    value={githubUrl}
+                    disabled={isReadOnly || isPending}
+                    onChange={(e) => {
+                      setGithubUrl(e.target.value);
+                      if (fieldErrors.github_url) {
+                        setFieldErrors((prev) => ({ ...prev, github_url: undefined }));
+                      }
+                    }}
+                    onBlur={(e) => setGithubUrl(e.target.value.trim())}
+                    placeholder="https://github.com/organisasi/nama-proyek"
+                    className={fieldErrors.github_url ? "border-destructive focus-visible:ring-destructive" : ""}
+                  />
+                  {fieldErrors.github_url ? (
+                    <p className="text-destructive text-xs">{fieldErrors.github_url}</p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      Tautan repositori publik GitHub yang berisi kode sumber proyek. Wajib diawali{" "}
+                      <code>https://github.com/</code>.
+                    </p>
+                  )}
+                  <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} />
                 </div>
-              </div>
 
-              {serverError && <p className="text-destructive text-sm">{serverError}</p>}
-            </CardContent>
+                {/* Live Demo URL */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="live_demo_url" className="flex items-center gap-1.5 font-medium">
+                      <Globe className="size-4 text-muted-foreground" />
+                      URL Live Demo
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() => handlePaste(setLiveDemoUrl)}
+                          className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                        >
+                          <ClipboardPaste className="size-3" />
+                          <span>Tempel</span>
+                        </Button>
+                        {liveDemoUrl && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => setLiveDemoUrl("")}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-3" />
+                            <span>Hapus</span>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    id="live_demo_url"
+                    name="live_demo_url"
+                    type="url"
+                    inputMode="url"
+                    value={liveDemoUrl}
+                    disabled={isReadOnly || isPending}
+                    onChange={(e) => {
+                      setLiveDemoUrl(e.target.value);
+                      if (fieldErrors.live_demo_url) {
+                        setFieldErrors((prev) => ({ ...prev, live_demo_url: undefined }));
+                      }
+                    }}
+                    onBlur={(e) => setLiveDemoUrl(e.target.value.trim())}
+                    placeholder="https://proyek-mitweek.vercel.app"
+                    className={fieldErrors.live_demo_url ? "border-destructive focus-visible:ring-destructive" : ""}
+                  />
+                  {fieldErrors.live_demo_url ? (
+                    <p className="text-destructive text-xs">{fieldErrors.live_demo_url}</p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel,
+                      Netlify, dsb).
+                    </p>
+                  )}
+                  <LinkCheckBadge item={linkCheck?.liveDemo} isChecking={isCheckingLinks} />
+                </div>
 
-            {!isReadOnly && (
-              <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Video Demo URL */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="video_url" className="flex items-center gap-1.5 font-medium">
+                      <Video className="size-4 text-muted-foreground" />
+                      URL Video Demo
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() => handlePaste(setVideoUrl)}
+                          className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                        >
+                          <ClipboardPaste className="size-3" />
+                          <span>Tempel</span>
+                        </Button>
+                        {videoUrl && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => setVideoUrl("")}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-3" />
+                            <span>Hapus</span>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    id="video_url"
+                    name="video_url"
+                    type="url"
+                    inputMode="url"
+                    value={videoUrl}
+                    disabled={isReadOnly || isPending}
+                    onChange={(e) => {
+                      setVideoUrl(e.target.value);
+                      if (fieldErrors.video_url) {
+                        setFieldErrors((prev) => ({ ...prev, video_url: undefined }));
+                      }
+                    }}
+                    onBlur={(e) => setVideoUrl(e.target.value.trim())}
+                    placeholder="https://youtube.com/watch?v=... atau https://youtu.be/..."
+                    className={fieldErrors.video_url ? "border-destructive focus-visible:ring-destructive" : ""}
+                  />
+                  {fieldErrors.video_url ? (
+                    <p className="text-destructive text-xs">{fieldErrors.video_url}</p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      Tautan video demonstrasi proyek berdurasi <strong>maksimal 5 menit</strong> (Juknis C.8). YouTube
+                      atau Google Drive dengan izin akses publik.
+                    </p>
+                  )}
+                  {(videoUrl.includes("list=") || videoUrl.includes("start_radio")) && (
+                    <p className="text-amber-600 text-xs font-medium">
+                      Tips: Tautan video terdeteksi memuat parameter playlist (&list=...). Disarankan menggunakan tautan
+                      langsung video tunggal agar juri dapat langsung membuka.
+                    </p>
+                  )}
+                  <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} />
+                </div>
+
+                <p className="text-muted-foreground text-xs italic">
+                  * Pemeriksaan tautan hanya peringatan dan tidak menghalangi pengiriman.
+                </p>
+
+                {/* Notes for judges */}
+                <div className="space-y-2 border-t pt-5">
+                  <Label htmlFor="notes_for_judges" className="flex items-center gap-1.5 font-medium">
+                    <StickyNote className="size-4 text-muted-foreground" />
+                    Catatan untuk Juri
+                    <span className="font-normal text-muted-foreground text-xs">(opsional)</span>
+                  </Label>
+                  <Textarea
+                    id="notes_for_judges"
+                    name="notes_for_judges"
+                    rows={4}
+                    maxLength={1000}
+                    value={notesForJudges}
+                    disabled={isReadOnly || isPending}
+                    onChange={(e) => setNotesForJudges(e.target.value)}
+                    placeholder="Contoh: akun demo yang dapat dipakai juri, langkah pengujian utama, atau batasan yang perlu diketahui."
+                    className="min-h-24 resize-y"
+                  />
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-muted-foreground text-xs">
+                      Ditampilkan kepada dewan juri dan panitia. Gunakan akun demo khusus, jangan bagikan kata sandi
+                      pribadi.
+                    </p>
+                    <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
+                      {notesForJudges.length}/1000
+                    </span>
+                  </div>
+                </div>
+
+                {serverError && <p className="text-destructive text-sm">{serverError}</p>}
+              </CardContent>
+
+              {!isReadOnly && (
+                <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!hasSubmissionRow || isCheckingLinks || isPending}
+                      onClick={() => runLinkCheck(true)}
+                      className="gap-1.5"
+                      title={hasSubmissionRow ? undefined : "Simpan draf terlebih dahulu untuk memeriksa tautan."}
+                    >
+                      <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
+                      {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
+                    </Button>
+                    {!hasSubmissionRow && (
+                      <span className="text-muted-foreground text-xs">Simpan draf dulu untuk memeriksa tautan.</span>
+                    )}
+                    {hasSubmissionRow && linkCheckedAt && (
+                      <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                    {!isSubmitted && (
+                      <Button type="button" variant="outline" disabled={isPending} onClick={handleSaveDraftClick}>
+                        Simpan draf
+                      </Button>
+                    )}
+                    <Button type="button" disabled={isPending} onClick={handleSubmitClick}>
+                      {isSubmitted ? "Perbarui submission" : "Kirim submission"}
+                    </Button>
+                  </div>
+                </CardFooter>
+              )}
+
+              {isReadOnly && hasSubmissionRow && (
+                <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={!hasSubmissionRow || isCheckingLinks || isPending}
+                    disabled={isCheckingLinks}
                     onClick={() => runLinkCheck(true)}
                     className="gap-1.5"
-                    title={hasSubmissionRow ? undefined : "Simpan draf terlebih dahulu untuk memeriksa tautan."}
                   >
                     <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
                     {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
                   </Button>
-                  {!hasSubmissionRow && (
-                    <span className="text-muted-foreground text-xs">Simpan draf dulu untuk memeriksa tautan.</span>
-                  )}
-                  {hasSubmissionRow && linkCheckedAt && (
+                  {linkCheckedAt && (
                     <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
                   )}
-                </div>
-
-                <div className="flex flex-col-reverse gap-3 sm:flex-row">
-                  {!isSubmitted && (
-                    <Button type="button" variant="outline" disabled={isPending} onClick={handleSaveDraftClick}>
-                      Simpan draf
-                    </Button>
-                  )}
-                  <Button type="button" disabled={isPending} onClick={handleSubmitClick}>
-                    {isSubmitted ? "Perbarui submission" : "Kirim submission"}
-                  </Button>
-                </div>
-              </CardFooter>
-            )}
-
-            {isReadOnly && hasSubmissionRow && (
-              <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isCheckingLinks}
-                  onClick={() => runLinkCheck(true)}
-                  className="gap-1.5"
-                >
-                  <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
-                  {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
-                </Button>
-                {linkCheckedAt && (
-                  <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
-                )}
-              </CardFooter>
-            )}
-          </Card>
-
-          <SubmissionChecklist />
+                </CardFooter>
+              )}
+            </Card>
+          )}
         </div>
 
+        {/* Right Rail (col-span-1, quiet rail) */}
         <div className="space-y-6">
-          <Card>
+          {/* 1. Countdown & Deadline Card (Sticky) */}
+          <Card className="sticky top-6">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="size-4 text-primary" />
@@ -651,8 +1013,19 @@ export function SubmissionClient({
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <span className="text-muted-foreground text-xs">Batas akhir:</span>
-                <p className="font-semibold text-foreground text-sm">{formatDeadlineWita(deadlineIso)}</p>
+                <span className="text-muted-foreground text-xs">Batas akhir pengumpulan:</span>
+                {multiZoneDeadline ? (
+                  <div className="mt-0.5 space-y-1">
+                    <p className="font-semibold text-foreground text-sm">{multiZoneDeadline.wita}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{multiZoneDeadline.wib}</span>
+                      <span>•</span>
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{multiZoneDeadline.wit}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="font-semibold text-foreground text-sm">{formatDeadlineWita(deadlineIso)}</p>
+                )}
               </div>
               <div className="rounded-md border bg-muted/30 p-2.5">
                 <CountdownTimer
@@ -683,44 +1056,38 @@ export function SubmissionClient({
             </CardContent>
           </Card>
 
+          {/* 2. Next Steps Timeline */}
+          <NextStepsCard />
+
+          {/* 3. Compact Team Info (No duplicate team code!) */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Informasi Tim</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-2.5 text-xs">
               <div>
-                <span className="text-muted-foreground text-xs">Kode Tim:</span>
-                <div className="mt-1 flex items-center justify-between rounded-md border bg-muted/60 px-3 py-1.5">
-                  <span className="font-bold font-mono text-lg">{team.team_code}</span>
-                  <CopyButton value={team.team_code} />
-                </div>
-                <p className="mt-1 text-muted-foreground text-xs">
-                  Kode tim dibutuhkan jika panitia memakai formulir cadangan.
-                </p>
-              </div>
-
-              <div className="border-t pt-2">
-                <span className="text-muted-foreground text-xs">Nama Tim:</span>
-                <p className="font-medium text-foreground">{team.team_name}</p>
+                <span className="text-muted-foreground">Nama Tim:</span>
+                <p className="font-semibold text-foreground text-sm">{team.team_name}</p>
               </div>
 
               <div>
-                <span className="text-muted-foreground text-xs">Institusi:</span>
+                <span className="text-muted-foreground">Institusi:</span>
                 <p className="text-foreground">{team.institution}</p>
               </div>
 
               <div>
-                <span className="text-muted-foreground text-xs">Ketua Tim:</span>
-                <p className="text-foreground">{team.leader_name}</p>
+                <span className="text-muted-foreground">Ketua Tim:</span>
+                <p className="text-foreground font-medium">{team.leader_name}</p>
               </div>
 
               <div>
-                <span className="text-muted-foreground text-xs">Anggota:</span>
+                <span className="text-muted-foreground">Anggota:</span>
                 <p className="text-foreground">{team.members.join(", ")}</p>
               </div>
             </CardContent>
           </Card>
 
+          {/* 4. Quiet Help Card */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -736,7 +1103,7 @@ export function SubmissionClient({
                 <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
                   <a href={toWhatsAppUrl(contactWhatsapp)} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="size-4 shrink-0 text-primary" />
-                    <span className="min-w-0 flex-1 truncate text-left">
+                    <span className="min-w-0 flex-1 truncate text-left text-xs">
                       Chat panitia {formatWhatsAppNumber(contactWhatsapp) ?? contactWhatsapp}
                     </span>
                     <ExternalLink className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
@@ -747,35 +1114,10 @@ export function SubmissionClient({
               )}
             </CardContent>
           </Card>
-
-          {hasSubmissionRow && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Riwayat Pengiriman</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2.5 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Pertama disimpan (draf/awal):</span>
-                  <p className="font-medium text-foreground">{formatTimestampWita(submission?.submitted_at)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Pertama dikirim (resmi):</span>
-                  <p className="font-medium text-foreground">
-                    {submission?.first_submitted_at
-                      ? formatTimestampWita(submission.first_submitted_at)
-                      : "Belum dikirim"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Terakhir diubah:</span>
-                  <p className="font-medium text-foreground">{formatTimestampWita(submission?.updated_at)}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
+      {/* Confirmation Dialog */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -32,6 +32,16 @@ export interface ResultsClientProps {
   results: TeamResultsData;
 }
 
+const idScoreFormatter = new Intl.NumberFormat("id-ID", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function formatScore(val: number | null | undefined): string {
+  if (val === null || val === undefined || Number.isNaN(val)) return "-";
+  return idScoreFormatter.format(val);
+}
+
 function StageResultsView({
   stage,
   stageTitle,
@@ -53,16 +63,18 @@ function StageResultsView({
             <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 font-medium text-primary text-xs">
               Nilai Akhir {stageTitle}
             </Badge>
-            <span className="text-muted-foreground text-xs">Dinilai oleh {stageData.judge_count} juri</span>
+            <span className="text-muted-foreground text-xs">
+              {stageData.judge_count > 1 ? `Dinilai oleh ${stageData.judge_count} juri` : "Dewan Juri"}
+            </span>
           </div>
         </CardHeader>
         <CardContent className="pt-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-extrabold font-mono text-4xl text-primary tracking-tight sm:text-5xl">
-                {stageData.total !== null ? stageData.total.toFixed(2) : "-"}
+              <span className="font-extrabold text-4xl text-primary tracking-tight tabular-nums sm:text-5xl">
+                {formatScore(stageData.total)}
               </span>
-              <span className="font-mono text-muted-foreground text-sm">/ 100</span>
+              <span className="text-muted-foreground text-sm tabular-nums">/ 100</span>
             </div>
             <p className="text-muted-foreground text-xs">Rata-rata total berbobot dari seluruh dewan juri</p>
           </div>
@@ -101,12 +113,10 @@ function StageResultsView({
                   <TableRow key={item.key}>
                     <TableCell className="font-medium text-foreground">{label}</TableCell>
                     <TableCell className="text-muted-foreground text-xs leading-relaxed">{indicator}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {item.average !== null ? item.average.toFixed(2) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">{weight}%</TableCell>
-                    <TableCell className="text-right font-mono font-semibold text-sm">
-                      {contribution !== null ? contribution.toFixed(2) : "-"}
+                    <TableCell className="text-right text-sm tabular-nums">{formatScore(item.average)}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{weight}%</TableCell>
+                    <TableCell className="text-right font-semibold text-sm tabular-nums">
+                      {formatScore(contribution)}
                     </TableCell>
                   </TableRow>
                 );
@@ -117,10 +127,10 @@ function StageResultsView({
                 <TableCell colSpan={2} className="font-semibold text-foreground">
                   Total Nilai Berbobot (Basis Data)
                 </TableCell>
-                <TableCell className="text-right font-mono text-muted-foreground text-xs">-</TableCell>
-                <TableCell className="text-right font-mono font-semibold">100%</TableCell>
-                <TableCell className="text-right font-bold font-mono text-base text-primary">
-                  {stageData.total !== null ? stageData.total.toFixed(2) : "-"}
+                <TableCell className="text-right text-muted-foreground text-xs tabular-nums">-</TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">100%</TableCell>
+                <TableCell className="text-right font-bold text-base text-primary tabular-nums">
+                  {formatScore(stageData.total)}
                 </TableCell>
               </TableRow>
             </TableFooter>
