@@ -41,7 +41,11 @@ export interface NavGroup {
   items: NavMainItem[];
 }
 
-export function getSidebarItems(role: CurrentUser["role"], juknisUrl?: string | null): NavGroup[] {
+export function getSidebarItems(
+  role: CurrentUser["role"],
+  juknisUrl?: string | null,
+  resultsReleased?: boolean,
+): NavGroup[] {
   if (role === "admin") {
     return [
       {
@@ -70,13 +74,23 @@ export function getSidebarItems(role: CurrentUser["role"], juknisUrl?: string | 
       url: basePath,
       icon: LayoutDashboard,
     },
-    {
-      id: "case-study",
-      title: "Studi Kasus",
-      url: `${basePath}/studi-kasus`,
-      icon: BookOpen,
-    },
   ];
+
+  if (role === "team" && resultsReleased) {
+    items.push({
+      id: "results",
+      title: "Hasil Penilaian",
+      url: "/team/hasil",
+      icon: Award,
+    });
+  }
+
+  items.push({
+    id: "case-study",
+    title: "Studi Kasus",
+    url: `${basePath}/studi-kasus`,
+    icon: BookOpen,
+  });
 
   if (juknisUrl?.startsWith("https://")) {
     items.push({

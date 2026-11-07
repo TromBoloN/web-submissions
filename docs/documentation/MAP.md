@@ -25,10 +25,11 @@ Architecture map of `src/`. Update it when you add, move or remove a screen or s
 | Judge scoring       | /judge/nilai/[tahap]/[teamId]         | `(main)/judge/nilai/[tahap]/[teamId]`                 | `preliminary_scores`, `final_scores`                |
 | Team portal         | /team                                 | `(main)/team` (files beside `page.tsx`)               | `submissions`, own `teams` row                      |
 | Case study          | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus`                           | `competition_settings` (markdown)                   |
+| Team results        | /team/hasil                           | `(main)/team/hasil`                                   | `get_my_results()` (RPC)                            |
 | Change password     | /<role>/kata-sandi                    | `(main)/<role>/kata-sandi`                            | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized        | /unauthorized                         | `(main)/unauthorized`                                 | none                                                |
 
-Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. The team results page is **planned, not built**.
+Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil/page.tsx`.
 
 ## Shared code
 

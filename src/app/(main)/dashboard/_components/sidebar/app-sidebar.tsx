@@ -26,8 +26,13 @@ import { NavUser } from "./nav-user";
 export function AppSidebar({
   user,
   juknisUrl,
+  resultsReleased,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user: CurrentUser; juknisUrl?: string | null }) {
+}: React.ComponentProps<typeof Sidebar> & {
+  user: CurrentUser;
+  juknisUrl?: string | null;
+  resultsReleased?: boolean;
+}) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
       sidebarVariant: s.values.sidebar_variant,
@@ -54,7 +59,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={getSidebarItems(user.role, juknisUrl)} />
+        <NavMain items={getSidebarItems(user.role, juknisUrl, resultsReleased)} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

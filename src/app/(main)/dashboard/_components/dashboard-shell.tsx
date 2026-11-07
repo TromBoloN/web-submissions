@@ -14,7 +14,15 @@ import { SearchDialog } from "./header/search-dialog";
 import { ThemeSwitcher } from "./header/theme-switcher";
 import { AppSidebar } from "./sidebar/app-sidebar";
 
-export async function DashboardShell({ children, user }: Readonly<{ children: ReactNode; user: CurrentUser }>) {
+export async function DashboardShell({
+  children,
+  user,
+  resultsReleased,
+}: Readonly<{
+  children: ReactNode;
+  user: CurrentUser;
+  resultsReleased?: boolean;
+}>) {
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const [variant, collapsible] = await Promise.all([
@@ -34,7 +42,13 @@ export async function DashboardShell({ children, user }: Readonly<{ children: Re
       defaultOpen={defaultOpen}
       style={{ "--sidebar-width": "calc(var(--spacing) * 68)" } as React.CSSProperties}
     >
-      <AppSidebar user={user} juknisUrl={juknisUrl} variant={variant} collapsible={collapsible} />
+      <AppSidebar
+        user={user}
+        juknisUrl={juknisUrl}
+        resultsReleased={resultsReleased}
+        variant={variant}
+        collapsible={collapsible}
+      />
       <SidebarInset
         className={cn(
           "[html[data-content-layout=centered]_&>*]:mx-auto",
