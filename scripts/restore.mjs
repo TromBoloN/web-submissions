@@ -258,8 +258,20 @@ async function main() {
   const subHistory = readJsonFile(path.join(backupDir, "submission_history.json"));
   if (subHistory && subHistory.length > 0) {
     process.stdout.write("Memulihkan tabel submission_history ... ");
-    const res = await upsertInBatches(supabase, "submission_history", subHistory, "id");
-    console.log(`OK (${res.count} baris)`);
+    // Clear trigger-generated initial entries from step 7 so backup history is restored cleanly
+    await supabase.from("submission_history").delete().neq("id", 0);
+    // id is GENERATED ALWAYS AS IDENTITY; strip id so Postgres generates identity cleanly
+    const cleaned = subHistory.map(({ id, ...rest }) => rest);
+    let totalHistory = 0;
+    for (let i = 0; i < cleaned.length; i += 100) {
+      const chunk = cleaned.slice(i, i + 100);
+      const { error } = await supabase.from("submission_history").insert(chunk);
+      if (error) {
+        throw new Error(`Gagal memulihkan submission_history: ${error.message}`);
+      }
+      totalHistory += chunk.length;
+    }
+    console.log(`OK (${totalHistory} baris)`);
   }
 
   // 9. Preliminary Scores (strip generated columns if any)
