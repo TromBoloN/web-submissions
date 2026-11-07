@@ -29,7 +29,7 @@ Architecture map of `src/`. Update it when you add, move or remove a screen or s
 | Change password     | /<role>/kata-sandi                    | `(main)/<role>/kata-sandi`                            | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized        | /unauthorized                         | `(main)/unauthorized`                                 | none                                                |
 
-Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil/page.tsx`.
+Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
 
 ## Shared code
 
