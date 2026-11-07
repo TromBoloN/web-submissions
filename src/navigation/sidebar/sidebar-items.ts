@@ -76,13 +76,12 @@ export function getSidebarItems(
     },
   ];
 
-  if (role === "team") {
+  if (role === "team" && resultsReleased === true) {
     items.push({
       id: "results",
       title: "Hasil Penilaian",
       url: "/team/hasil",
       icon: Award,
-      badge: resultsReleased ? undefined : "locked",
     });
   }
 

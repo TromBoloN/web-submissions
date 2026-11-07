@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import type { Metadata } from "next";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,16 +19,17 @@ export default async function TeamHasilPage() {
   const supabase = await createClient();
 
   // 1. Check release flags in competition_settings
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from("competition_settings")
     .select("preliminary_results_released, final_results_released")
     .eq("id", true)
     .maybeSingle();
 
-  const isAnyReleased = Boolean(settings?.preliminary_results_released || settings?.final_results_released);
+  const isAnyReleased =
+    !settingsError && Boolean(settings?.preliminary_results_released || settings?.final_results_released);
 
   if (!isAnyReleased) {
-    return <ResultsClient results={null} />;
+    redirect("/team");
   }
 
   // 2. Fetch results from RPC

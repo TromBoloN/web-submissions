@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Info, LockKeyhole, MessageSquareQuote, Sparkles } from "lucide-react";
+import { Award, Info, MessageSquareQuote, Sparkles } from "lucide-react";
 
 import { type RubricBarItem, RubricBars } from "@/components/rubric-bars";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ export type TeamResultsData = {
 };
 
 export interface ResultsClientProps {
-  results: TeamResultsData | null;
+  results: TeamResultsData;
 }
 
 const idScoreFormatter = new Intl.NumberFormat("id-ID", {
@@ -263,30 +263,6 @@ function StageResultsView({
 }
 
 export function ResultsClient({ results }: ResultsClientProps) {
-  if (!results) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-display font-semibold text-2xl tracking-tight">Hasil Penilaian</h1>
-          <p className="text-muted-foreground text-sm">Nilai dan masukan juri tersedia setelah diumumkan panitia.</p>
-        </div>
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-            <div className="grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
-              <LockKeyhole aria-hidden="true" className="size-6" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="font-semibold text-lg">Hasil penilaian masih terkunci</h2>
-              <p className="max-w-md text-muted-foreground text-sm">
-                Panitia akan membuka nilai, rincian kriteria, dan masukan anonim setelah proses penilaian selesai.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const showFinalTab = results.is_finalist && Boolean(results.final);
   const defaultTab = results.preliminary ? "preliminary" : "final";
 
