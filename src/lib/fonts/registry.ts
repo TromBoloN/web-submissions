@@ -23,88 +23,105 @@ import { GeistPixelSquare } from "geist/font/pixel";
 
 const inter = Inter({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-inter",
 });
 
 const notoSans = Noto_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-noto-sans",
 });
 
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
+  display: "swap",
   variable: "--font-roboto",
 });
 
 const geist = Geist({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-geist",
 });
 
 const outfit = Outfit({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-outfit",
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-geist-mono",
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-dm-sans",
 });
 
 const nunitoSans = Nunito_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-nunito-sans",
 });
 
 const figtree = Figtree({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-figtree",
 });
 
 const raleway = Raleway({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-raleway",
 });
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-public-sans",
 });
 
 const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-jetbrains-mono",
 });
 
 const notoSerif = Noto_Serif({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-noto-serif",
 });
 
 const robotoSlab = Roboto_Slab({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-roboto-slab",
 });
 
 const merriweather = Merriweather({
   subsets: ["latin"],
   weight: ["400", "700"],
+  display: "swap",
   variable: "--font-merriweather",
 });
 
 const lora = Lora({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-lora",
 });
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-playfair-display",
 });
 

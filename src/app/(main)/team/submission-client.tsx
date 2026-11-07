@@ -384,7 +384,7 @@ function SubmissionStatusHero({
           </div>
           <p className="text-muted-foreground text-xs sm:text-sm">{heroDescription}</p>
           {!isClosed && !isDisqualified && (
-            <p className="whitespace-nowrap font-sans text-foreground text-xs tabular-nums">
+            <p className="font-sans text-foreground text-xs tabular-nums sm:whitespace-nowrap">
               Batas: {multiZoneDeadline?.wita ?? formatDeadlineWita(deadlineIso)}
               {multiZoneDeadline && ` · ${multiZoneDeadline.wib} · ${multiZoneDeadline.wit}`}
             </p>
@@ -407,10 +407,18 @@ function SubmissionStatusHero({
   );
 }
 
-function LinkCheckBadge({ item, isChecking }: { item?: LinkCheckItem; isChecking?: boolean }) {
+function LinkCheckBadge({
+  item,
+  isChecking,
+  statusId,
+}: {
+  item?: LinkCheckItem;
+  isChecking?: boolean;
+  statusId: string;
+}) {
   if (isChecking) {
     return (
-      <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+      <div id={statusId} className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
         <RotateCw className="size-3 animate-spin" />
         <span>Memeriksa tautan...</span>
       </div>
@@ -421,7 +429,10 @@ function LinkCheckBadge({ item, isChecking }: { item?: LinkCheckItem; isChecking
 
   if (item.status === "ok") {
     return (
-      <div className="flex items-start gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-700 text-xs dark:text-emerald-400">
+      <div
+        id={statusId}
+        className="flex items-start gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-[13px] text-emerald-700 dark:text-emerald-400"
+      >
         <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
         <div>
           <span className="font-medium">Tautan valid:</span> {item.message}
@@ -432,7 +443,10 @@ function LinkCheckBadge({ item, isChecking }: { item?: LinkCheckItem; isChecking
 
   if (item.status === "warning") {
     return (
-      <div className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-amber-700 text-xs dark:text-amber-400">
+      <div
+        id={statusId}
+        className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[13px] text-amber-700 dark:text-amber-400"
+      >
         <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
         <div>
           <span className="font-medium">Peringatan:</span> {item.message}
@@ -442,7 +456,10 @@ function LinkCheckBadge({ item, isChecking }: { item?: LinkCheckItem; isChecking
   }
 
   return (
-    <div className="flex items-start gap-1.5 rounded-md border border-muted bg-muted/40 p-2 text-muted-foreground text-xs">
+    <div
+      id={statusId}
+      className="flex items-start gap-1.5 rounded-md border border-muted bg-muted/40 p-2 text-[13px] text-muted-foreground"
+    >
       <HelpCircle className="mt-0.5 size-3.5 shrink-0" />
       <div>
         <span className="font-medium">Info verifikasi:</span> {item.message}
@@ -753,6 +770,11 @@ export function SubmissionClient({
                       type="url"
                       inputMode="url"
                       value={githubUrl}
+                      aria-describedby={
+                        fieldErrors.github_url
+                          ? "github_url_error github_url_status"
+                          : "github_url_help github_url_status"
+                      }
                       disabled={isReadOnly || isPending}
                       onChange={(e) => {
                         setGithubUrl(e.target.value);
@@ -781,14 +803,16 @@ export function SubmissionClient({
                     )}
                   </div>
                   {fieldErrors.github_url ? (
-                    <p className="text-destructive text-xs">{fieldErrors.github_url}</p>
+                    <p id="github_url_error" className="text-[13px] text-destructive">
+                      {fieldErrors.github_url}
+                    </p>
                   ) : (
-                    <p className="text-muted-foreground text-xs">
+                    <p id="github_url_help" className="text-[13px] text-muted-foreground">
                       Tautan repositori publik GitHub yang berisi kode sumber proyek. Wajib diawali{" "}
                       <code>https://github.com/</code>.
                     </p>
                   )}
-                  <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} />
+                  <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} statusId="github_url_status" />
                 </div>
 
                 {/* Live Demo URL */}
@@ -824,6 +848,11 @@ export function SubmissionClient({
                       type="url"
                       inputMode="url"
                       value={liveDemoUrl}
+                      aria-describedby={
+                        fieldErrors.live_demo_url
+                          ? "live_demo_url_error live_demo_url_status"
+                          : "live_demo_url_help live_demo_url_status"
+                      }
                       disabled={isReadOnly || isPending}
                       onChange={(e) => {
                         setLiveDemoUrl(e.target.value);
@@ -852,14 +881,20 @@ export function SubmissionClient({
                     )}
                   </div>
                   {fieldErrors.live_demo_url ? (
-                    <p className="text-destructive text-xs">{fieldErrors.live_demo_url}</p>
+                    <p id="live_demo_url_error" className="text-[13px] text-destructive">
+                      {fieldErrors.live_demo_url}
+                    </p>
                   ) : (
-                    <p className="text-muted-foreground text-xs">
+                    <p id="live_demo_url_help" className="text-[13px] text-muted-foreground">
                       Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel,
                       Netlify, dsb).
                     </p>
                   )}
-                  <LinkCheckBadge item={linkCheck?.liveDemo} isChecking={isCheckingLinks} />
+                  <LinkCheckBadge
+                    item={linkCheck?.liveDemo}
+                    isChecking={isCheckingLinks}
+                    statusId="live_demo_url_status"
+                  />
                 </div>
 
                 {/* Video Demo URL */}
@@ -895,6 +930,9 @@ export function SubmissionClient({
                       type="url"
                       inputMode="url"
                       value={videoUrl}
+                      aria-describedby={
+                        fieldErrors.video_url ? "video_url_error video_url_status" : "video_url_help video_url_status"
+                      }
                       disabled={isReadOnly || isPending}
                       onChange={(e) => {
                         setVideoUrl(e.target.value);
@@ -923,9 +961,11 @@ export function SubmissionClient({
                     )}
                   </div>
                   {fieldErrors.video_url ? (
-                    <p className="text-destructive text-xs">{fieldErrors.video_url}</p>
+                    <p id="video_url_error" className="text-[13px] text-destructive">
+                      {fieldErrors.video_url}
+                    </p>
                   ) : (
-                    <p className="text-muted-foreground text-xs">
+                    <p id="video_url_help" className="text-[13px] text-muted-foreground">
                       Tautan video demonstrasi proyek berdurasi <strong>maksimal 5 menit</strong> (Juknis C.8). YouTube
                       atau Google Drive dengan izin akses publik.
                     </p>
@@ -936,7 +976,7 @@ export function SubmissionClient({
                       langsung video tunggal agar juri dapat langsung membuka.
                     </p>
                   )}
-                  <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} />
+                  <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} statusId="video_url_status" />
                 </div>
 
                 <p className="text-muted-foreground text-xs italic">

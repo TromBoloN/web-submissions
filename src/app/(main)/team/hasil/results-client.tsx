@@ -122,7 +122,7 @@ function StageResultsView({
           </div>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="flex items-center gap-5">
+          <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
             <ScoreGauge score={stageData.total} />
             <div className="min-w-0 space-y-3">
               <p className="text-muted-foreground text-sm">Rata-rata total berbobot dari seluruh dewan juri.</p>

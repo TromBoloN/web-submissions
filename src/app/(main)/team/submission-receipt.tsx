@@ -98,7 +98,7 @@ function ReceiptLinkRow({ label, url }: { label: string; url: string | null | un
   };
 
   return (
-    <div className="grid grid-cols-[5rem_1fr_auto] items-center gap-3">
+    <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
       <span className="font-sans text-muted-foreground">{label}:</span>
       <div className="min-w-0 truncate">
         {isValid && url ? (
