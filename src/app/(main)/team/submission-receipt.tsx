@@ -5,7 +5,6 @@ import { useState } from "react";
 import { Check, Copy, ExternalLink, Printer, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Database } from "@/types/database";
@@ -99,76 +98,82 @@ function ReceiptLinkRow({ label, url }: { label: string; url: string | null | un
   };
 
   return (
-    <div className="grid grid-cols-1 gap-1 sm:grid-cols-3 sm:items-center">
+    <div className="grid grid-cols-[5rem_1fr_auto] items-center gap-3">
       <span className="font-sans text-muted-foreground">{label}:</span>
-      <div className="flex min-w-0 items-center justify-between gap-2 sm:col-span-2">
-        <div className="min-w-0 flex-1 truncate">
-          {isValid && url ? (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={url}
-              className="inline-flex max-w-full items-center gap-1 font-sans text-primary underline underline-offset-2 hover:opacity-80"
-            >
-              <span className="truncate font-medium">{shortLabel}</span>
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
-          ) : (
-            <span className="truncate text-muted-foreground font-sans">{url ?? "-"}</span>
-          )}
-        </div>
-        {isValid && url && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleCopyRow}
-            title={`Salin URL ${label}`}
-            className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+      <div className="min-w-0 truncate">
+        {isValid && url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={url}
+            className="inline-flex max-w-full items-center gap-1 font-sans text-primary underline underline-offset-2 hover:opacity-80"
           >
-            {copiedRow ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-            <span className="sr-only">Salin {label}</span>
-          </Button>
+            <span className="truncate font-medium">{shortLabel}</span>
+            <ExternalLink className="size-3 shrink-0" />
+          </a>
+        ) : (
+          <span className="truncate font-sans text-muted-foreground">{url ?? "-"}</span>
         )}
       </div>
+      {isValid && url ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleCopyRow}
+          title={`Salin URL ${label}`}
+          className="size-7 shrink-0 text-muted-foreground hover:text-foreground focus-visible:ring-2"
+        >
+          {copiedRow ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+          <span className="sr-only">Salin {label}</span>
+        </Button>
+      ) : (
+        <span />
+      )}
     </div>
   );
 }
 
 function generateReceiptNumber(teamCode: string, dateIso: string | null | undefined): string {
-  if (!dateIso) return `${teamCode}-OFFICIAL`;
+  if (!dateIso) return `${teamCode}-PENDING`;
   const d = new Date(dateIso);
-  if (Number.isNaN(d.getTime())) return `${teamCode}-OFFICIAL`;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
+  if (Number.isNaN(d.getTime())) return `${teamCode}-PENDING`;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(d)
+    .reduce<Record<string, string>>((result, part) => {
+      result[part.type] = part.value;
+      return result;
+    }, {});
+  const { year: y, month: m, day, hour: hh, minute: mm, second: ss } = parts;
   return `${teamCode}-${y}${m}${day}-${hh}${mm}${ss}`;
 }
 
 export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) {
   const [copied, setCopied] = useState(false);
 
-  const receiptNumber = generateReceiptNumber(team.team_code, submission.first_submitted_at || submission.submitted_at);
-  const draftSavedFormatted = formatWitaWithSeconds(submission.submitted_at);
-  const firstSubmittedFormatted = formatWitaWithSeconds(submission.first_submitted_at || submission.submitted_at);
+  const receiptNumber = generateReceiptNumber(team.team_code, submission.first_submitted_at);
+  const firstSubmittedFormatted = formatWitaWithSeconds(submission.first_submitted_at);
   const updatedAtFormatted = formatWitaWithSeconds(submission.updated_at);
 
   const handleCopy = async () => {
     const textToCopy = [
       "BUKTI PENGIRIMAN RESMI MIT-WEEK 2026",
       `No. Bukti: ${receiptNumber}`,
-      `Kode tim: ${team.team_code}`,
-      `Nama tim: ${team.team_name}`,
       `Institusi: ${team.institution}`,
       `GitHub: ${submission.github_url || "-"}`,
       `Live demo: ${submission.live_demo_url || "-"}`,
       `Video: ${submission.video_url || "-"}`,
-      `Pertama disimpan: ${draftSavedFormatted} WITA`,
-      `Pertama dikirim resmi: ${firstSubmittedFormatted} WITA`,
+      `Pertama dikirim: ${firstSubmittedFormatted} WITA`,
       `Terakhir diubah: ${updatedAtFormatted} WITA`,
     ].join("\n");
 
@@ -187,7 +192,7 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
   };
 
   return (
-    <Card className="border-emerald-600/30 bg-emerald-50/40 print:border-none print:shadow-none dark:bg-emerald-950/10">
+    <Card className="gap-0 border-emerald-600/30 bg-emerald-50/40 py-0 dark:bg-emerald-950/10 print:border-none print:shadow-none">
       <CardHeader className="p-4 sm:p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
@@ -197,59 +202,48 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
             <div>
               <CardTitle className="text-base text-foreground">Bukti Pengiriman Berkas</CardTitle>
               <CardDescription className="text-xs">
-                No. Bukti: <span className="font-mono font-medium text-foreground">{receiptNumber}</span>
+                No. Bukti: <span className="font-medium font-mono text-foreground">{receiptNumber}</span>
               </CardDescription>
             </div>
           </div>
-          <Badge className="w-fit bg-emerald-600 text-white text-xs hover:bg-emerald-600/90">Terkirim Resmi</Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 p-4 pt-0 text-xs sm:p-5 sm:pt-0 sm:text-sm">
-        <div className="grid gap-3 rounded-lg border bg-background/80 p-3 font-mono sm:p-4">
-          <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
-            <span className="font-sans text-muted-foreground">Kode tim:</span>
-            <span className="font-bold text-foreground sm:col-span-2">{team.team_code}</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
-            <span className="font-sans text-muted-foreground">Nama tim:</span>
-            <span className="font-sans text-foreground sm:col-span-2">{team.team_name}</span>
-          </div>
-
+      <CardContent className="space-y-4 p-5 text-xs sm:text-sm">
+        <div className="grid gap-3 p-0">
           <ReceiptLinkRow label="GitHub" url={submission.github_url} />
           <ReceiptLinkRow label="Live demo" url={submission.live_demo_url} />
           <ReceiptLinkRow label="Video" url={submission.video_url} />
 
           {/* Timeline points */}
-          <div className="space-y-2 border-t pt-2.5 font-sans">
-            <span className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="space-y-2 border-t pt-3 font-sans sm:col-span-2">
+            <span className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
               Kronologi Pengiriman
             </span>
-            <div className="grid grid-cols-1 gap-1.5 text-xs">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Draf pertama disimpan:</span>
-                <span className="font-medium text-foreground font-mono">{draftSavedFormatted} WITA</span>
+            <div className="grid grid-cols-1 gap-2 text-xs">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span>Pertama dikirim:</span>
+                <span className="font-medium text-foreground tabular-nums">{firstSubmittedFormatted} WITA</span>
               </div>
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Pertama dikirim resmi:</span>
-                <span className="font-medium text-emerald-700 font-mono dark:text-emerald-400">
-                  {firstSubmittedFormatted} WITA
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <span>Terakhir diperbarui:</span>
-                <span className="font-medium text-foreground font-mono">{updatedAtFormatted} WITA</span>
+                <span className="font-medium text-foreground tabular-nums">{updatedAtFormatted} WITA</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2.5 print:hidden sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <p className="font-sans text-muted-foreground text-xs">
             Simpan atau cetak bukti ini sebagai tanda terima pengiriman submission MIT-WEEK 2026.
           </p>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handlePrint} className="gap-1.5 font-sans">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="gap-1.5 font-sans focus-visible:ring-2"
+            >
               <Printer className="size-3.5" />
               <span>Cetak / PDF</span>
             </Button>

@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import type { Metadata } from "next";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,9 +25,8 @@ export default async function TeamHasilPage() {
 
   const isAnyReleased = Boolean(settings?.preliminary_results_released || settings?.final_results_released);
 
-  // If neither flag is on, redirect to /team
   if (!isAnyReleased) {
-    redirect("/team");
+    return <ResultsClient results={null} />;
   }
 
   // 2. Fetch results from RPC

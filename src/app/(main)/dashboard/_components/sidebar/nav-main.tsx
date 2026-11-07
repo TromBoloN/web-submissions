@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "cn";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, LockKeyhole } from "lucide-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -153,7 +153,13 @@ function NavItem({ item, isItemActive, isSubItemActive, isSubmenuOpen }: NavItem
 function NavLinkItem({ item, isActive, showIconFallback }: NavLinkItemProps) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild aria-disabled={item.disabled} tooltip={item.title} isActive={isActive}>
+      <SidebarMenuButton
+        asChild
+        aria-disabled={item.disabled}
+        className="focus:outline-none focus-visible:outline-none focus-visible:ring-2"
+        tooltip={item.title}
+        isActive={isActive}
+      >
         <Link
           prefetch={false}
           href={item.url}
@@ -190,7 +196,12 @@ function NavDropdownItem({ item, isActive, isSubItemActive }: NavDropdownItemPro
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton tooltip={item.title} isActive={isActive} disabled={item.disabled}>
+          <SidebarMenuButton
+            className="focus:outline-none focus-visible:outline-none focus-visible:ring-2"
+            tooltip={item.title}
+            isActive={isActive}
+            disabled={item.disabled}
+          >
             {Icon ? <Icon /> : <CollapsedIconFallback title={item.title} />}
             <span>{item.title}</span>
           </SidebarMenuButton>
@@ -231,7 +242,12 @@ function NavCollapsibleItem({ item, isActive, defaultOpen, isSubItemActive }: Na
     <Collapsible asChild defaultOpen={defaultOpen} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.title} isActive={isActive} disabled={item.disabled}>
+          <SidebarMenuButton
+            className="focus:outline-none focus-visible:outline-none focus-visible:ring-2"
+            tooltip={item.title}
+            isActive={isActive}
+            disabled={item.disabled}
+          >
             {Icon && <Icon />}
             <span>{item.title}</span>
             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -277,6 +293,7 @@ function NavItemBadge({ badge }: { badge?: NavBadge }) {
   }
 
   const badgeLabels: Record<NavBadge, string> = {
+    locked: "Terkunci",
     new: "Baru",
     soon: "Segera",
   };
@@ -285,11 +302,13 @@ function NavItemBadge({ badge }: { badge?: NavBadge }) {
     <SidebarMenuBadge
       className={cn(
         "rounded-sm border capitalize",
+        badge === "locked" && "border-muted-foreground/40 text-muted-foreground",
         badge === "new" &&
           "border-green-600 text-green-600 peer-hover/menu-button:text-green-600 peer-data-active/menu-button:text-green-600",
         badge === "soon" && "border-muted-foreground text-muted-foreground",
       )}
     >
+      {badge === "locked" && <LockKeyhole aria-hidden="true" className="mr-1 inline size-3" />}
       {badgeLabels[badge] ?? badge}
     </SidebarMenuBadge>
   );

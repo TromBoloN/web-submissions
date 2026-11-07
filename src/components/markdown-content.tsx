@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { cn } from "cn";
 import ReactMarkdown from "react-markdown";
@@ -7,6 +7,16 @@ import remarkGfm from "remark-gfm";
 interface MarkdownContentProps {
   content: string;
   className?: string;
+}
+
+function headingId(children: ReactNode): string {
+  const text = Array.isArray(children) ? children.join("") : String(children);
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
@@ -34,17 +44,29 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             );
           },
           h1: ({ children, ...props }: ComponentPropsWithoutRef<"h1">) => (
-            <h1 className="mt-6 mb-3 font-bold text-foreground text-xl tracking-tight first:mt-0" {...props}>
+            <h1
+              id={headingId(children)}
+              className="mt-6 mb-3 scroll-mt-20 font-bold text-foreground text-xl tracking-tight first:mt-0"
+              {...props}
+            >
               {children}
             </h1>
           ),
           h2: ({ children, ...props }: ComponentPropsWithoutRef<"h2">) => (
-            <h2 className="mt-5 mb-2.5 font-semibold text-foreground text-lg tracking-tight first:mt-0" {...props}>
+            <h2
+              id={headingId(children)}
+              className="mt-5 mb-2.5 scroll-mt-20 font-semibold text-foreground text-lg tracking-tight first:mt-0"
+              {...props}
+            >
               {children}
             </h2>
           ),
           h3: ({ children, ...props }: ComponentPropsWithoutRef<"h3">) => (
-            <h3 className="mt-4 mb-2 font-semibold text-base text-foreground first:mt-0" {...props}>
+            <h3
+              id={headingId(children)}
+              className="mt-4 mb-2 scroll-mt-20 font-semibold text-base text-foreground first:mt-0"
+              {...props}
+            >
               {children}
             </h3>
           ),

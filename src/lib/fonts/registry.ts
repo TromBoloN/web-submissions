@@ -16,6 +16,7 @@ import {
   Raleway,
   Roboto,
   Roboto_Slab,
+  Space_Grotesk,
 } from "next/font/google";
 
 import { GeistPixelSquare } from "geist/font/pixel";
@@ -105,6 +106,12 @@ const lora = Lora({
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair-display",
+});
+
+export const displayFont = Space_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-space-grotesk",
 });
 
 export const fontRegistry = {

@@ -43,6 +43,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-signal: var(--signal);
+  --color-hero: var(--hero);
 
   /* Brand accents from the poster. Usable as bg-brand-green, text-brand-purple, etc. */
   --color-brand-green: var(--brand-green);
@@ -67,6 +69,8 @@
 .theme-light {
   color-scheme: light;
   --radius: 0.75rem;
+  --space-card: 1.5rem;
+  --space-section: 1.5rem;
 
   /* brand */
   --brand-navy: oklch(0.24 0.07 268);
@@ -74,6 +78,8 @@
   --brand-sky: oklch(0.78 0.09 255);
   --brand-green: oklch(0.82 0.21 155);
   --brand-green-foreground: oklch(0.25 0.07 155);
+  --signal: oklch(0.715 0.143 215.221);
+  --hero: oklch(0.129 0.042 264.695);
 
   /* surfaces */
   --background: oklch(0.975 0.012 255);
@@ -84,7 +90,7 @@
   --popover-foreground: oklch(0.24 0.07 268);
 
   /* actions */
-  --primary: oklch(0.42 0.2 277);
+  --primary: oklch(0.511 0.262 276.966);
   --primary-foreground: oklch(0.99 0.005 255);
   --secondary: oklch(0.94 0.03 265);
   --secondary-foreground: oklch(0.28 0.09 270);
@@ -109,7 +115,7 @@
   /* sidebar: light, tinted, so any logo reads well on it */
   --sidebar: oklch(0.965 0.02 262);
   --sidebar-foreground: oklch(0.24 0.07 268);
-  --sidebar-primary: oklch(0.42 0.2 277);
+  --sidebar-primary: oklch(0.511 0.262 276.966);
   --sidebar-primary-foreground: oklch(0.99 0.005 255);
   --sidebar-accent: oklch(0.92 0.045 265);
   --sidebar-accent-foreground: oklch(0.28 0.09 270);
@@ -156,6 +162,8 @@
   --sidebar-accent-foreground: oklch(0.96 0.01 260);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.65 0.17 277);
+  --signal: oklch(0.789 0.154 211.53);
+  --hero: oklch(0.129 0.042 264.695);
 }
 
 @layer base {
@@ -168,12 +176,30 @@
     --font-mono: var(--font-geist-mono);
     /* Optional display face for the logo text and page titles (class: font-display).
        Falls back to the normal font if the pixel font is not loaded. */
-    --font-display: var(--font-geist-pixel-square, var(--font-geist));
+    --font-display: var(--font-space-grotesk, var(--font-geist));
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
+    isolation: isolate;
   }
   html {
     @apply font-sans;
+  }
+
+  body::before {
+    background-image: radial-gradient(color-mix(in oklab, var(--signal) 18%, transparent) 1px, transparent 1px);
+    background-position: center;
+    background-size: 24px 24px;
+    content: "";
+    inset: 0;
+    mask-image: linear-gradient(to bottom, black, transparent 42rem);
+    pointer-events: none;
+    position: fixed;
+    z-index: 0;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
   }
 }
 
@@ -181,6 +207,28 @@
   /* Neon green marker on the active sidebar item, like the green highlights on the poster. */
   [data-sidebar="menu-button"][data-active="true"] {
     box-shadow: inset 3px 0 0 0 var(--brand-green);
+  }
+
+  .portal-hero {
+    background-color: color-mix(in oklab, var(--primary) 7%, var(--background));
+    border: 1px solid color-mix(in oklab, var(--primary) 18%, var(--border));
+    color: var(--foreground);
+  }
+
+  .dark .portal-hero {
+    background-color: var(--hero);
+    background-image:
+      radial-gradient(circle at top right, color-mix(in oklab, var(--signal) 28%, transparent), transparent 42%),
+      linear-gradient(135deg, color-mix(in oklab, var(--primary) 35%, transparent), transparent 58%);
+    color: white;
+  }
+
+  .dark .portal-hero :is(.text-muted-foreground, .text-foreground\/80) {
+    color: color-mix(in oklab, white 74%, transparent);
+  }
+
+  .dark .portal-hero .text-foreground {
+    color: white;
   }
 }
 

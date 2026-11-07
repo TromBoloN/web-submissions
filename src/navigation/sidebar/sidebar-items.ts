@@ -3,7 +3,7 @@ import { Award, BookOpen, ClipboardList, FileText, LayoutDashboard, Settings, Tr
 
 import type { CurrentUser } from "@/lib/user-display";
 
-export type NavBadge = "new" | "soon";
+export type NavBadge = "locked" | "new" | "soon";
 
 export interface NavSubItem {
   id: string;
@@ -76,12 +76,13 @@ export function getSidebarItems(
     },
   ];
 
-  if (role === "team" && resultsReleased) {
+  if (role === "team") {
     items.push({
       id: "results",
       title: "Hasil Penilaian",
       url: "/team/hasil",
       icon: Award,
+      badge: resultsReleased ? undefined : "locked",
     });
   }
 

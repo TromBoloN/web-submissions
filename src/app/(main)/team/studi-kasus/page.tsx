@@ -8,11 +8,11 @@ export default async function TeamCaseStudyPage() {
   await requireRole("team");
   const supabase = await createClient();
 
-  const { data: caseStudy } = await supabase
-    .from("case_study")
-    .select("title, content_md, updated_at")
-    .eq("id", true)
-    .maybeSingle();
+  const [caseStudyRes, settingsRes] = await Promise.all([
+    supabase.from("case_study").select("title, content_md, updated_at").eq("id", true).maybeSingle(),
+    supabase.from("competition_settings").select("submission_closes_at, juknis_url").eq("id", true).maybeSingle(),
+  ]);
+  const caseStudy = caseStudyRes.data;
 
   let releaseAt: string | null = null;
   // Jika baris disembunyikan oleh RLS (sebelum release_at), ambil HANYA release_at dengan adminClient
@@ -38,6 +38,9 @@ export default async function TeamCaseStudyPage() {
           : null
       }
       releaseAt={releaseAt}
+      deadlineIso={settingsRes.data?.submission_closes_at ?? null}
+      juknisUrl={settingsRes.data?.juknis_url ?? null}
+      serverNowIso={new Date().toISOString()}
     />
   );
 }
