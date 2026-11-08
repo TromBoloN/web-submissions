@@ -42,67 +42,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { emailToDisplayName, usernameToEmail } from "@/lib/identity";
-import type { Database } from "@/types/database";
 
+import { AccountFilters } from "./account-filters";
+import type { AccountRow, AccountsClientProps, JudgeStage, MemberItem, Role } from "./account-types";
+import { formatDate, generatePassword, roleLabels, stageLabels } from "./account-utils";
 import { createAccount, resetAccountPassword, toggleAccountActive, updateAccount } from "./actions";
+import { CopyButton } from "./copy-button";
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type TeamData = Database["public"]["Tables"]["teams"]["Row"];
-type Role = Database["public"]["Enums"]["user_role_type"];
-type JudgeStage = Database["public"]["Enums"]["judge_stage_type"];
-
-export type AccountRow = Profile & {
-  team: Pick<TeamData, "id" | "team_code" | "team_name" | "institution" | "leader_name" | "members"> | null;
-  teamName: string | null;
-};
-
-type AccountsClientProps = {
-  rows: AccountRow[];
-  total: number;
-  page: number;
-  pageSize: number;
-  nextTeamCode: string;
-  currentUserId: string;
-};
+export type { AccountRow } from "./account-types";
 
 const features = tableFeatures({});
-const roleLabels: Record<Role, string> = { admin: "Admin", judge: "Juri", team: "Peserta" };
-const stageLabels: Record<JudgeStage, string> = { preliminary: "Preliminary", final: "Final", both: "Keduanya" };
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Makassar",
-    dateStyle: "medium",
-  }).format(new Date(value));
-}
-
-function generatePassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
-  const values = new Uint32Array(16);
-  crypto.getRandomValues(values);
-  return Array.from(values, (value) => alphabet[value % alphabet.length]).join("");
-}
-
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={async () => {
-        await navigator.clipboard.writeText(value);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
-      }}
-    >
-      {copied ? "Tersalin" : "Salin"}
-    </Button>
-  );
-}
-
-type MemberItem = { id: string; name: string };
 type CreatedAccountInfo = {
   email: string;
   password: string;
@@ -895,27 +844,13 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode, curr
   return (
     <div className="space-y-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <form onSubmit={applyFilters} className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari nama, email, atau username..."
-          />
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className="w-full sm:w-36">
-              <SelectValue placeholder="Semua role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua role</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="judge">Juri</SelectItem>
-              <SelectItem value="team">Peserta</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" variant="outline">
-            Cari
-          </Button>
-        </form>
+        <AccountFilters
+          search={search}
+          role={role}
+          onSearchChange={setSearch}
+          onRoleChange={setRole}
+          onSubmit={applyFilters}
+        />
         <CreateAccountDialog nextTeamCode={nextTeamCode} onCreated={() => router.refresh()} />
       </div>
       <div className="rounded-lg border">

@@ -52,6 +52,7 @@ src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
 src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl)
 src/app/(main)/dashboard/_components      shell: dashboard-shell, header, sidebar (app-sidebar, nav-main, nav-user)
+src/app/(main)/admin/akun                  account types, filters, clipboard control, and account utilities
 src/components/                      shared UI (change-password-form, markdown-content, logout-button, rubric-bars); ui/ is shadcn, do not edit
 src/types/database.ts                generated Supabase types
 src/scripts/seed.mjs                 npm run seed / seed:clear
