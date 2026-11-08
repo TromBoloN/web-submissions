@@ -5,6 +5,7 @@ Rules for AI agents. Project context is in `AI.md`. File locations are in `docs/
 ## What to read
 
 - `docs/documentation/MAP.md`: before searching the repo for where something lives.
+- `docs/documentation/*.md`: for full project documentation.
 - `AI.md`: before touching scoring, deadlines, submissions, results, roles or exports, and whenever a decision is unclear. It lists the open decisions. Ask about them, never decide them.
 - `docs/development/*.md`: the current task. If it conflicts with these files, stop and ask.
 
@@ -16,7 +17,7 @@ Rules for AI agents. Project context is in `AI.md`. File locations are in `docs/
 - No new dependencies. No features, pages or columns that were not requested.
 - If something is ambiguous or touches an open decision, ask instead of guessing.
 - Report: files changed, what was done, deviations from the phase file, anything unsure, what I should test manually.
-- Update `docs/documentation/MAP.md` when you add, move or remove a screen or shared file.
+- Update `docs/documentation/.md` when you add, move or remove a screen or shared file.
 - after every major changes make a reccomended github commit message at the end but dont commit
 
 ## Security (never break)
