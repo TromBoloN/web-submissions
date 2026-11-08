@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import Link from "next/link";
 
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   ChevronDown,
@@ -156,6 +157,19 @@ export function ScoringFormClient({
   );
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialScore?.updated_at ?? null);
   const [lockedAt, setLockedAt] = useState<string | null>(initialScore?.locked_at ?? null);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => {
+    const initial: Record<string, string> = {};
+    for (const c of rubric) {
+      const existingVal = initialScore?.[c.column as keyof ExistingScoreData];
+      initial[c.column] = existingVal !== undefined && existingVal !== null ? String(existingVal) : "";
+    }
+    return {
+      scores: initial,
+      feedback: initialScore?.feedback ?? "",
+    };
+  });
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+  const [validatedScoresData, setValidatedScoresData] = useState<Record<string, number> | null>(null);
   const [isLockConfirmOpen, setIsLockConfirmOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -164,12 +178,52 @@ export function ScoringFormClient({
   const isReadOnly = isLocked ? true : isStageReleased;
   const isInputDisabled = isReadOnly ? true : isPending;
 
+  const isDirty = useMemo(() => {
+    if (isReadOnly) return false;
+    if (feedback !== savedSnapshot.feedback) return true;
+    for (const c of rubric) {
+      if ((scores[c.column] ?? "") !== (savedSnapshot.scores[c.column] ?? "")) {
+        return true;
+      }
+    }
+    return false;
+  }, [scores, feedback, savedSnapshot, rubric, isReadOnly]);
+
+  useEffect(() => {
+    if (!isDirty || isReadOnly) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty, isReadOnly]);
+
+  const handleBackClick = (e: React.MouseEvent) => {
+    if (isDirty) {
+      const confirmLeave = window.confirm("Perubahan nilai belum disimpan. Yakin ingin meninggalkan halaman?");
+      if (!confirmLeave) {
+        e.preventDefault();
+      }
+    }
+  };
+
   const previewTotal = useMemo(() => {
     return calcWeightedTotal(tahap, scores);
   }, [tahap, scores]);
 
   const handleScoreChange = (column: string, value: string) => {
-    setScores((prev) => ({ ...prev, [column]: value }));
+    let cleaned = value.replace(/[^0-9.,]/g, "");
+    const firstSepIndex = cleaned.search(/[.,]/);
+    if (firstSepIndex !== -1) {
+      const before = cleaned.slice(0, firstSepIndex);
+      const sep = cleaned[firstSepIndex];
+      const after = cleaned.slice(firstSepIndex + 1).replace(/[.,]/g, "");
+      cleaned = `${before}${sep}${after.slice(0, 2)}`;
+    }
+    setScores((prev) => ({ ...prev, [column]: cleaned }));
     setFormError(null);
   };
 
@@ -181,12 +235,13 @@ export function ScoringFormClient({
         setFormError(`Kriteria "${c.label}" wajib diisi.`);
         return null;
       }
-      const num = Number(valStr);
+      const normalized = valStr.replace(",", ".");
+      const num = Number(normalized);
       if (Number.isNaN(num) || num < 0 || num > 100) {
         setFormError(`Nilai untuk "${c.label}" harus di antara 0 sampai 100.`);
         return null;
       }
-      if (!/^\d{1,3}(\.\d{1,2})?$/.test(valStr)) {
+      if (!/^\d{1,3}(\.\d{1,2})?$/.test(normalized)) {
         setFormError(`Nilai untuk "${c.label}" maksimal memiliki 2 angka di belakang koma.`);
         return null;
       }
@@ -194,6 +249,19 @@ export function ScoringFormClient({
     }
     return numericScores;
   };
+
+  const hasLowScore = useMemo(() => {
+    const active = validatedScoresData;
+    if (!active) return false;
+    return Object.values(active).some((val) => val < 10);
+  }, [validatedScoresData]);
+
+  const hasIdenticalScores = useMemo(() => {
+    const active = validatedScoresData;
+    if (!active) return false;
+    const values = Object.values(active);
+    return values.length > 1 && values.every((val) => val === values[0]);
+  }, [validatedScoresData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,22 +271,34 @@ export function ScoringFormClient({
     const numericScores = validateScores();
     if (!numericScores) return;
 
+    setValidatedScoresData(numericScores);
+    setIsSaveConfirmOpen(true);
+  };
+
+  const handleSaveConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isReadOnly || !validatedScoresData) return;
+    setFormError(null);
+
     startTransition(async () => {
       const res = await saveScore({
         tahap,
         team_id: team.id,
-        scores: numericScores,
+        scores: validatedScoresData,
         feedback: feedback.trim(),
       });
 
       if (!res.ok) {
         setFormError(res.message);
         toast.error(res.message);
+        setIsSaveConfirmOpen(false);
         return;
       }
 
       setConfirmedTotal(res.total);
       setLastSavedAt(res.updatedAt);
+      setSavedSnapshot({ scores: { ...scores }, feedback });
+      setIsSaveConfirmOpen(false);
       toast.success("Nilai berhasil disimpan.");
     });
   };
@@ -226,7 +306,9 @@ export function ScoringFormClient({
   const handleLockRequest = () => {
     if (isReadOnly) return;
     setFormError(null);
-    if (!validateScores()) return;
+    const numericScores = validateScores();
+    if (!numericScores) return;
+    setValidatedScoresData(numericScores);
     setIsLockConfirmOpen(true);
   };
 
@@ -260,6 +342,7 @@ export function ScoringFormClient({
       if (!lockRes.ok) {
         setConfirmedTotal(saveRes.total);
         setLastSavedAt(saveRes.updatedAt);
+        setSavedSnapshot({ scores: { ...scores }, feedback });
         setFormError(lockRes.message);
         toast.error(lockRes.message);
         setIsLockConfirmOpen(false);
@@ -269,6 +352,7 @@ export function ScoringFormClient({
       setConfirmedTotal(saveRes.total);
       setLastSavedAt(saveRes.updatedAt);
       setLockedAt(lockRes.lockedAt);
+      setSavedSnapshot({ scores: { ...scores }, feedback });
       setIsLockConfirmOpen(false);
       toast.success("Nilai berhasil disimpan dan dikunci.");
     });
@@ -280,7 +364,7 @@ export function ScoringFormClient({
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <Button variant="ghost" size="icon" asChild className="size-8 -ml-2">
-              <Link href="/judge">
+              <Link href="/judge" onClick={handleBackClick}>
                 <ArrowLeft className="size-4" />
                 <span className="sr-only">Kembali</span>
               </Link>
@@ -313,7 +397,7 @@ export function ScoringFormClient({
 
         <div className="flex items-center gap-3">
           <Button variant="outline" asChild size="sm">
-            <Link href="/judge">
+            <Link href="/judge" onClick={handleBackClick}>
               <ArrowLeft className="mr-1.5 size-3.5" />
               Kembali
             </Link>
@@ -458,13 +542,12 @@ export function ScoringFormClient({
 
                     <Input
                       id={`score-${criterion.column}`}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={val}
                       disabled={isInputDisabled}
+                      onWheel={(e) => e.currentTarget.blur()}
                       onChange={(e) => handleScoreChange(criterion.column, e.target.value)}
                       className="font-mono text-base"
                       required
@@ -526,7 +609,9 @@ export function ScoringFormClient({
 
           <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
             <Button variant="outline" type="button" asChild>
-              <Link href="/judge">Kembali</Link>
+              <Link href="/judge" onClick={handleBackClick}>
+                Kembali
+              </Link>
             </Button>
             {isReadOnly ? (
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -554,6 +639,67 @@ export function ScoringFormClient({
           </CardFooter>
         </Card>
       </form>
+
+      {/* Dialog Konfirmasi Simpan Nilai */}
+      <AlertDialog open={isSaveConfirmOpen} onOpenChange={setIsSaveConfirmOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Simpan Nilai</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2 text-foreground">
+                <p className="text-muted-foreground text-sm">
+                  Periksa kembali ringkasan nilai sebelum disimpan untuk tim{" "}
+                  <span className="font-semibold text-foreground">{team.team_code}</span>:
+                </p>
+
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  {rubric.map((criterion) => {
+                    const rawVal = scores[criterion.column] ?? "-";
+                    return (
+                      <div key={criterion.column} className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {criterion.label} <span className="text-[10px]">({criterion.weight}%)</span>
+                        </span>
+                        <span className="font-mono font-semibold">{rawVal}</span>
+                      </div>
+                    );
+                  })}
+                  <div className="border-t pt-2 flex items-center justify-between font-medium text-sm">
+                    <span>Total Berbobot (Pratinjau)</span>
+                    <span className="font-mono font-bold text-primary">{previewTotal.toFixed(2)} / 100</span>
+                  </div>
+                </div>
+
+                {hasLowScore && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                    <span>
+                      Peringatan: Terdapat kriteria dengan nilai di bawah 10 (&lt; 10). Pastikan nilai ini sudah sesuai
+                      sebelum menyimpan.
+                    </span>
+                  </div>
+                )}
+
+                {hasIdenticalScores && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                    <span>
+                      Peringatan: Semua kriteria bernilai sama persis. Pastikan penilaian objektif telah diberikan untuk
+                      setiap aspek.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Periksa lagi</AlertDialogCancel>
+            <AlertDialogAction disabled={isPending} onClick={handleSaveConfirm}>
+              {isPending ? "Menyimpan..." : "Simpan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isLockConfirmOpen} onOpenChange={setIsLockConfirmOpen}>
         <AlertDialogContent>

@@ -108,7 +108,8 @@ export function calcWeightedTotal(
 
   for (const criterion of rubric) {
     const rawVal = scores[criterion.column];
-    const val = typeof rawVal === "number" ? rawVal : Number(rawVal);
+    const normalized = typeof rawVal === "string" ? rawVal.trim().replace(",", ".") : rawVal;
+    const val = typeof normalized === "number" ? normalized : Number(normalized);
     if (!Number.isNaN(val) && rawVal !== null && rawVal !== undefined && rawVal !== "") {
       total += val * (criterion.weight / 100);
     }

@@ -21,12 +21,71 @@ function handleScoreError(error: { code?: string; message?: string } | null, def
   return defaultMessage;
 }
 
-const criterionScoreSchema = z.coerce
-  .number()
-  .min(0, "Nilai minimal 0.")
-  .max(100, "Nilai maksimal 100.")
-  .refine((val) => !Number.isNaN(val) && /^\d{1,3}(\.\d{1,2})?$/.test(val.toString()), {
-    message: "Nilai maksimal memiliki 2 angka di belakang koma.",
+const criterionScoreSchema = z
+  .union([z.number(), z.string()])
+  .superRefine((val, ctx) => {
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      if (!trimmed) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai kriteria wajib diisi (tidak boleh kosong).",
+        });
+        return;
+      }
+      const normalized = trimmed.replace(",", ".");
+      const num = Number(normalized);
+      if (Number.isNaN(num)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai harus berupa angka yang valid.",
+        });
+        return;
+      }
+      if (num < 0 || num > 100) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai harus berada di rentang 0 sampai 100.",
+        });
+        return;
+      }
+      if (!/^\d{1,3}(\.\d{1,2})?$/.test(normalized)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai maksimal memiliki 2 angka di belakang koma.",
+        });
+        return;
+      }
+    } else {
+      if (Number.isNaN(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai harus berupa angka yang valid.",
+        });
+        return;
+      }
+      if (val < 0 || val > 100) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai harus berada di rentang 0 sampai 100.",
+        });
+        return;
+      }
+      const str = val.toString();
+      if (!/^\d{1,3}(\.\d{1,2})?$/.test(str)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nilai maksimal memiliki 2 angka di belakang koma.",
+        });
+        return;
+      }
+    }
+  })
+  .transform((val) => {
+    if (typeof val === "string") {
+      return Number(val.trim().replace(",", "."));
+    }
+    return val;
   });
 
 const prelimScoreInputSchema = z.object({
@@ -59,7 +118,7 @@ const finalScoreInputSchema = z.object({
 export async function saveScore(input: {
   tahap: "preliminary" | "final";
   team_id: string;
-  scores: Record<string, number>;
+  scores: Record<string, number | string>;
   feedback?: string;
 }): Promise<SaveScoreResult> {
   const caller = await getCurrentProfile();
