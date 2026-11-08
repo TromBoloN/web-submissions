@@ -39,14 +39,14 @@ Designed to give teams an intuitive and distraction-free submission experience:
   - Demonstrations: Video Walkthrough URL (`http://` or `https://`).
   - Team notes dedicated for the judges.
 - **Draft & Submit Workflow:**
-  - *Simpan Draf:* Save partial deliverables anytime before the deadline.
-  - *Kirim Submission:* Validates all required links and transitions status to `Terkirim` (Submitted).
-  - *Perbarui Submission:* Allows post-submission updates without reverting status to draft.
+  - _Simpan Draf:_ Save partial deliverables anytime before the deadline.
+  - _Kirim Submission:_ Validates all required links and transitions status to `Terkirim` (Submitted).
+  - _Perbarui Submission:_ Allows post-submission updates without reverting status to draft.
 - **Case Study Viewer (`/team/studi-kasus`):**
   - Direct in-app access to the official case study and problem statement rendered from Markdown.
 - **Team Results & Feedback (`/team/hasil`):**
   - Conditionally enabled in navigation once the committee officially releases results.
-  - Prominent total weighted score with panel count indicator (*"Dinilai oleh N juri"*).
+  - Prominent total weighted score with panel count indicator (_"Dinilai oleh N juri"_).
   - Rubric criterion breakdown table showing Juknis indicators, average judge scores, rubric weights, and final contributions.
   - Anonymized judicial feedback list with zero identifiable judge metadata.
   - Dynamic Finalist tab exclusively unlocked for Top 5 Finalist teams.
@@ -61,7 +61,7 @@ Designed to give teams an intuitive and distraction-free submission experience:
 Built for fair, confidential, and structured evaluation:
 
 - **Judging Queue (`/judge`):**
-  - Filterable by stage (*Babak Awal* / *Babak Final*) and scoring progress (*Belum dinilai*, *Draf*, *Terkunci*).
+  - Filterable by stage (_Babak Awal_ / _Babak Final_) and scoring progress (_Belum dinilai_, _Draf_, _Terkunci_).
   - High-level progress counter showing completed evaluations versus assigned queue.
   - Strict blind judging: Judges evaluate submissions independently; scorecards from peer judges remain completely invisible.
   - Eligible feed: Displays only active, non-disqualified teams with submitted deliverables.
@@ -71,7 +71,7 @@ Built for fair, confidential, and structured evaluation:
     - **Preliminary Stage:** Functionality (30%), Case Study Fit (25%), UI/UX (20%), Code Quality (15%), Documentation (10%).
     - **Final Stage:** Functionality (25%), Case Study Fit (20%), UI/UX (15%), Code Quality (15%), Presentation & Q&A (15%), Documentation (10%).
   - Live client-side weighted preview calculation with strict two-decimal precision.
-  - *Simpan Nilai* (draft) vs. *Simpan & Kunci* (lock) with confirmation dialog.
+  - _Simpan Nilai_ (draft) vs. _Simpan & Kunci_ (lock) with confirmation dialog.
 - **Release-Driven Read-Only Enforcement:**
   - When stage results are released by the committee, the scoring form automatically locks into a read-only view with alert banners.
   - Backed by database triggers preventing `INSERT`, `UPDATE`, or `DELETE` writes once released.
@@ -104,15 +104,15 @@ Full-spectrum operational management for the organizing committee:
   - Real-time TanStack Table displaying all registered teams.
   - Status badges: `Terkirim` (green), `Draf` (amber), and `Belum dikirim` (neutral).
   - Safe link openers with `rel="noopener noreferrer"` and visual URL truncation.
-  - *Admin Override Modal:* Enables committee members to manually update or input team links (e.g., synchronizing emergency fallback submissions) unrestricted by deadlines.
-  - *CSV Data Export (`/admin/submission/export`):* Instant UTF-8 BOM spreadsheet export with sanitization against formula injection.
+  - _Admin Override Modal:_ Enables committee members to manually update or input team links (e.g., synchronizing emergency fallback submissions) unrestricted by deadlines.
+  - _CSV Data Export (`/admin/submission/export`):_ Instant UTF-8 BOM spreadsheet export with sanitization against formula injection.
 - **Leaderboard & Rankings (`/admin/peringkat`):**
   - Real-time aggregate rankings powered by PostgreSQL views (`preliminary_ranking`, `final_ranking`).
   - Stage tabs for Preliminary and Final rounds with rank badges, judge count, criteria averages, and total scores.
-  - *Rankings CSV Export (`/admin/peringkat/export`):* Downloadable rankings spreadsheet for jury review and archival.
+  - _Rankings CSV Export (`/admin/peringkat/export`):_ Downloadable rankings spreadsheet for jury review and archival.
 - **Competition Settings (`/admin/pengaturan`):**
   - Dynamic deadline configuration interface in WITA (UTC+8) with strict "+1 minute" boundary rule.
-  - Guidebook (*Juknis*) URL configuration.
+  - Guidebook (_Juknis_) URL configuration.
   - Case study Markdown editor.
   - **Results Release Toggles ("Rilis Hasil"):**
     - Independent switches for Preliminary and Final stage results.
@@ -232,8 +232,12 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 Apply the schema migrations located in `supabase/migrations/` sequentially via the Supabase CLI or the Supabase SQL Editor:
 
 1. `20261020000000_init_schema.sql` — Initial schema, RLS, functions, and ranking views.
-2. `20261026000000_team_results.sql` — Results release flags and secure `get_my_results()` RPC function.
-3. `20261027000000_score_release_lock.sql` — Database triggers enforcing score freeze upon results release.
+2. `20261024000000_contestant_features.sql` - Basic schema for constestant tables
+3. `20261025000000_judging_and_contact.sql` - Basic schema for judging and contact tables
+4. `20261026000000_team_results.sql` — Results release flags and secure `get_my_results()` RPC function.
+5. `20261027000000_score_release_lock.sql` — Database triggers enforcing score freeze upon results release.
+6. `20261108000000_fix_first_submitted_at.sql` - First submit fix.
+7. `20261108010000_drafts_recusals_and_private_notes` - Schema for draft and judge private notes.
 
 ### 5. Run the Development Server
 
@@ -247,13 +251,16 @@ Visit [http://localhost:3000](http://localhost:3000) to view the application.
 
 ## 📜 Available Scripts
 
-| Command          | Purpose                                                |
-| :--------------- | :----------------------------------------------------- |
-| `npm run dev`    | Starts local Next.js development server with Turbopack |
-| `npm run build`  | Compiles the production build and type-checks          |
-| `npm run lint`   | Runs Biome linter across the codebase                  |
-| `npm run format` | Automatically formats files using Biome                |
-| `npm run check`  | Checks formatting and linting concurrently             |
+| Command           | Purpose                                                |
+| :---------------- | :----------------------------------------------------- |
+| `npm run dev`     | Starts local Next.js development server with Turbopack |
+| `npm run build`   | Compiles the production build and type-checks          |
+| `npm run lint`    | Runs Biome linter across the codebase                  |
+| `npm run format`  | Automatically formats files using Biome                |
+| `npm run check`   | Checks formatting and linting concurrently             |
+| `npm run backup`  | runs a backup database script and save it as json      |
+| `npm run restore` | runs a restore script from the json backup             |
+| `npm run onboard` | converts registratrants data into a csv for accounts   |
 
 ---
 
