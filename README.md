@@ -68,8 +68,8 @@ Built for fair, confidential, and structured evaluation:
 - **Scoring Interface (`/judge/nilai/[tahap]/[teamId]`):**
   - Project showcase card with safe external openers for GitHub repository, live demo, and demo video, alongside contestant notes.
   - Formal rubric entry inputs:
-    - **Preliminary Stage:** Functionality (30%), Case Study Fit (25%), UI/UX (20%), Code Quality (15%), Documentation (10%).
-    - **Final Stage:** Functionality (25%), Case Study Fit (20%), UI/UX (15%), Code Quality (15%), Presentation & Q&A (15%), Documentation (10%).
+    - **Preliminary Stage:** Functionality (35%), Case Study Fit (25%), UI/UX (20%), Code Quality (10%), Documentation (10%).
+    - **Final Stage:** Functionality (25%), Case Study Fit (20%), UI/UX (15%), Code Quality (10%), Presentation & Q&A (20%), Documentation (10%).
   - Live client-side weighted preview calculation with strict two-decimal precision.
   - _Simpan Nilai_ (draft) vs. _Simpan & Kunci_ (lock) with confirmation dialog.
 - **Release-Driven Read-Only Enforcement:**
@@ -139,8 +139,9 @@ Full-spectrum operational management for the organizing committee:
 
 ```
 web-submissions/
-├── docs/                            # Developer manuals, architecture map, and phase plans
-│   ├── documentation/MAP.md         # Source-code routing and architectural map
+├── docs/                            # Documentation library, source map, and phase plans
+│   ├── documentation/               # Setup, architecture, data, API, operations, and contribution guides
+│   │   └── README.md                # Documentation index
 │   └── development/                 # Step-by-step feature implementation specifications
 ├── src/
 │   ├── proxy.ts                     # Session refresh & route redirect (Next.js 16)
@@ -237,7 +238,7 @@ Apply the schema migrations located in `supabase/migrations/` sequentially via t
 4. `20261026000000_team_results.sql` — Results release flags and secure `get_my_results()` RPC function.
 5. `20261027000000_score_release_lock.sql` — Database triggers enforcing score freeze upon results release.
 6. `20261108000000_fix_first_submitted_at.sql` - First submit fix.
-7. `20261108010000_drafts_recusals_and_private_notes` - Schema for draft and judge private notes.
+7. `20261108010000_drafts_recusals_and_private_notes.sql` - Schema for draft and judge private notes.
 
 ### 5. Run the Development Server
 
@@ -246,6 +247,8 @@ npm run dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000) to view the application.
+
+For the complete setup guide, environment-variable reference, migration workflow, and common fixes, see [`docs/documentation/SETUP.md`](docs/documentation/SETUP.md).
 
 ---
 
@@ -261,6 +264,21 @@ Visit [http://localhost:3000](http://localhost:3000) to view the application.
 | `npm run backup`  | runs a backup database script and save it as json      |
 | `npm run restore` | runs a restore script from the json backup             |
 | `npm run onboard` | converts registratrants data into a csv for accounts   |
+
+## 📚 Documentation
+
+The documentation library is organized by task:
+
+- [Documentation index](docs/documentation/README.md)
+- [Setup and development](docs/documentation/SETUP.md)
+- [Architecture and data flow](docs/documentation/ARCHITECTURE.md)
+- [Data model and security](docs/documentation/DATA-MODEL.md)
+- [Application reference](docs/documentation/API.md)
+- [Operations and incident runbook](docs/documentation/OPERATIONS.md)
+- [Frontend conventions](docs/documentation/FRONTEND.md)
+- [Contributing](docs/documentation/CONTRIBUTING.md)
+
+The application currently exposes Next.js pages, Server Actions, two admin CSV routes, and one authenticated Supabase RPC; it does not have a separate REST/GraphQL API. The application reference documents those actual interfaces.
 
 ---
 

@@ -2,6 +2,8 @@
 
 Architecture map of `src/`. Update it when you add, move or remove a screen or shared file. If it disagrees with the file system, trust the file system.
 
+Documentation library: [documentation index](./README.md), [setup](./SETUP.md), [architecture](./ARCHITECTURE.md), [data model](./DATA-MODEL.md), [application reference](./API.md), [operations](./OPERATIONS.md), [frontend conventions](./FRONTEND.md), and [contributing](./CONTRIBUTING.md).
+
 ## Conventions
 
 - Route groups in parentheses are not in URLs. `(auth)` is public. `(main)` is protected and wrapped in the dashboard shell.
