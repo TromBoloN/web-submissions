@@ -35,6 +35,12 @@ npm run build
 npm test
 ```
 
+The build receives Supabase configuration from the repository secrets
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY`. If those secrets are unavailable, CI uses non-functional
+placeholders only to allow Next.js module evaluation; it does not connect to Supabase or
+replace deployment environment variables.
+
 For database or authorization changes, also verify the relevant role flows and release/deadline edge cases against a non-production Supabase project.
 
 ## Pull requests
