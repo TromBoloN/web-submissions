@@ -25,6 +25,16 @@ npm run check
 npm run build
 ```
 
+Pull requests run the same validation automatically in GitHub Actions:
+
+```text
+npm ci
+npm run lint
+npm run check
+npm run build
+npm test
+```
+
 For database or authorization changes, also verify the relevant role flows and release/deadline edge cases against a non-production Supabase project.
 
 ## Pull requests
