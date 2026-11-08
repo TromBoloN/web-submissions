@@ -1,5 +1,15 @@
 import type { LucideIcon } from "lucide-react";
-import { Award, BookOpen, ClipboardList, FileText, LayoutDashboard, Settings, Trophy, Users } from "lucide-react";
+import {
+  Award,
+  BookOpen,
+  ClipboardList,
+  FileText,
+  History,
+  LayoutDashboard,
+  Settings,
+  Trophy,
+  Users,
+} from "lucide-react";
 
 import type { CurrentUser } from "@/lib/user-display";
 
@@ -50,14 +60,25 @@ export function getSidebarItems(
     return [
       {
         id: 1,
-        label: "Administrasi",
+        label: "Ringkasan",
+        items: [{ id: "dashboard", title: "Dasbor", url: "/admin", icon: LayoutDashboard }],
+      },
+      {
+        id: 2,
+        label: "Kompetisi",
         items: [
-          { id: "dashboard", title: "Dasbor", url: "/admin", icon: LayoutDashboard },
           { id: "accounts", title: "Akun", url: "/admin/akun", icon: Users },
           { id: "teams", title: "Tim", url: "/admin/tim", icon: ClipboardList },
           { id: "submissions", title: "Submission", url: "/admin/submission", icon: FileText },
           { id: "ranking", title: "Peringkat", url: "/admin/peringkat", icon: Award },
           { id: "finalists", title: "Finalis", url: "/admin/finalis", icon: Trophy },
+        ],
+      },
+      {
+        id: 3,
+        label: "Sistem",
+        items: [
+          { id: "audit", title: "Audit", url: "/admin/audit", icon: History },
           { id: "settings", title: "Pengaturan", url: "/admin/pengaturan", icon: Settings },
         ],
       },

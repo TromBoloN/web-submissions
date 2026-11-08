@@ -192,7 +192,7 @@ function LinkCheckDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detail Pemeriksaan Tautan</DialogTitle>
           <DialogDescription>
@@ -208,9 +208,9 @@ function LinkCheckDetailDialog({
             </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             {items.map(({ label, url, item }) => (
-              <div key={label} className="space-y-1.5 rounded-md border p-3">
+              <div key={label} className="min-w-0 space-y-1.5 rounded-md border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-muted-foreground text-xs">{label}</span>
                   {item?.status === "ok" && (
@@ -241,15 +241,15 @@ function LinkCheckDetailDialog({
                   )}
                 </div>
 
-                <div className="truncate text-xs">
+                <div className="min-w-0 text-xs">
                   {url ? (
                     <a
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                      className="inline-flex min-w-0 max-w-full items-start gap-1 break-all text-primary hover:underline"
                     >
-                      <span className="truncate">{url}</span>
+                      <span className="break-all">{url}</span>
                       <ExternalLink className="size-3 shrink-0 opacity-70" />
                     </a>
                   ) : (

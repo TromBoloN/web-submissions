@@ -18,6 +18,7 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 | Login               | /login                                | `(auth)/login`, `(auth)/_components`                  | Auth                                                |
 | Admin dashboard     | /admin                                | `(main)/admin/page.tsx`                               | counts and deadline status                          |
 | Accounts            | /admin/akun                           | `(main)/admin/akun`                                   | `profiles` + Auth (service role)                    |
+| Audit               | /admin/audit                          | `(main)/admin/audit/page.tsx`                        | `audit_logs` + `profiles`                           |
 | Finalists           | /admin/finalis                        | `(main)/admin/finalis`                                | `teams.is_finalist`, ranking views                  |
 | Settings            | /admin/pengaturan                     | `(main)/admin/pengaturan`                             | `competition_settings`                              |
 | Ranking and CSV     | /admin/peringkat                      | `(main)/admin/peringkat` (+ `export/route.ts`)        | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
