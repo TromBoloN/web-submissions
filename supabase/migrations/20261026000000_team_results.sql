@@ -3,14 +3,15 @@
 -- Migration 004: Team Results and Release Flags
 -- 1. Add preliminary_results_released & final_results_released to competition_settings
 -- 2. public.get_my_results() SECURITY DEFINER function for contestant results
+-- This file is idempotent: safe to re-run.
 -- ============================================================================
 
 -- ============================================================================
 -- 1. RELEASE FLAGS IN COMPETITION_SETTINGS
 -- ============================================================================
 ALTER TABLE public.competition_settings
-  ADD COLUMN preliminary_results_released BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN final_results_released BOOLEAN NOT NULL DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS preliminary_results_released BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS final_results_released BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- ============================================================================
 -- 2. GET_MY_RESULTS() RPC FUNCTION
@@ -228,4 +229,3 @@ $$;
 -- Revoke public/anon privileges and grant to authenticated only
 REVOKE ALL ON FUNCTION public.get_my_results() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_my_results() TO authenticated;
-

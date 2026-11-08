@@ -1,6 +1,7 @@
 -- ============================================================================
 -- MIT-WEEK 2026 Competition Management System
 -- Migration: Draft Scores, Judge Recusals, Private Notes, and First Submitted At
+-- This file is idempotent: safe to re-run.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -94,11 +95,13 @@ REVOKE ALL ON TABLE public.judge_recusals FROM PUBLIC, anon;
 GRANT SELECT, INSERT, DELETE ON TABLE public.judge_recusals TO authenticated;
 
 -- RLS: Admin reads all
+DROP POLICY IF EXISTS "Admin read all judge_recusals" ON public.judge_recusals;
 CREATE POLICY "Admin read all judge_recusals" ON public.judge_recusals
     FOR SELECT TO authenticated
     USING (public.current_user_role() = 'admin');
 
 -- RLS: Judge can only select their own
+DROP POLICY IF EXISTS "Judges read own recusals" ON public.judge_recusals;
 CREATE POLICY "Judges read own recusals" ON public.judge_recusals
     FOR SELECT TO authenticated
     USING (
@@ -107,6 +110,7 @@ CREATE POLICY "Judges read own recusals" ON public.judge_recusals
     );
 
 -- RLS: Judge can only insert their own for teams they are allowed to view
+DROP POLICY IF EXISTS "Judges insert own recusals" ON public.judge_recusals;
 CREATE POLICY "Judges insert own recusals" ON public.judge_recusals
     FOR INSERT TO authenticated
     WITH CHECK (
@@ -116,6 +120,7 @@ CREATE POLICY "Judges insert own recusals" ON public.judge_recusals
     );
 
 -- RLS: Judge can delete own recusal (cancel recusal before results release)
+DROP POLICY IF EXISTS "Judges delete own recusals" ON public.judge_recusals;
 CREATE POLICY "Judges delete own recusals" ON public.judge_recusals
     FOR DELETE TO authenticated
     USING (

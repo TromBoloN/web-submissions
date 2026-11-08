@@ -5,13 +5,17 @@
 -- 2. Append-only submission history written by trigger
 -- 3. Score locking for preliminary and final scores
 -- 4. Public contact WhatsApp number on competition settings
+-- This file is idempotent: safe to re-run.
 -- ============================================================================
 
 -- ============================================================================
 -- 1. NOTES FOR JUDGES
 -- ============================================================================
 ALTER TABLE public.submissions
-  ADD COLUMN notes_for_judges TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS notes_for_judges TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE public.submissions
+  DROP CONSTRAINT IF EXISTS submissions_notes_for_judges_length,
   ADD CONSTRAINT submissions_notes_for_judges_length
     CHECK (char_length(notes_for_judges) <= 1000);
 
@@ -19,7 +23,7 @@ ALTER TABLE public.submissions
 -- ============================================================================
 -- 2. SUBMISSION HISTORY (append-only, written by trigger only)
 -- ============================================================================
-CREATE TABLE public.submission_history (
+CREATE TABLE IF NOT EXISTS public.submission_history (
   id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   submission_id    UUID NOT NULL REFERENCES public.submissions(id) ON DELETE CASCADE,
   team_id          UUID NOT NULL,
@@ -32,15 +36,16 @@ CREATE TABLE public.submission_history (
   changed_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_submission_history_submission
+CREATE INDEX IF NOT EXISTS idx_submission_history_submission
   ON public.submission_history (submission_id, changed_at DESC);
-CREATE INDEX idx_submission_history_team
+CREATE INDEX IF NOT EXISTS idx_submission_history_team
   ON public.submission_history (team_id);
-CREATE INDEX idx_submission_history_changed_at
+CREATE INDEX IF NOT EXISTS idx_submission_history_changed_at
   ON public.submission_history (changed_at DESC, id DESC);
 
 ALTER TABLE public.submission_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin read submission history" ON public.submission_history;
 CREATE POLICY "Admin read submission history" ON public.submission_history
   FOR SELECT TO authenticated
   USING (public.current_user_role() = 'admin');
@@ -49,6 +54,7 @@ REVOKE ALL ON public.submission_history FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.submission_history TO authenticated;
 
 -- Baseline snapshot so existing submissions have a starting history entry.
+-- Only submissions with no history yet are added, so re-runs do not duplicate rows.
 INSERT INTO public.submission_history (
   submission_id,
   team_id,
@@ -70,7 +76,12 @@ SELECT
   s.status::text,
   NULL,
   s.updated_at
-FROM public.submissions AS s;
+FROM public.submissions AS s
+WHERE NOT EXISTS (
+  SELECT 1
+    FROM public.submission_history AS h
+   WHERE h.submission_id = s.id
+);
 
 CREATE OR REPLACE FUNCTION public.log_submission_change()
 RETURNS trigger
@@ -106,10 +117,12 @@ $$;
 
 REVOKE ALL ON FUNCTION public.log_submission_change() FROM PUBLIC, anon, authenticated;
 
+DROP TRIGGER IF EXISTS submissions_history_after_insert ON public.submissions;
 CREATE TRIGGER submissions_history_after_insert
   AFTER INSERT ON public.submissions
   FOR EACH ROW EXECUTE FUNCTION public.log_submission_change();
 
+DROP TRIGGER IF EXISTS submissions_history_after_update ON public.submissions;
 CREATE TRIGGER submissions_history_after_update
   AFTER UPDATE ON public.submissions
   FOR EACH ROW
@@ -128,10 +141,11 @@ CREATE TRIGGER submissions_history_after_update
 --    A judge can lock their own score after finishing. Locked scores can no
 --    longer be edited by the judge (admin full-access policy is unchanged).
 -- ============================================================================
-ALTER TABLE public.preliminary_scores ADD COLUMN locked_at TIMESTAMPTZ;
-ALTER TABLE public.final_scores ADD COLUMN locked_at TIMESTAMPTZ;
+ALTER TABLE public.preliminary_scores ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+ALTER TABLE public.final_scores ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
 
-DROP POLICY "Prelim judges update own scores" ON public.preliminary_scores;
+DROP POLICY IF EXISTS "Prelim judges update own scores" ON public.preliminary_scores;
+DROP POLICY IF EXISTS "Prelim judges update own unlocked scores" ON public.preliminary_scores;
 CREATE POLICY "Prelim judges update own unlocked scores" ON public.preliminary_scores
   FOR UPDATE TO authenticated
   USING (
@@ -144,7 +158,8 @@ CREATE POLICY "Prelim judges update own unlocked scores" ON public.preliminary_s
     AND public.judge_can_score_preliminary(team_id)
   );
 
-DROP POLICY "Final judges update own scores" ON public.final_scores;
+DROP POLICY IF EXISTS "Final judges update own scores" ON public.final_scores;
+DROP POLICY IF EXISTS "Final judges update own unlocked scores" ON public.final_scores;
 CREATE POLICY "Final judges update own unlocked scores" ON public.final_scores
   FOR UPDATE TO authenticated
   USING (
@@ -162,11 +177,12 @@ CREATE POLICY "Final judges update own unlocked scores" ON public.final_scores
 -- 4. PUBLIC CONTACT WHATSAPP
 -- ============================================================================
 ALTER TABLE public.competition_settings
-  ADD COLUMN contact_whatsapp TEXT;
+  ADD COLUMN IF NOT EXISTS contact_whatsapp TEXT;
 
 ALTER TABLE public.competition_settings
+  DROP CONSTRAINT IF EXISTS competition_settings_contact_whatsapp_check,
   ADD CONSTRAINT competition_settings_contact_whatsapp_check
-  CHECK (contact_whatsapp IS NULL OR contact_whatsapp ~ '^[0-9]{8,15}$');
+    CHECK (contact_whatsapp IS NULL OR contact_whatsapp ~ '^[0-9]{8,15}$');
 
 -- Safe public read for the login page (unauthenticated visitors).
 CREATE OR REPLACE FUNCTION public.get_public_contact_whatsapp()

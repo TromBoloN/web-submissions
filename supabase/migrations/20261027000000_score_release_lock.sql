@@ -3,6 +3,7 @@
 -- Migration: Enforce Score Locking Upon Results Release
 -- Blocks INSERT, UPDATE, and DELETE on preliminary_scores and final_scores
 -- whenever the stage results are marked as released.
+-- This file is idempotent: safe to re-run.
 -- ============================================================================
 
 -- 1. Trigger function for preliminary_scores
@@ -66,13 +67,14 @@ REVOKE ALL ON FUNCTION public.check_preliminary_scores_not_released() FROM PUBLI
 REVOKE ALL ON FUNCTION public.check_final_scores_not_released() FROM PUBLIC, anon;
 
 -- 4. Create triggers on preliminary_scores and final_scores
+DROP TRIGGER IF EXISTS trg_preliminary_scores_release_lock ON public.preliminary_scores;
 CREATE TRIGGER trg_preliminary_scores_release_lock
   BEFORE INSERT OR UPDATE OR DELETE ON public.preliminary_scores
   FOR EACH ROW
   EXECUTE FUNCTION public.check_preliminary_scores_not_released();
 
+DROP TRIGGER IF EXISTS trg_final_scores_release_lock ON public.final_scores;
 CREATE TRIGGER trg_final_scores_release_lock
   BEFORE INSERT OR UPDATE OR DELETE ON public.final_scores
   FOR EACH ROW
   EXECUTE FUNCTION public.check_final_scores_not_released();
-
