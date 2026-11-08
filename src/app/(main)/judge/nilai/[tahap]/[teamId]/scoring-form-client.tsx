@@ -4,7 +4,21 @@ import { useMemo, useState, useTransition } from "react";
 
 import Link from "next/link";
 
-import { ArrowLeft, Check, Code2, ExternalLink, Globe, Info, Lock, Save, StickyNote, Video } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Code2,
+  ExternalLink,
+  FileText,
+  Globe,
+  Info,
+  Lock,
+  Save,
+  StickyNote,
+  Video,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,6 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -377,19 +392,70 @@ export function ScoringFormClient({
               </Alert>
             )}
 
+            {/* Panel Ketentuan Juknis */}
+            <Collapsible className="rounded-lg border bg-muted/40">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between p-3.5 text-left text-sm font-medium hover:bg-muted/60 transition-colors rounded-lg group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="size-4 text-primary" />
+                    <span>Ketentuan Juknis</span>
+                  </div>
+                  <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-4 pb-4 pt-1 text-xs text-muted-foreground space-y-2">
+                <ol className="list-decimal pl-4 space-y-1.5 leading-relaxed">
+                  <li>
+                    Kegagalan akses atau fungsi live deployment yang berasal dari sisi peserta mengurangi nilai
+                    Fungsionalitas (C.7b).
+                  </li>
+                  <li>
+                    Penilaian alternatif lewat video dan GitHub hanya bila ada gangguan platform hosting yang dapat
+                    diverifikasi (C.7c–d).
+                  </li>
+                </ol>
+              </CollapsibleContent>
+            </Collapsible>
+
             <div className="grid gap-4 sm:grid-cols-2">
               {rubric.map((criterion) => {
                 const val = scores[criterion.column] ?? "";
                 return (
-                  <div key={criterion.column} className="space-y-1.5 rounded-lg border p-3.5 bg-card">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={`score-${criterion.column}`} className="font-medium text-sm">
-                        {criterion.label}
-                      </Label>
-                      <Badge variant="outline" className="text-xs font-mono">
-                        Bobot {criterion.weight}%
-                      </Badge>
+                  <div
+                    key={criterion.column}
+                    className="flex flex-col justify-between space-y-3 rounded-lg border p-3.5 bg-card"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label htmlFor={`score-${criterion.column}`} className="font-medium text-sm">
+                          {criterion.label}
+                        </Label>
+                        <Badge variant="outline" className="text-xs font-mono shrink-0">
+                          Bobot {criterion.weight}%
+                        </Badge>
+                      </div>
+
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+                          >
+                            <ChevronRight className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <span>Indikator penilaian</span>
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-1.5 pb-0.5">
+                          <p className="rounded-md bg-muted/50 p-2 text-xs leading-relaxed text-muted-foreground">
+                            {criterion.indicator}
+                          </p>
+                        </CollapsibleContent>
+                      </Collapsible>
                     </div>
+
                     <Input
                       id={`score-${criterion.column}`}
                       type="number"

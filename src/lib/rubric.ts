@@ -15,31 +15,35 @@ export const PRELIMINARY_RUBRIC: readonly RubricCriterion[] = [
     column: "functionality_score",
     label: "Fungsionalitas",
     weight: 35,
-    indicator: "Kelengkapan fitur aplikasi, keandalan sistem, dan pemenuhan spesifikasi teknis.",
+    indicator:
+      "Kelengkapan dan keberjalanan fitur yang dikembangkan serta kemampuan aplikasi dalam menjalankan fungsi sesuai tujuan yang ditetapkan.",
   },
   {
     column: "case_study_fit_score",
-    label: "Kesesuaian Studi Kasus",
+    label: "Kesesuaian dengan Studi Kasus",
     weight: 25,
-    indicator: "Kesesuaian dan efektivitas solusi web terhadap permasalahan pada studi kasus.",
+    indicator:
+      "Kesesuaian produk dengan tema dan studi kasus yang diberikan serta kemampuan solusi dalam menjawab permasalahan yang ditetapkan.",
   },
   {
     column: "ui_ux_score",
     label: "UI/UX",
     weight: 20,
-    indicator: "Kemudahan navigasi, responsivitas tampilan antarmuka, dan estetika desain pengguna.",
+    indicator:
+      "Kualitas antarmuka, kemudahan navigasi, kejelasan alur penggunaan, responsivitas, dan pengalaman pengguna.",
   },
   {
     column: "code_quality_score",
     label: "Kualitas Kode & Pemeliharaan",
     weight: 10,
-    indicator: "Struktur kerapian kode sumber, modularitas, dan kemudahan pemeliharaan (maintainability).",
+    indicator:
+      "Kerapian dan keteraturan kode, struktur proyek, penggunaan komponen, serta kemudahan kode untuk dipahami, dipelihara, dan dikembangkan oleh pengembang lain.",
   },
   {
     column: "documentation_score",
     label: "Dokumentasi",
     weight: 10,
-    indicator: "Kelengkapan panduan instalasi, kejelasan README repositori, dan dokumentasi alur solusi.",
+    indicator: "Kelengkapan dan kejelasan README.md serta dokumentasi teknis yang disediakan oleh peserta.",
   },
 ] as const;
 
@@ -48,37 +52,42 @@ export const FINAL_RUBRIC: readonly RubricCriterion[] = [
     column: "functionality_score",
     label: "Fungsionalitas",
     weight: 25,
-    indicator: "Kelengkapan fitur aplikasi, keandalan sistem, dan pemenuhan spesifikasi teknis.",
+    indicator:
+      "Kelengkapan dan keberjalanan fitur yang dikembangkan serta kemampuan aplikasi dalam menjalankan fungsi sesuai tujuan yang ditetapkan.",
   },
   {
     column: "case_study_fit_score",
-    label: "Kesesuaian Studi Kasus",
+    label: "Kesesuaian dengan Studi Kasus",
     weight: 20,
-    indicator: "Kesesuaian dan efektivitas solusi web terhadap permasalahan pada studi kasus.",
+    indicator:
+      "Kesesuaian produk dengan tema dan studi kasus yang diberikan serta kemampuan solusi dalam menjawab permasalahan yang ditetapkan.",
   },
   {
     column: "ui_ux_score",
     label: "UI/UX",
     weight: 15,
-    indicator: "Kemudahan navigasi, responsivitas tampilan antarmuka, dan estetika desain pengguna.",
+    indicator:
+      "Kualitas antarmuka, kemudahan navigasi, kejelasan alur penggunaan, responsivitas, dan pengalaman pengguna.",
   },
   {
     column: "code_quality_score",
     label: "Kualitas Kode & Pemeliharaan",
     weight: 10,
-    indicator: "Struktur kerapian kode sumber, modularitas, dan kemudahan pemeliharaan (maintainability).",
+    indicator:
+      "Kerapian dan keteraturan kode, struktur proyek, penggunaan komponen, serta kemudahan kode untuk dipahami, dipelihara, dan dikembangkan oleh pengembang lain.",
   },
   {
     column: "documentation_score",
     label: "Dokumentasi",
     weight: 10,
-    indicator: "Kelengkapan panduan instalasi, kejelasan README repositori, dan dokumentasi alur solusi.",
+    indicator: "Kelengkapan dan kejelasan README.md serta dokumentasi teknis yang disediakan oleh peserta.",
   },
   {
     column: "presentation_qa_score",
-    label: "Presentasi & Tanya Jawab",
+    label: "Presentasi dan Q&A",
     weight: 20,
-    indicator: "Kejelasan pemaparan solusi, demonstrasi karya, dan ketepatan menjawab pertanyaan dewan juri.",
+    indicator:
+      "Kemampuan menjelaskan produk, fitur, dan tujuan pengembangan dengan jelas; menjelaskan implementasi dan keputusan pengembangan; penguasaan terhadap produk dan teknologi yang digunakan; menjawab pertanyaan dan mempertanggungjawabkan keputusan selama pengembangan.",
   },
 ] as const;
 
