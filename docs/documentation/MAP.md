@@ -21,7 +21,7 @@ Architecture map of `src/`. Update it when you add, move or remove a screen or s
 | Ranking and CSV     | /admin/peringkat                      | `(main)/admin/peringkat` (+ `export/route.ts`)        | `preliminary_ranking`, `final_ranking`              |
 | Submissions and CSV | /admin/submission                     | `(main)/admin/submission` (+ `export/route.ts`)       | `submissions`                                       |
 | Teams               | /admin/tim                            | `(main)/admin/tim`                                    | `teams`                                             |
-| Judge queue         | /judge                                | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx` | `submissions`, own scores                           |
+| Judge queue         | /judge                                | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores                           |
 | Judge scoring       | /judge/nilai/[tahap]/[teamId]         | `(main)/judge/nilai/[tahap]/[teamId]`                 | `preliminary_scores`, `final_scores`                |
 | Team portal         | /team                                 | `(main)/team` (files beside `page.tsx`)               | `submissions`, own `teams` row                      |
 | Case study          | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus`                           | `competition_settings` (markdown)                   |

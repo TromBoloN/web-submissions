@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth";
 import type { ScoringStage } from "@/lib/rubric";
 import { createClient } from "@/lib/supabase/server";
 
+import { getJudgeTeamList } from "../../../queries";
 import { ScoringFormClient } from "./scoring-form-client";
 
 interface PageProps {
@@ -35,15 +36,21 @@ export default async function JudgeScoringPage({ params }: PageProps) {
     redirect("/judge");
   }
 
+  // Retrieve authorized team list for this judge and stage
+  const teamList = await getJudgeTeamList(tahap);
+  const currentIndex = teamList.findIndex((t) => t.id === teamId);
+
+  // If the team is not in the authorized list (disqualified, draft, non-finalist, or wrong stage), redirect
+  if (currentIndex === -1) {
+    redirect("/judge");
+  }
+
+  const currentTeamItem = teamList[currentIndex];
+
   const supabase = await createClient();
 
-  // Load team, submission, and competition settings
-  const [teamRes, submissionRes, settingsRes] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id, team_code, team_name, is_finalist, is_disqualified")
-      .eq("id", teamId)
-      .maybeSingle(),
+  // Load submission and stage settings
+  const [{ data: submission }, { data: settings }] = await Promise.all([
     supabase
       .from("submissions")
       .select("status, github_url, live_demo_url, video_url, notes_for_judges")
@@ -56,27 +63,23 @@ export default async function JudgeScoringPage({ params }: PageProps) {
       .maybeSingle(),
   ]);
 
-  if (teamRes.error || !teamRes.data || teamRes.data.is_disqualified) {
+  if (submission?.status !== "submitted") {
     redirect("/judge");
   }
-
-  const team = teamRes.data;
-
-  // Final stage requires the team to be a finalist
-  if (tahap === "final" && !team.is_finalist) {
-    redirect("/judge");
-  }
-
-  if (submissionRes.error || !submissionRes.data || submissionRes.data.status !== "submitted") {
-    redirect("/judge");
-  }
-
-  const submission = submissionRes.data;
-  const settings = settingsRes.data;
 
   const isStageReleased = Boolean(
     tahap === "preliminary" ? settings?.preliminary_results_released : settings?.final_results_released,
   );
+
+  // Calculate navigation:
+  // Previous and Next teams in the sorted list
+  const prevTeam = currentIndex > 0 ? teamList[currentIndex - 1] : null;
+  const nextTeam = currentIndex < teamList.length - 1 ? teamList[currentIndex + 1] : null;
+
+  // Find next unrated team (score === null and stage not released)
+  const nextForward = teamList.slice(currentIndex + 1).find((t) => t.score === null && !t.is_stage_released);
+  const nextFromStart = teamList.slice(0, currentIndex).find((t) => t.score === null && !t.is_stage_released);
+  const nextUnscored = nextForward ?? nextFromStart;
 
   // Load judge's existing score for this team (if any)
   let initialScore = null;
@@ -129,9 +132,9 @@ export default async function JudgeScoringPage({ params }: PageProps) {
     <ScoringFormClient
       tahap={tahap}
       team={{
-        id: team.id,
-        team_code: team.team_code,
-        team_name: team.team_name,
+        id: currentTeamItem.id,
+        team_code: currentTeamItem.team_code,
+        team_name: currentTeamItem.team_name,
       }}
       submission={{
         github_url: submission.github_url ?? "",
@@ -141,6 +144,13 @@ export default async function JudgeScoringPage({ params }: PageProps) {
       }}
       initialScore={initialScore}
       isStageReleased={isStageReleased}
+      navigation={{
+        currentPosition: currentIndex + 1,
+        totalTeams: teamList.length,
+        prevTeamId: prevTeam ? prevTeam.id : null,
+        nextTeamId: nextTeam ? nextTeam.id : null,
+        nextUnscoredTeamId: nextUnscored ? nextUnscored.id : null,
+      }}
     />
   );
 }

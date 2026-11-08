@@ -9,7 +9,9 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Code2,
   ExternalLink,
   FileText,
@@ -70,12 +72,21 @@ interface ExistingScoreData {
   locked_at: string | null;
 }
 
+export interface JudgeScoringNavigation {
+  currentPosition: number;
+  totalTeams: number;
+  prevTeamId: string | null;
+  nextTeamId: string | null;
+  nextUnscoredTeamId: string | null;
+}
+
 interface ScoringFormClientProps {
   tahap: ScoringStage;
   team: TeamData;
   submission: SubmissionData;
   initialScore: ExistingScoreData | null;
   isStageReleased?: boolean;
+  navigation?: JudgeScoringNavigation;
 }
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -139,6 +150,7 @@ export function ScoringFormClient({
   submission,
   initialScore,
   isStageReleased = false,
+  navigation,
 }: ScoringFormClientProps) {
   const rubric = useMemo(() => getRubricForStage(tahap), [tahap]);
 
@@ -405,6 +417,66 @@ export function ScoringFormClient({
         </div>
       </div>
 
+      {/* Team Navigation Bar */}
+      {navigation && (
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center sm:justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">
+              Tim {navigation.currentPosition} dari {navigation.totalTeams}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!navigation.prevTeamId}
+              asChild={Boolean(navigation.prevTeamId)}
+            >
+              {navigation.prevTeamId ? (
+                <Link href={`/judge/nilai/${tahap}/${navigation.prevTeamId}`} onClick={handleBackClick}>
+                  <ChevronLeft className="mr-1 size-4" />
+                  Sebelumnya
+                </Link>
+              ) : (
+                <span>
+                  <ChevronLeft className="mr-1 size-4" />
+                  Sebelumnya
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!navigation.nextTeamId}
+              asChild={Boolean(navigation.nextTeamId)}
+            >
+              {navigation.nextTeamId ? (
+                <Link href={`/judge/nilai/${tahap}/${navigation.nextTeamId}`} onClick={handleBackClick}>
+                  Berikutnya
+                  <ChevronRight className="ml-1 size-4" />
+                </Link>
+              ) : (
+                <span>
+                  Berikutnya
+                  <ChevronRight className="ml-1 size-4" />
+                </span>
+              )}
+            </Button>
+
+            {navigation.nextUnscoredTeamId && (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href={`/judge/nilai/${tahap}/${navigation.nextUnscoredTeamId}`} onClick={handleBackClick}>
+                  <ClipboardCheck className="mr-1.5 size-4" />
+                  Tim belum dinilai berikutnya
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Submission Links Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -425,12 +497,14 @@ export function ScoringFormClient({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <StickyNote className="size-4 text-primary" />
-              Catatan dari Tim
+              Catatan untuk Juri
             </CardTitle>
-            <CardDescription>Ditulis peserta khusus untuk dewan juri.</CardDescription>
+            <CardDescription>Catatan dari peserta untuk dewan juri (hanya baca).</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{submission.notes_for_judges}</p>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+              {submission.notes_for_judges}
+            </p>
           </CardContent>
         </Card>
       )}
