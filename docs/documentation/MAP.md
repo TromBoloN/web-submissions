@@ -40,6 +40,7 @@ src/proxy.ts                         session refresh, login redirect
 src/lib/auth.ts                      getCurrentProfile, requireRole, getDashboardPath
 src/lib/auth-actions.ts              signIn, signOut, changePassword
 src/lib/deadline.ts                  WITA conversion, exclusive-bound handling, +1 minute rule
+src/lib/audit.ts                     server-only audit event writer for sensitive mutations
 src/lib/rubric.ts                    rubric weights, calcWeightedTotal (must match DB)
 src/lib/csv.ts                       CSV building and escaping
 src/lib/link-check.ts                server-side URL validation, SSRF guard (DNS, private IP blocking)

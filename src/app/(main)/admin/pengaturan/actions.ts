@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { z } from "zod";
 
+import { logAuditEvent } from "@/lib/audit";
 import { getCurrentProfile } from "@/lib/auth";
 import { normalizeWhatsAppNumber } from "@/lib/contact";
 import { parseWitaInputToExclusiveCutoff, parseWitaInputToUtcIso } from "@/lib/deadline";
@@ -313,6 +314,13 @@ export async function updateResultsRelease(stage: "preliminary" | "final", relea
   if (!data || data.length === 0) {
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
   }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: parsed.data.released ? "results_released" : "results_unreleased",
+    targetType: "competition_settings",
+    metadata: { stage: parsed.data.stage },
+  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/pengaturan");

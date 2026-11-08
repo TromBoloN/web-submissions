@@ -72,3 +72,4 @@ Route groups `(auth)` and `(main)` do not appear in URLs. `(main)` contains the 
 - **Database-calculated totals:** score totals are generated in PostgreSQL and mirrored by `src/lib/rubric.ts` for the live UI preview. Change both only when the rubric is intentionally changed.
 - **Exclusive deadline:** the database stores the first instant that is no longer accepted; the UI presents the previous minute as the last accepted WITA minute.
 - **Released results RPC:** teams do not receive direct score-table access. The RPC derives the caller's team from `auth.uid()` and strips judge identity and unreleased data.
+- **Audit logging:** sensitive account, team, result-release, and judging mutations write an audit event through the server-only service-role client. Audit metadata is limited to action context and never includes credentials, scores, feedback, or personal data.

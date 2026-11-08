@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { z } from "zod";
 
+import { logAuditEvent } from "@/lib/audit";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,15 +34,27 @@ export async function toggleFinalist(input: { teamId: string; targetFinalist: bo
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("teams")
     .update({ is_finalist: parsed.data.targetFinalist })
-    .eq("id", parsed.data.teamId);
+    .eq("id", parsed.data.teamId)
+    .select("id");
 
   if (error) {
     console.error("Failed to update finalist status", error);
     return { success: false, error: "Gagal memperbarui status finalis. Coba lagi." };
   }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Tim tidak ditemukan." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: parsed.data.targetFinalist ? "finalist_selected" : "finalist_unselected",
+    targetType: "team",
+    targetId: parsed.data.teamId,
+  });
 
   revalidatePath("/admin/tim");
   return { success: true };
@@ -62,15 +75,27 @@ export async function toggleDisqualified(input: {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("teams")
     .update({ is_disqualified: parsed.data.targetDisqualified })
-    .eq("id", parsed.data.teamId);
+    .eq("id", parsed.data.teamId)
+    .select("id");
 
   if (error) {
     console.error("Failed to update disqualified status", error);
     return { success: false, error: "Gagal memperbarui status diskualifikasi. Coba lagi." };
   }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Tim tidak ditemukan." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: parsed.data.targetDisqualified ? "team_disqualified" : "team_disqualification_removed",
+    targetType: "team",
+    targetId: parsed.data.teamId,
+  });
 
   revalidatePath("/admin/tim");
   return { success: true };

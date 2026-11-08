@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { z } from "zod";
 
+import { logAuditEvent } from "@/lib/audit";
 import { getCurrentProfile } from "@/lib/auth";
 import { usernameToEmail } from "@/lib/identity";
 import { adminClient } from "@/lib/supabase/admin";
@@ -210,6 +211,14 @@ export async function createAccount(formData: FormData): Promise<CreateAccountRe
     }
   }
 
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "account_created",
+    targetType: "profile",
+    targetId: userId,
+    metadata: { role: parsed.data.role },
+  });
+
   revalidatePath("/admin/akun");
   return {
     success: true,
@@ -254,6 +263,13 @@ export async function toggleAccountActive(input: { userId: string; targetActive:
     return { success: false, error: "Gagal mengubah status akun. Coba lagi." };
   }
 
+  await logAuditEvent({
+    actorId: caller.id,
+    action: parsed.data.targetActive ? "account_activated" : "account_deactivated",
+    targetType: "profile",
+    targetId: parsed.data.userId,
+  });
+
   revalidatePath("/admin/akun");
   return { success: true };
 }
@@ -283,6 +299,13 @@ export async function resetAccountPassword(input: { userId: string; password: st
     console.error("Failed to reset password", error);
     return { success: false, error: "Gagal mereset kata sandi. Coba lagi." };
   }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "account_password_reset",
+    targetType: "profile",
+    targetId: parsed.data.userId,
+  });
 
   return { success: true, password: parsed.data.password };
 }
@@ -369,6 +392,14 @@ export async function updateAccount(formData: FormData): Promise<ActionResult> {
     console.error("Failed to update profile", profileError);
     return { success: false, error: "Gagal memperbarui profil akun. Coba lagi." };
   }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "account_updated",
+    targetType: "profile",
+    targetId: parsed.data.userId,
+    metadata: { role: parsed.data.role },
+  });
 
   revalidatePath("/admin/akun");
   if (parsed.data.role === "team") {

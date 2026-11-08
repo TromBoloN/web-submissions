@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { z } from "zod";
 
+import { logAuditEvent } from "@/lib/audit";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,6 +15,16 @@ export type ScoreStatus = "draft" | "final";
 export type SaveScoreResult =
   | { ok: true; total: number | null; updatedAt: string; status: ScoreStatus }
   | { ok: false; message: string };
+
+async function logScoreChange(actorId: string, stage: "preliminary" | "final", teamId: string, action: string) {
+  await logAuditEvent({
+    actorId,
+    action,
+    targetType: `${stage}_score`,
+    targetId: teamId,
+    metadata: { stage },
+  });
+}
 
 function handleScoreError(error: { code?: string; message?: string } | null, defaultMessage: string): string {
   const message = error?.message ?? "";
@@ -216,6 +227,7 @@ export async function saveScore(input: {
       }
 
       const saved = data[0];
+      await logScoreChange(caller.id, "preliminary", team_id, "score_changed");
       revalidatePath("/judge");
       revalidatePath("/admin/peringkat");
       revalidatePath(`/judge/nilai/preliminary/${team_id}`);
@@ -255,6 +267,7 @@ export async function saveScore(input: {
         }
 
         const saved = retryData[0];
+        await logScoreChange(caller.id, "preliminary", team_id, "score_changed");
         revalidatePath("/judge");
         revalidatePath("/admin/peringkat");
         revalidatePath(`/judge/nilai/preliminary/${team_id}`);
@@ -275,6 +288,7 @@ export async function saveScore(input: {
     }
 
     const saved = data[0];
+    await logScoreChange(caller.id, "preliminary", team_id, "score_changed");
     revalidatePath("/judge");
     revalidatePath("/admin/peringkat");
     revalidatePath(`/judge/nilai/preliminary/${team_id}`);
@@ -341,6 +355,7 @@ export async function saveScore(input: {
     }
 
     const saved = data[0];
+    await logScoreChange(caller.id, "final", team_id, "score_changed");
     revalidatePath("/judge");
     revalidatePath("/admin/peringkat");
     revalidatePath(`/judge/nilai/final/${team_id}`);
@@ -379,6 +394,7 @@ export async function saveScore(input: {
       }
 
       const saved = retryData[0];
+      await logScoreChange(caller.id, "final", team_id, "score_changed");
       revalidatePath("/judge");
       revalidatePath("/admin/peringkat");
       revalidatePath(`/judge/nilai/final/${team_id}`);
@@ -399,6 +415,7 @@ export async function saveScore(input: {
   }
 
   const saved = data[0];
+  await logScoreChange(caller.id, "final", team_id, "score_changed");
   revalidatePath("/judge");
   revalidatePath("/admin/peringkat");
   revalidatePath(`/judge/nilai/final/${team_id}`);
@@ -449,6 +466,7 @@ export async function lockScore(input: { tahap: "preliminary" | "final"; team_id
       return { ok: false, message: "Nilai belum tersimpan atau sudah dikunci sebelumnya." };
     }
 
+    await logScoreChange(caller.id, "preliminary", input.team_id, "score_locked");
     revalidatePath("/judge");
     revalidatePath("/admin/peringkat");
     revalidatePath(`/judge/nilai/preliminary/${input.team_id}`);
@@ -473,6 +491,7 @@ export async function lockScore(input: { tahap: "preliminary" | "final"; team_id
     return { ok: false, message: "Nilai belum tersimpan atau sudah dikunci sebelumnya." };
   }
 
+  await logScoreChange(caller.id, "final", input.team_id, "score_locked");
   revalidatePath("/judge");
   revalidatePath("/admin/peringkat");
   revalidatePath(`/judge/nilai/final/${input.team_id}`);
