@@ -1,6 +1,6 @@
 -- ============================================================================
 -- MIT-WEEK 2026 Competition Management System
--- Migration 002: Phase 3 Contestant Features
+-- Migration 002: Phase 3 Contestant Features (Idempotent)
 -- 1.1 Juknis link in competition_settings
 -- 1.2 Case study table with RLS & initial seed
 -- 1.3 Submission receipt (first_submitted_at) & link_check columns + triggers
@@ -11,20 +11,24 @@
 -- 1.1 JUKNIS LINK
 -- ============================================================================
 ALTER TABLE public.competition_settings
-  ADD COLUMN juknis_url TEXT;
+  ADD COLUMN IF NOT EXISTS juknis_url TEXT;
 
-ALTER TABLE public.competition_settings
-  ADD CONSTRAINT competition_settings_juknis_url_check
-  CHECK (juknis_url IS NULL OR juknis_url ~* '^https://');
-
--- Catatan: Policy "Authenticated read settings" sudah ada di migrasi 001,
--- sehingga semua role yang terautentikasi (admin, judge, team) sudah bisa membaca juknis_url.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'competition_settings_juknis_url_check'
+  ) THEN
+    ALTER TABLE public.competition_settings
+      ADD CONSTRAINT competition_settings_juknis_url_check
+      CHECK (juknis_url IS NULL OR juknis_url ~* '^https://');
+  END IF;
+END $$;
 
 
 -- ============================================================================
 -- 1.2 CASE STUDY (Single-row table)
 -- ============================================================================
-CREATE TABLE public.case_study (
+CREATE TABLE IF NOT EXISTS public.case_study (
   id         BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
   title      TEXT NOT NULL DEFAULT '',
   content_md TEXT NOT NULL DEFAULT '',
@@ -35,19 +39,23 @@ CREATE TABLE public.case_study (
 
 ALTER TABLE public.case_study ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS trg_case_study_touch ON public.case_study;
 CREATE TRIGGER trg_case_study_touch
 BEFORE UPDATE ON public.case_study
 FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
+DROP POLICY IF EXISTS "Admin full access case_study" ON public.case_study;
 CREATE POLICY "Admin full access case_study" ON public.case_study
   FOR ALL TO authenticated
   USING (public.current_user_role() = 'admin')
   WITH CHECK (public.current_user_role() = 'admin');
 
+DROP POLICY IF EXISTS "Judges read case_study" ON public.case_study;
 CREATE POLICY "Judges read case_study" ON public.case_study
   FOR SELECT TO authenticated
   USING (public.current_user_role() = 'judge');
 
+DROP POLICY IF EXISTS "Teams read case_study when released" ON public.case_study;
 CREATE POLICY "Teams read case_study when released" ON public.case_study
   FOR SELECT TO authenticated
   USING (
@@ -80,21 +88,23 @@ Situasi berikut hanya menggambarkan jenis permasalahan yang dapat dihadapi pengg
 
 Peserta bebas menentukan pendekatan solusi, target pengguna yang lebih spesifik, dan teknologi yang digunakan, selama solusi yang dikembangkan tetap relevan dengan permasalahan dalam studi kasus dan memenuhi ketentuan kompetisi.$md$,
   NULL
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ============================================================================
 -- 1.3 SUBMISSION RECEIPT & LINK CHECK COLUMNS
 -- ============================================================================
 ALTER TABLE public.submissions
-  ADD COLUMN first_submitted_at TIMESTAMPTZ,
-  ADD COLUMN link_check JSONB,
-  ADD COLUMN link_checked_at TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS first_submitted_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS link_check JSONB,
+  ADD COLUMN IF NOT EXISTS link_checked_at TIMESTAMPTZ;
 
--- Backfill data uji yang sudah berstatus 'submitted'
+-- Backfill data uji yang sudah berstatus 'submitted' (hanya jika belum terisi)
 UPDATE public.submissions
    SET first_submitted_at = submitted_at
- WHERE status = 'submitted';
+ WHERE status = 'submitted'
+   AND first_submitted_at IS NULL;
 
 CREATE OR REPLACE FUNCTION public.submissions_set_first_submitted_at()
 RETURNS trigger
@@ -105,7 +115,7 @@ BEGIN
   IF TG_OP = 'UPDATE' AND OLD.first_submitted_at IS NOT NULL THEN
     NEW.first_submitted_at := OLD.first_submitted_at;      -- terkunci selamanya
   ELSIF NEW.status = 'submitted' THEN
-    NEW.first_submitted_at := now();                       -- pertama kali tombol Kirim ditekan
+    NEW.first_submitted_at := now();                        -- pertama kali tombol Kirim ditekan
   ELSE
     NEW.first_submitted_at := null;
   END IF;
@@ -113,6 +123,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS submissions_first_submitted_at ON public.submissions;
 CREATE TRIGGER submissions_first_submitted_at
   BEFORE INSERT OR UPDATE ON public.submissions
   FOR EACH ROW EXECUTE FUNCTION public.submissions_set_first_submitted_at();
@@ -121,7 +132,7 @@ CREATE TRIGGER submissions_first_submitted_at
 -- ============================================================================
 -- 1.4 FINALIST NOTICE
 -- ============================================================================
-CREATE TABLE public.finalist_notice (
+CREATE TABLE IF NOT EXISTS public.finalist_notice (
   id                   BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
   finalist_message     TEXT NOT NULL DEFAULT '',
   non_finalist_message TEXT NOT NULL DEFAULT '',
@@ -132,17 +143,19 @@ CREATE TABLE public.finalist_notice (
 
 ALTER TABLE public.finalist_notice ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS trg_finalist_notice_touch ON public.finalist_notice;
 CREATE TRIGGER trg_finalist_notice_touch
   BEFORE UPDATE ON public.finalist_notice
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 -- Admin only. Tim TIDAK PERNAH membaca tabel ini secara langsung.
+DROP POLICY IF EXISTS "Admin full access finalist_notice" ON public.finalist_notice;
 CREATE POLICY "Admin full access finalist_notice" ON public.finalist_notice
   FOR ALL TO authenticated
   USING (public.current_user_role() = 'admin')
   WITH CHECK (public.current_user_role() = 'admin');
 
-INSERT INTO public.finalist_notice (id) VALUES (TRUE);
+INSERT INTO public.finalist_notice (id) VALUES (TRUE) ON CONFLICT (id) DO NOTHING;
 
 -- RPC function untuk peserta membaca pengumuman miliknya secara aman
 CREATE OR REPLACE FUNCTION public.get_my_finalist_notice()
