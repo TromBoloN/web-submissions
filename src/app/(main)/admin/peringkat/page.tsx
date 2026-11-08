@@ -4,7 +4,13 @@ import { APP_CONFIG } from "@/config/app-config";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-import { type JudgeProgress, type JudgeScoreDetail, RankingClient, type RankingRow } from "./ranking-client";
+import {
+  type JudgeProgress,
+  type JudgeRecusalDetail,
+  type JudgeScoreDetail,
+  RankingClient,
+  type RankingRow,
+} from "./ranking-client";
 
 export const metadata: Metadata = {
   title: `Peringkat | ${APP_CONFIG.name}`,
@@ -16,24 +22,46 @@ export default async function AdminPeringkatPage() {
 
   const supabase = await createClient();
 
-  const [judgesRes, teamsRes, submissionsRes, prelimRankingRes, finalRankingRes, prelimScoresRes, finalScoresRes] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name, judge_stage, is_active")
-        .eq("role", "judge")
-        .eq("is_active", true)
-        .order("full_name", { ascending: true }),
-      supabase
-        .from("teams")
-        .select("id, team_code, team_name, is_finalist, is_disqualified")
-        .order("team_code", { ascending: true }),
-      supabase.from("submissions").select("team_id, status"),
-      supabase.from("preliminary_ranking").select("*").order("rank", { ascending: true }),
-      supabase.from("final_ranking").select("*").order("rank", { ascending: true }),
-      supabase.from("preliminary_scores").select("*").order("created_at", { ascending: true }),
-      supabase.from("final_scores").select("*").order("created_at", { ascending: true }),
-    ]);
+  const [
+    judgesRes,
+    teamsRes,
+    submissionsRes,
+    prelimRankingRes,
+    finalRankingRes,
+    prelimScoresRes,
+    finalScoresRes,
+    recusalsRes,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, judge_stage, is_active")
+      .eq("role", "judge")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true }),
+    supabase
+      .from("teams")
+      .select("id, team_code, team_name, is_finalist, is_disqualified")
+      .order("team_code", { ascending: true }),
+    supabase.from("submissions").select("team_id, status"),
+    supabase.from("preliminary_ranking").select("*").order("rank", { ascending: true }),
+    supabase.from("final_ranking").select("*").order("rank", { ascending: true }),
+    supabase
+      .from("preliminary_scores")
+      .select(
+        "judge_id, team_id, functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, total_weighted_score, feedback, updated_at, locked_at, status",
+      )
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("final_scores")
+      .select(
+        "judge_id, team_id, functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, presentation_qa_score, total_weighted_score, feedback, updated_at, locked_at, status",
+      )
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("judge_recusals")
+      .select("judge_id, team_id, stage, reason, created_at")
+      .order("created_at", { ascending: true }),
+  ]);
 
   if (
     judgesRes.error ||
@@ -42,7 +70,8 @@ export default async function AdminPeringkatPage() {
     prelimRankingRes.error ||
     finalRankingRes.error ||
     prelimScoresRes.error ||
-    finalScoresRes.error
+    finalScoresRes.error ||
+    recusalsRes.error
   ) {
     return (
       <div className="space-y-6">
@@ -64,6 +93,7 @@ export default async function AdminPeringkatPage() {
   const submissions = submissionsRes.data ?? [];
   const prelimScores = prelimScoresRes.data ?? [];
   const finalScores = finalScoresRes.data ?? [];
+  const recusals = recusalsRes.data ?? [];
 
   const submissionMap = new Map(submissions.map((s) => [s.team_id, s.status]));
   const judgeMap = new Map(judges.map((j) => [j.id, j]));
@@ -77,15 +107,25 @@ export default async function AdminPeringkatPage() {
   const prelimExpectedTotal = eligiblePrelimTeams.length;
   const finalExpectedTotal = eligibleFinalTeams.length;
 
-  // Count scores entered per judge
+  // Count completed assessments per judge (final scores + recusals). Drafts are not counted.
   const prelimCountByJudge = new Map<string, number>();
   for (const s of prelimScores) {
+    if (s.status !== "final") continue;
     prelimCountByJudge.set(s.judge_id, (prelimCountByJudge.get(s.judge_id) ?? 0) + 1);
   }
 
   const finalCountByJudge = new Map<string, number>();
   for (const s of finalScores) {
+    if (s.status !== "final") continue;
     finalCountByJudge.set(s.judge_id, (finalCountByJudge.get(s.judge_id) ?? 0) + 1);
+  }
+
+  for (const r of recusals) {
+    if (r.stage === "preliminary") {
+      prelimCountByJudge.set(r.judge_id, (prelimCountByJudge.get(r.judge_id) ?? 0) + 1);
+    } else if (r.stage === "final") {
+      finalCountByJudge.set(r.judge_id, (finalCountByJudge.get(r.judge_id) ?? 0) + 1);
+    }
   }
 
   // Build judges progress
@@ -114,7 +154,7 @@ export default async function AdminPeringkatPage() {
     };
   });
 
-  // Build team score breakdown for preliminary
+  // Build team score breakdown for preliminary (drafts and finals)
   const prelimBreakdown: Record<string, JudgeScoreDetail[]> = {};
   for (const s of prelimScores) {
     if (!prelimBreakdown[s.team_id]) {
@@ -132,10 +172,11 @@ export default async function AdminPeringkatPage() {
       feedback: s.feedback,
       updated_at: s.updated_at,
       locked_at: s.locked_at,
+      status: s.status,
     });
   }
 
-  // Build team score breakdown for final
+  // Build team score breakdown for final (drafts and finals)
   const finalBreakdown: Record<string, JudgeScoreDetail[]> = {};
   for (const s of finalScores) {
     if (!finalBreakdown[s.team_id]) {
@@ -154,6 +195,23 @@ export default async function AdminPeringkatPage() {
       feedback: s.feedback,
       updated_at: s.updated_at,
       locked_at: s.locked_at,
+      status: s.status,
+    });
+  }
+
+  // Build recusals per team and stage (reasons are admin-only; private notes are never fetched)
+  const prelimRecusals: Record<string, JudgeRecusalDetail[]> = {};
+  const finalRecusals: Record<string, JudgeRecusalDetail[]> = {};
+  for (const r of recusals) {
+    const target = r.stage === "final" ? finalRecusals : prelimRecusals;
+    if (!target[r.team_id]) {
+      target[r.team_id] = [];
+    }
+    target[r.team_id].push({
+      judge_id: r.judge_id,
+      judge_name: judgeMap.get(r.judge_id)?.full_name ?? "Juri",
+      reason: r.reason,
+      created_at: r.created_at,
     });
   }
 
@@ -183,6 +241,8 @@ export default async function AdminPeringkatPage() {
       finalRanking={finalRanking}
       prelimBreakdown={prelimBreakdown}
       finalBreakdown={finalBreakdown}
+      prelimRecusals={prelimRecusals}
+      finalRecusals={finalRecusals}
     />
   );
 }

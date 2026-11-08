@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import { cn } from "cn";
-import { Check, ClipboardCheck, Eye, FileEdit, FileQuestion, Layers, Lock, Search, Trophy } from "lucide-react";
+import { Check, ClipboardCheck, Eye, FileEdit, FileQuestion, Layers, Lock, Search, Trophy, UserX } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,10 +53,20 @@ function StageBadge({ stage }: { stage: Database["public"]["Enums"]["judge_stage
 }
 
 function renderStatusBadge(item: JudgeTeamItem) {
-  const isScored = item.score !== null;
+  const isFinal = item.score?.status === "final";
+  const isDraft = item.score?.status === "draft";
   const isLocked = Boolean(item.score?.locked_at);
 
-  if (item.is_stage_released && !isScored) {
+  if (item.recusal) {
+    return (
+      <Badge variant="outline" className="gap-1 border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+        <UserX className="size-3" />
+        Recusal
+      </Badge>
+    );
+  }
+
+  if (item.is_stage_released && !isFinal) {
     return (
       <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
         <Lock className="size-3" />
@@ -77,7 +87,16 @@ function renderStatusBadge(item: JudgeTeamItem) {
     );
   }
 
-  if (isScored) {
+  if (isDraft) {
+    return (
+      <Badge variant="secondary" className="gap-1">
+        <FileEdit className="size-3" />
+        Draf
+      </Badge>
+    );
+  }
+
+  if (isFinal) {
     return (
       <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
         <Check className="size-3" />
@@ -94,8 +113,18 @@ function renderStatusBadge(item: JudgeTeamItem) {
 }
 
 function renderActionButtonContent(item: JudgeTeamItem) {
-  const isScored = item.score !== null;
+  const isFinal = item.score?.status === "final";
+  const isDraft = item.score?.status === "draft";
   const isLocked = Boolean(item.score?.locked_at);
+
+  if (item.recusal) {
+    return (
+      <>
+        <UserX className="mr-1.5 size-3.5" />
+        Kelola recusal
+      </>
+    );
+  }
 
   if (isLocked || item.is_stage_released) {
     return (
@@ -106,7 +135,16 @@ function renderActionButtonContent(item: JudgeTeamItem) {
     );
   }
 
-  if (isScored) {
+  if (isDraft) {
+    return (
+      <>
+        <FileEdit className="mr-1.5 size-3.5" />
+        Lanjutkan draf
+      </>
+    );
+  }
+
+  if (isFinal) {
     return (
       <>
         <FileEdit className="mr-1.5 size-3.5" />
@@ -139,20 +177,23 @@ function StageSection({
   const [sortBy, setSortBy] = useState<SortOption>("team_code");
 
   const totalCount = teams.length;
-  const scoredCount = teams.filter((t) => t.score !== null).length;
-  const unscoredCount = teams.filter((t) => t.score === null && !t.is_stage_released).length;
-  const progressPercentage = totalCount > 0 ? Math.round((scoredCount / totalCount) * 100) : 0;
+  const finalCount = teams.filter((t) => t.score?.status === "final").length;
+  const recusedCount = teams.filter((t) => t.recusal !== null).length;
+  const completedCount = finalCount + recusedCount;
+  const draftCount = teams.filter((t) => t.score?.status === "draft" && !t.recusal).length;
+  const unscoredCount = teams.filter((t) => t.score?.status !== "final" && !t.recusal && !t.is_stage_released).length;
+  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const filteredTeams = useMemo(() => {
     let list = teams;
 
     // 1. Filter
     if (filter === "unscored") {
-      // Belum dinilai: only teams that can still be scored (no score and results not released)
-      list = list.filter((item) => item.score === null && !item.is_stage_released);
+      // Belum selesai: no final score and no recusal, and results not released
+      list = list.filter((item) => item.score?.status !== "final" && !item.recusal && !item.is_stage_released);
     } else if (filter === "scored") {
-      // Sudah dinilai: teams with score
-      list = list.filter((item) => item.score !== null);
+      // Selesai: final score or recusal (drafts are not counted)
+      list = list.filter((item) => item.score?.status === "final" || item.recusal !== null);
     }
     // "all": shows everything, including "Tidak dinilai (hasil dirilis)"
 
@@ -195,8 +236,13 @@ function StageSection({
             <div className="text-sm">
               <span className="text-muted-foreground">Progres: </span>
               <span className="font-semibold">
-                {scoredCount} dari {totalCount} tim sudah dinilai
+                {completedCount} dari {totalCount} tim selesai
               </span>
+              <span className="text-muted-foreground">
+                {" "}
+                · {finalCount} dinilai · {recusedCount} recusal
+              </span>
+              {draftCount > 0 && <span className="text-muted-foreground"> · {draftCount} draf</span>}
             </div>
           </div>
         </CardHeader>
@@ -234,7 +280,7 @@ function StageSection({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                Belum dinilai ({unscoredCount})
+                Belum selesai ({unscoredCount})
               </button>
               <button
                 type="button"
@@ -246,7 +292,7 @@ function StageSection({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                Sudah dinilai ({scoredCount})
+                Selesai ({completedCount})
               </button>
             </div>
 
@@ -297,8 +343,9 @@ function StageSection({
                 </TableHeader>
                 <TableBody>
                   {filteredTeams.map((item) => {
-                    const isScored = item.score !== null;
-                    const isUnratedReleased = item.is_stage_released && !isScored;
+                    const isScored = item.score?.status === "final";
+                    const isRecused = item.recusal !== null;
+                    const isUnratedReleased = item.is_stage_released && !isScored && !isRecused;
 
                     return (
                       <TableRow key={item.id}>
@@ -306,9 +353,10 @@ function StageSection({
                         <TableCell className="font-medium">{item.team_name}</TableCell>
                         <TableCell>{renderStatusBadge(item)}</TableCell>
                         <TableCell>
-                          {isScored ? (
+                          {item.score?.total_weighted_score !== null &&
+                          item.score?.total_weighted_score !== undefined ? (
                             <span className="font-semibold text-foreground">
-                              {Number(item.score?.total_weighted_score).toFixed(2)}
+                              {Number(item.score.total_weighted_score).toFixed(2)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground text-xs">-</span>
@@ -316,11 +364,15 @@ function StageSection({
                         </TableCell>
                         <TableCell>
                           <span className="text-xs text-muted-foreground">
-                            {formatTimestampWita(item.score?.updated_at)}
+                            {formatTimestampWita(item.recusal?.created_at ?? item.score?.updated_at)}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button asChild size="sm" variant={isScored || isUnratedReleased ? "outline" : "default"}>
+                          <Button
+                            asChild
+                            size="sm"
+                            variant={isScored || isRecused || isUnratedReleased ? "outline" : "default"}
+                          >
                             <Link href={`/judge/nilai/${stage}/${item.id}`}>{renderActionButtonContent(item)}</Link>
                           </Button>
                         </TableCell>
@@ -344,6 +396,8 @@ export function JudgeDashboardClient({
   finalTeams,
 }: JudgeDashboardClientProps) {
   const stage = judgeStage ?? "preliminary";
+  const prelimCompletedCount = preliminaryTeams.filter((t) => t.score?.status === "final" || t.recusal !== null).length;
+  const finalCompletedCount = finalTeams.filter((t) => t.score?.status === "final" || t.recusal !== null).length;
 
   return (
     <div className="space-y-6">
@@ -365,11 +419,11 @@ export function JudgeDashboardClient({
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="preliminary" className="gap-2">
               <Layers className="size-4" />
-              Babak Awal ({preliminaryTeams.filter((t) => t.score !== null).length}/{preliminaryTeams.length})
+              Babak Awal ({prelimCompletedCount}/{preliminaryTeams.length})
             </TabsTrigger>
             <TabsTrigger value="final" className="gap-2">
               <Trophy className="size-4" />
-              Final ({finalTeams.filter((t) => t.score !== null).length}/{finalTeams.length})
+              Final ({finalCompletedCount}/{finalTeams.length})
             </TabsTrigger>
           </TabsList>
 

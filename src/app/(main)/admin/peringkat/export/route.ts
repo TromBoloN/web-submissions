@@ -23,10 +23,23 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   const isPrelim = tahap === "preliminary";
-  const scoresTable = isPrelim ? "preliminary_scores" : "final_scores";
 
   const [scoresRes, teamsRes, judgesRes] = await Promise.all([
-    supabase.from(scoresTable).select("*").order("created_at", { ascending: true }),
+    isPrelim
+      ? supabase
+          .from("preliminary_scores")
+          .select(
+            "team_id, judge_id, functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, total_weighted_score, feedback, created_at, updated_at",
+          )
+          .eq("status", "final")
+          .order("created_at", { ascending: true })
+      : supabase
+          .from("final_scores")
+          .select(
+            "team_id, judge_id, functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, presentation_qa_score, total_weighted_score, feedback, created_at, updated_at",
+          )
+          .eq("status", "final")
+          .order("created_at", { ascending: true }),
     supabase.from("teams").select("id, team_code, team_name").order("team_code", { ascending: true }),
     supabase.from("profiles").select("id, full_name").eq("role", "judge"),
   ]);
@@ -99,7 +112,7 @@ export async function GET(request: NextRequest) {
           score.ui_ux_score,
           score.code_quality_score,
           score.documentation_score,
-          (score as { presentation_qa_score: number }).presentation_qa_score,
+          (score as { presentation_qa_score: number | null }).presentation_qa_score,
           score.total_weighted_score ?? "",
           score.feedback ?? "",
           formatWitaDateTime(score.created_at),

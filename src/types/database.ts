@@ -102,51 +102,57 @@ export type Database = {
       };
       final_scores: {
         Row: {
-          case_study_fit_score: number;
-          code_quality_score: number;
+          case_study_fit_score: number | null;
+          code_quality_score: number | null;
           created_at: string;
-          documentation_score: number;
+          documentation_score: number | null;
           feedback: string | null;
-          functionality_score: number;
+          functionality_score: number | null;
           id: string;
           judge_id: string;
           locked_at: string | null;
-          presentation_qa_score: number;
+          presentation_qa_score: number | null;
+          private_note: string | null;
+          status: Database["public"]["Enums"]["score_status_type"];
           team_id: string;
           total_weighted_score: number | null;
-          ui_ux_score: number;
+          ui_ux_score: number | null;
           updated_at: string;
         };
         Insert: {
-          case_study_fit_score: number;
-          code_quality_score: number;
+          case_study_fit_score?: number | null;
+          code_quality_score?: number | null;
           created_at?: string;
-          documentation_score: number;
+          documentation_score?: number | null;
           feedback?: string | null;
-          functionality_score: number;
+          functionality_score?: number | null;
           id?: string;
           judge_id: string;
           locked_at?: string | null;
-          presentation_qa_score: number;
+          presentation_qa_score?: number | null;
+          private_note?: string | null;
+          status?: Database["public"]["Enums"]["score_status_type"];
           team_id: string;
           total_weighted_score?: number | null;
-          ui_ux_score: number;
+          ui_ux_score?: number | null;
           updated_at?: string;
         };
         Update: {
-          case_study_fit_score?: number;
-          code_quality_score?: number;
+          case_study_fit_score?: number | null;
+          code_quality_score?: number | null;
           created_at?: string;
-          documentation_score?: number;
+          documentation_score?: number | null;
           feedback?: string | null;
-          functionality_score?: number;
+          functionality_score?: number | null;
           id?: string;
           judge_id?: string;
           locked_at?: string | null;
-          presentation_qa_score?: number;
+          presentation_qa_score?: number | null;
+          private_note?: string | null;
+          status?: Database["public"]["Enums"]["score_status_type"];
           team_id?: string;
           total_weighted_score?: number | null;
-          ui_ux_score?: number;
+          ui_ux_score?: number | null;
           updated_at?: string;
         };
         Relationships: [
@@ -180,50 +186,98 @@ export type Database = {
           },
         ];
       };
+      judge_recusals: {
+        Row: {
+          created_at: string;
+          id: string;
+          judge_id: string;
+          reason: string;
+          stage: string;
+          team_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          judge_id: string;
+          reason: string;
+          stage: string;
+          team_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          judge_id?: string;
+          reason?: string;
+          stage?: string;
+          team_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "judge_recusals_judge_id_fkey";
+            columns: ["judge_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "judge_recusals_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       preliminary_scores: {
         Row: {
-          case_study_fit_score: number;
-          code_quality_score: number;
+          case_study_fit_score: number | null;
+          code_quality_score: number | null;
           created_at: string;
-          documentation_score: number;
+          documentation_score: number | null;
           feedback: string | null;
-          functionality_score: number;
+          functionality_score: number | null;
           id: string;
           judge_id: string;
           locked_at: string | null;
+          private_note: string | null;
+          status: Database["public"]["Enums"]["score_status_type"];
           team_id: string;
           total_weighted_score: number | null;
-          ui_ux_score: number;
+          ui_ux_score: number | null;
           updated_at: string;
         };
         Insert: {
-          case_study_fit_score: number;
-          code_quality_score: number;
+          case_study_fit_score?: number | null;
+          code_quality_score?: number | null;
           created_at?: string;
-          documentation_score: number;
+          documentation_score?: number | null;
           feedback?: string | null;
-          functionality_score: number;
+          functionality_score?: number | null;
           id?: string;
           judge_id: string;
           locked_at?: string | null;
+          private_note?: string | null;
+          status?: Database["public"]["Enums"]["score_status_type"];
           team_id: string;
           total_weighted_score?: number | null;
-          ui_ux_score: number;
+          ui_ux_score?: number | null;
           updated_at?: string;
         };
         Update: {
-          case_study_fit_score?: number;
-          code_quality_score?: number;
+          case_study_fit_score?: number | null;
+          code_quality_score?: number | null;
           created_at?: string;
-          documentation_score?: number;
+          documentation_score?: number | null;
           feedback?: string | null;
-          functionality_score?: number;
+          functionality_score?: number | null;
           id?: string;
           judge_id?: string;
           locked_at?: string | null;
+          private_note?: string | null;
+          status?: Database["public"]["Enums"]["score_status_type"];
           team_id?: string;
           total_weighted_score?: number | null;
-          ui_ux_score?: number;
+          ui_ux_score?: number | null;
           updated_at?: string;
         };
         Relationships: [
@@ -510,6 +564,7 @@ export type Database = {
     };
     Enums: {
       judge_stage_type: "preliminary" | "final" | "both";
+      score_status_type: "draft" | "final";
       submission_status_type: "draft" | "submitted";
       user_role_type: "admin" | "judge" | "team";
     };

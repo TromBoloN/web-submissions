@@ -18,11 +18,11 @@ Architecture map of `src/`. Update it when you add, move or remove a screen or s
 | Accounts            | /admin/akun                           | `(main)/admin/akun`                                   | `profiles` + Auth (service role)                    |
 | Finalists           | /admin/finalis                        | `(main)/admin/finalis`                                | `teams.is_finalist`, ranking views                  |
 | Settings            | /admin/pengaturan                     | `(main)/admin/pengaturan`                             | `competition_settings`                              |
-| Ranking and CSV     | /admin/peringkat                      | `(main)/admin/peringkat` (+ `export/route.ts`)        | `preliminary_ranking`, `final_ranking`              |
+| Ranking and CSV     | /admin/peringkat                      | `(main)/admin/peringkat` (+ `export/route.ts`)        | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
 | Submissions and CSV | /admin/submission                     | `(main)/admin/submission` (+ `export/route.ts`)       | `submissions`                                       |
 | Teams               | /admin/tim                            | `(main)/admin/tim`                                    | `teams`                                             |
-| Judge queue         | /judge                                | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores                           |
-| Judge scoring       | /judge/nilai/[tahap]/[teamId]         | `(main)/judge/nilai/[tahap]/[teamId]`                 | `preliminary_scores`, `final_scores`                |
+| Judge queue         | /judge                                | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals`        |
+| Judge scoring       | /judge/nilai/[tahap]/[teamId]         | `(main)/judge/nilai/[tahap]/[teamId]`                 | `preliminary_scores`, `final_scores`, `judge_recusals` |
 | Team portal         | /team                                 | `(main)/team` (files beside `page.tsx`)               | `submissions`, own `teams` row                      |
 | Case study          | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus`                           | `competition_settings` (markdown)                   |
 | Team results        | /team/hasil                           | `(main)/team/hasil`                                   | `get_my_results()` (RPC)                            |
@@ -61,7 +61,7 @@ Possibly unused starter code (verify imports before relying on or deleting): `da
 
 ## Database
 
-- Tables: `profiles`, `teams`, `competition_settings` (single row), `submissions`, `preliminary_scores`, `final_scores`.
+- Tables: `profiles`, `teams`, `competition_settings` (single row), `submissions`, `preliminary_scores`, `final_scores`, `judge_recusals`.
 - Views: `preliminary_ranking`, `final_ranking` (`security_invoker`).
 - Helper functions (`SECURITY DEFINER`, empty `search_path`): `current_user_role`, `current_user_judge_stage`, `submission_open`, `team_can_submit`, `judge_can_view_team`, `judge_can_score_preliminary`, `judge_can_score_final`.
 

@@ -11,9 +11,14 @@ export interface JudgeTeamItem {
   is_finalist: boolean;
   is_stage_released: boolean;
   score: {
-    total_weighted_score: number;
+    total_weighted_score: number | null;
     updated_at: string;
     locked_at: string | null;
+    status: "draft" | "final";
+  } | null;
+  recusal: {
+    reason: string;
+    created_at: string;
   } | null;
 }
 
@@ -38,6 +43,7 @@ export async function getJudgeTeamList(stage: ScoringStage): Promise<JudgeTeamIt
     { data: submissions, error: submissionsError },
     scoresResult,
     { data: settings, error: settingsError },
+    { data: recusals, error: recusalsError },
   ] = await Promise.all([
     supabase
       .from("teams")
@@ -48,25 +54,27 @@ export async function getJudgeTeamList(stage: ScoringStage): Promise<JudgeTeamIt
     stage === "preliminary"
       ? supabase
           .from("preliminary_scores")
-          .select("team_id, total_weighted_score, updated_at, locked_at")
+          .select("team_id, total_weighted_score, updated_at, locked_at, status")
           .eq("judge_id", profile.id)
       : supabase
           .from("final_scores")
-          .select("team_id, total_weighted_score, updated_at, locked_at")
+          .select("team_id, total_weighted_score, updated_at, locked_at, status")
           .eq("judge_id", profile.id),
     supabase
       .from("competition_settings")
       .select("preliminary_results_released, final_results_released")
       .eq("id", true)
       .maybeSingle(),
+    supabase.from("judge_recusals").select("team_id, reason, created_at").eq("judge_id", profile.id).eq("stage", stage),
   ]);
 
-  if (teamsError || submissionsError || scoresResult.error || settingsError) {
+  if (teamsError || submissionsError || scoresResult.error || settingsError || recusalsError) {
     console.error("Failed to fetch judge team list", {
       teamsError,
       submissionsError,
       scoresError: scoresResult.error,
       settingsError,
+      recusalsError,
     });
     return [];
   }
@@ -81,11 +89,16 @@ export async function getJudgeTeamList(stage: ScoringStage): Promise<JudgeTeamIt
     (scoresResult.data ?? []).map((score) => [
       score.team_id,
       {
-        total_weighted_score: Number(score.total_weighted_score),
+        total_weighted_score: score.total_weighted_score === null ? null : Number(score.total_weighted_score),
         updated_at: score.updated_at,
         locked_at: score.locked_at,
+        status: score.status,
       },
     ]),
+  );
+
+  const recusalMap = new Map(
+    (recusals ?? []).map((recusal) => [recusal.team_id, { reason: recusal.reason, created_at: recusal.created_at }]),
   );
 
   // Teams that are submitted and not disqualified
@@ -106,5 +119,6 @@ export async function getJudgeTeamList(stage: ScoringStage): Promise<JudgeTeamIt
     is_finalist: team.is_finalist,
     is_stage_released: isStageReleased,
     score: scoreMap.get(team.id) ?? null,
+    recusal: recusalMap.get(team.id) ?? null,
   }));
 }

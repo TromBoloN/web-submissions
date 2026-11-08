@@ -4,7 +4,19 @@ import { useMemo, useState } from "react";
 
 import Link from "next/link";
 
-import { AlertTriangle, Award, CheckCircle2, Clock, Download, Eye, Info, Lock, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  Award,
+  Ban,
+  CheckCircle2,
+  Clock,
+  Download,
+  Eye,
+  FileEdit,
+  Info,
+  Lock,
+  Users,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -39,16 +51,24 @@ export interface RankingRow {
 export interface JudgeScoreDetail {
   judge_id: string;
   judge_name: string;
-  functionality_score: number;
-  case_study_fit_score: number;
-  ui_ux_score: number;
-  code_quality_score: number;
-  documentation_score: number;
-  presentation_qa_score?: number;
+  functionality_score: number | null;
+  case_study_fit_score: number | null;
+  ui_ux_score: number | null;
+  code_quality_score: number | null;
+  documentation_score: number | null;
+  presentation_qa_score?: number | null;
   total_weighted_score: number | null;
   feedback: string | null;
   updated_at: string;
   locked_at: string | null;
+  status: "draft" | "final";
+}
+
+export interface JudgeRecusalDetail {
+  judge_id: string;
+  judge_name: string;
+  reason: string;
+  created_at: string;
 }
 
 interface RankingClientProps {
@@ -57,6 +77,8 @@ interface RankingClientProps {
   finalRanking: RankingRow[];
   prelimBreakdown: Record<string, JudgeScoreDetail[]>;
   finalBreakdown: Record<string, JudgeScoreDetail[]>;
+  prelimRecusals: Record<string, JudgeRecusalDetail[]>;
+  finalRecusals: Record<string, JudgeRecusalDetail[]>;
 }
 
 function formatWitaDateTime(iso: string | null | undefined): string {
@@ -115,6 +137,8 @@ export function RankingClient({
   finalRanking,
   prelimBreakdown,
   finalBreakdown,
+  prelimRecusals,
+  finalRecusals,
 }: RankingClientProps) {
   const [selectedTeam, setSelectedTeam] = useState<{
     team_id: string;
@@ -155,6 +179,17 @@ export function RankingClient({
     const source = selectedTeam.tahap === "preliminary" ? prelimBreakdown : finalBreakdown;
     return source[selectedTeam.team_id] ?? [];
   }, [selectedTeam, prelimBreakdown, finalBreakdown]);
+
+  const currentRecusals = useMemo(() => {
+    if (!selectedTeam) return [];
+    const source = selectedTeam.tahap === "preliminary" ? prelimRecusals : finalRecusals;
+    return source[selectedTeam.team_id] ?? [];
+  }, [selectedTeam, prelimRecusals, finalRecusals]);
+
+  const currentDraftCount = useMemo(
+    () => currentBreakdown.filter((s) => s.status === "draft").length,
+    [currentBreakdown],
+  );
 
   return (
     <div className="space-y-8">
@@ -474,93 +509,141 @@ export function RankingClient({
               <span className="font-normal text-muted-foreground">- {selectedTeam?.team_name}</span>
             </DialogTitle>
             <DialogDescription>
-              Rincian kriteria nilai dan masukan dari seluruh juri untuk tahap{" "}
-              <strong>{selectedTeam?.tahap === "final" ? "Babak Final" : "Babak Awal"}</strong>.
+              Rincian nilai, draf, dan recusal dari seluruh juri untuk tahap{" "}
+              <strong>{selectedTeam?.tahap === "final" ? "Babak Final" : "Babak Awal"}</strong>. Catatan pribadi juri
+              tidak ditampilkan.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            {currentBreakdown.length === 0 ? (
+            {currentBreakdown.length === 0 && currentRecusals.length === 0 ? (
               <p className="text-center text-muted-foreground text-sm py-8">
-                Belum ada juri yang memasukkan nilai untuk tim ini pada tahap ini.
+                Belum ada juri yang memasukkan nilai atau recusal untuk tim ini pada tahap ini.
               </p>
             ) : (
-              currentBreakdown.map((score, idx) => {
-                const rubric = selectedTeam?.tahap === "final" ? FINAL_RUBRIC : PRELIMINARY_RUBRIC;
+              <>
+                {currentDraftCount > 0 && (
+                  <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                    <FileEdit className="size-4 text-amber-600 dark:text-amber-400" />
+                    <AlertDescription className="text-xs">
+                      {currentDraftCount} juri masih menyimpan draf. Draf belum dihitung pada peringkat maupun progres
+                      penilaian.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {currentBreakdown.map((score, idx) => {
+                  const rubric = selectedTeam?.tahap === "final" ? FINAL_RUBRIC : PRELIMINARY_RUBRIC;
 
-                return (
-                  <Card key={score.judge_id || idx} className="border shadow-none">
-                    <CardHeader className="p-4 pb-2 bg-muted/30">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-semibold text-sm">{score.judge_name}</p>
+                  return (
+                    <Card key={score.judge_id || idx} className="border shadow-none">
+                      <CardHeader className="p-4 pb-2 bg-muted/30">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-semibold text-sm">{score.judge_name}</p>
+                              {score.status === "draft" && (
+                                <Badge variant="secondary" className="gap-1 text-[10px]">
+                                  <FileEdit className="size-2.5" />
+                                  Draf
+                                </Badge>
+                              )}
+                              {score.locked_at && (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300"
+                                >
+                                  <Lock className="size-2.5" />
+                                  Terkunci
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              Terakhir diubah: {formatWitaDateTime(score.updated_at)}
+                            </p>
                             {score.locked_at && (
-                              <Badge
-                                variant="outline"
-                                className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300"
-                              >
-                                <Lock className="size-2.5" />
-                                Terkunci
-                              </Badge>
+                              <p className="text-[11px] text-muted-foreground">
+                                Dikunci: {formatWitaDateTime(score.locked_at)}
+                              </p>
                             )}
                           </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Terakhir diubah: {formatWitaDateTime(score.updated_at)}
-                          </p>
-                          {score.locked_at && (
-                            <p className="text-[11px] text-muted-foreground">
-                              Dikunci: {formatWitaDateTime(score.locked_at)}
-                            </p>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Total Berbobot:</span>
+                            <Badge variant="default" className="font-mono text-sm">
+                              {score.total_weighted_score !== null
+                                ? Number(score.total_weighted_score).toFixed(2)
+                                : "-"}{" "}
+                              / 100
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Total Berbobot:</span>
-                          <Badge variant="default" className="font-mono text-sm">
-                            {score.total_weighted_score !== null ? Number(score.total_weighted_score).toFixed(2) : "-"}{" "}
-                            / 100
-                          </Badge>
+                      </CardHeader>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                          {rubric.map((crit) => {
+                            let val: number | null | undefined;
+                            if (crit.column === "functionality_score") val = score.functionality_score;
+                            else if (crit.column === "case_study_fit_score") val = score.case_study_fit_score;
+                            else if (crit.column === "ui_ux_score") val = score.ui_ux_score;
+                            else if (crit.column === "code_quality_score") val = score.code_quality_score;
+                            else if (crit.column === "documentation_score") val = score.documentation_score;
+                            else if (crit.column === "presentation_qa_score") val = score.presentation_qa_score;
+
+                            return (
+                              <div key={crit.column} className="rounded border p-2 bg-background">
+                                <p className="text-muted-foreground text-[11px] truncate" title={crit.label}>
+                                  {crit.label} ({crit.weight}%)
+                                </p>
+                                <p className="font-mono font-bold text-sm mt-0.5">
+                                  {val !== undefined && val !== null ? Number(val).toFixed(2) : "-"}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
+
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground">Masukan Juri:</p>
+                          <div className="rounded-md border bg-muted/40 p-2.5 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                            {score.feedback && score.feedback.trim() ? (
+                              score.feedback
+                            ) : (
+                              <span className="text-muted-foreground italic">
+                                Tidak ada masukan tertulis dari juri.
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+
+                {currentRecusals.map((recusal) => (
+                  <Card key={`recusal-${recusal.judge_id}`} className="border-sky-500/30 shadow-none">
+                    <CardHeader className="p-4 pb-2 bg-sky-500/5">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-sm">{recusal.judge_name}</p>
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-sky-500/40 bg-sky-500/10 text-[10px] text-sky-700 dark:text-sky-300"
+                        >
+                          <Ban className="size-2.5" />
+                          Recusal
+                        </Badge>
                       </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Dicatat: {formatWitaDateTime(recusal.created_at)}
+                      </p>
                     </CardHeader>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                        {rubric.map((crit) => {
-                          let val: number | undefined;
-                          if (crit.column === "functionality_score") val = score.functionality_score;
-                          else if (crit.column === "case_study_fit_score") val = score.case_study_fit_score;
-                          else if (crit.column === "ui_ux_score") val = score.ui_ux_score;
-                          else if (crit.column === "code_quality_score") val = score.code_quality_score;
-                          else if (crit.column === "documentation_score") val = score.documentation_score;
-                          else if (crit.column === "presentation_qa_score") val = score.presentation_qa_score;
-
-                          return (
-                            <div key={crit.column} className="rounded border p-2 bg-background">
-                              <p className="text-muted-foreground text-[11px] truncate" title={crit.label}>
-                                {crit.label} ({crit.weight}%)
-                              </p>
-                              <p className="font-mono font-bold text-sm mt-0.5">
-                                {val !== undefined ? Number(val).toFixed(2) : "-"}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Masukan Juri:</p>
-                        <div className="rounded-md border bg-muted/40 p-2.5 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
-                          {score.feedback && score.feedback.trim() ? (
-                            score.feedback
-                          ) : (
-                            <span className="text-muted-foreground italic">Tidak ada masukan tertulis dari juri.</span>
-                          )}
-                        </div>
+                    <CardContent className="p-4 space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Alasan recusal:</p>
+                      <div className="rounded-md border bg-muted/40 p-2.5 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                        {recusal.reason}
                       </div>
                     </CardContent>
                   </Card>
-                );
-              })
+                ))}
+              </>
             )}
           </div>
         </DialogContent>

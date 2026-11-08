@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  Ban,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -20,6 +21,8 @@ import {
   Lock,
   Save,
   StickyNote,
+  Undo2,
+  UserX,
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +47,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { calcWeightedTotal, getRubricForStage, type ScoringStage } from "@/lib/rubric";
 
-import { lockScore, saveScore } from "../../actions";
+import { cancelRecusal, createRecusal, lockScore, saveScore } from "../../actions";
 
 interface TeamData {
   id: string;
@@ -59,15 +62,19 @@ interface SubmissionData {
   notes_for_judges: string;
 }
 
+type ScoreStatus = "draft" | "final";
+
 interface ExistingScoreData {
-  functionality_score: number;
-  case_study_fit_score: number;
-  ui_ux_score: number;
-  code_quality_score: number;
-  documentation_score: number;
-  presentation_qa_score?: number;
-  total_weighted_score: number;
+  functionality_score: number | null;
+  case_study_fit_score: number | null;
+  ui_ux_score: number | null;
+  code_quality_score: number | null;
+  documentation_score: number | null;
+  presentation_qa_score?: number | null;
+  total_weighted_score: number | null;
   feedback: string | null;
+  private_note: string | null;
+  status: ScoreStatus;
   updated_at: string;
   locked_at: string | null;
 }
@@ -85,6 +92,7 @@ interface ScoringFormClientProps {
   team: TeamData;
   submission: SubmissionData;
   initialScore: ExistingScoreData | null;
+  initialRecusal?: { reason: string; created_at: string } | null;
   isStageReleased?: boolean;
   navigation?: JudgeScoringNavigation;
 }
@@ -149,6 +157,7 @@ export function ScoringFormClient({
   team,
   submission,
   initialScore,
+  initialRecusal = null,
   isStageReleased = false,
   navigation,
 }: ScoringFormClientProps) {
@@ -158,14 +167,18 @@ export function ScoringFormClient({
     const initial: Record<string, string> = {};
     for (const c of rubric) {
       const existingVal = initialScore?.[c.column as keyof ExistingScoreData];
-      initial[c.column] = existingVal !== undefined && existingVal !== null ? String(existingVal) : "";
+      initial[c.column] = typeof existingVal === "number" && Number.isFinite(existingVal) ? String(existingVal) : "";
     }
     return initial;
   });
 
   const [feedback, setFeedback] = useState(initialScore?.feedback ?? "");
+  const [privateNote, setPrivateNote] = useState(initialScore?.private_note ?? "");
+  const [scoreStatus, setScoreStatus] = useState<ScoreStatus | null>(initialScore?.status ?? null);
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(
-    initialScore ? Number(initialScore.total_weighted_score) : null,
+    initialScore?.total_weighted_score !== null && initialScore?.total_weighted_score !== undefined
+      ? Number(initialScore.total_weighted_score)
+      : null,
   );
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialScore?.updated_at ?? null);
   const [lockedAt, setLockedAt] = useState<string | null>(initialScore?.locked_at ?? null);
@@ -173,33 +186,41 @@ export function ScoringFormClient({
     const initial: Record<string, string> = {};
     for (const c of rubric) {
       const existingVal = initialScore?.[c.column as keyof ExistingScoreData];
-      initial[c.column] = existingVal !== undefined && existingVal !== null ? String(existingVal) : "";
+      initial[c.column] = typeof existingVal === "number" && Number.isFinite(existingVal) ? String(existingVal) : "";
     }
     return {
       scores: initial,
       feedback: initialScore?.feedback ?? "",
+      privateNote: initialScore?.private_note ?? "",
     };
   });
-  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+  const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false);
   const [validatedScoresData, setValidatedScoresData] = useState<Record<string, number> | null>(null);
-  const [isLockConfirmOpen, setIsLockConfirmOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const [recusal, setRecusal] = useState(initialRecusal);
+  const [isRecusalDialogOpen, setIsRecusalDialogOpen] = useState(false);
+  const [isCancelRecusalOpen, setIsCancelRecusalOpen] = useState(false);
+  const [recusalReason, setRecusalReason] = useState("");
+  const [recusalError, setRecusalError] = useState<string | null>(null);
+
+  const isRecused = recusal !== null;
   const isLocked = lockedAt !== null;
-  const isReadOnly = isLocked ? true : isStageReleased;
+  const isReadOnly = isRecused || isLocked || isStageReleased;
   const isInputDisabled = isReadOnly ? true : isPending;
 
   const isDirty = useMemo(() => {
     if (isReadOnly) return false;
     if (feedback !== savedSnapshot.feedback) return true;
+    if (privateNote !== savedSnapshot.privateNote) return true;
     for (const c of rubric) {
       if ((scores[c.column] ?? "") !== (savedSnapshot.scores[c.column] ?? "")) {
         return true;
       }
     }
     return false;
-  }, [scores, feedback, savedSnapshot, rubric, isReadOnly]);
+  }, [scores, feedback, privateNote, savedSnapshot, rubric, isReadOnly]);
 
   useEffect(() => {
     if (!isDirty || isReadOnly) return;
@@ -239,13 +260,16 @@ export function ScoringFormClient({
     setFormError(null);
   };
 
-  const validateScores = (): Record<string, number> | null => {
+  const collectScores = (requireAll: boolean): Record<string, number> | null => {
     const numericScores: Record<string, number> = {};
     for (const c of rubric) {
       const valStr = scores[c.column]?.trim();
       if (!valStr) {
-        setFormError(`Kriteria "${c.label}" wajib diisi.`);
-        return null;
+        if (requireAll) {
+          setFormError(`Kriteria "${c.label}" wajib diisi untuk menyimpan nilai final.`);
+          return null;
+        }
+        continue;
       }
       const normalized = valStr.replace(",", ".");
       const num = Number(normalized);
@@ -262,6 +286,15 @@ export function ScoringFormClient({
     return numericScores;
   };
 
+  // The server expects every rubric key; blanks are sent as "" and stored as NULL.
+  const buildPayloadScores = (numericScores: Record<string, number>): Record<string, number | string> => {
+    const payload: Record<string, number | string> = {};
+    for (const c of rubric) {
+      payload[c.column] = numericScores[c.column] ?? "";
+    }
+    return payload;
+  };
+
   const hasLowScore = useMemo(() => {
     const active = validatedScoresData;
     if (!active) return false;
@@ -275,98 +308,164 @@ export function ScoringFormClient({
     return values.length > 1 && values.every((val) => val === values[0]);
   }, [validatedScoresData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isReadOnly) return;
+  const handleSaveDraft = () => {
+    if (isReadOnly || isPending) return;
     setFormError(null);
 
-    const numericScores = validateScores();
+    const numericScores = collectScores(false);
     if (!numericScores) return;
-
-    setValidatedScoresData(numericScores);
-    setIsSaveConfirmOpen(true);
-  };
-
-  const handleSaveConfirm = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isReadOnly || !validatedScoresData) return;
-    setFormError(null);
+    if (Object.keys(numericScores).length === 0) {
+      setFormError("Isi minimal satu kriteria sebelum menyimpan draf.");
+      return;
+    }
 
     startTransition(async () => {
       const res = await saveScore({
         tahap,
         team_id: team.id,
-        scores: validatedScoresData,
+        mode: "draft",
+        scores: buildPayloadScores(numericScores),
         feedback: feedback.trim(),
+        private_note: privateNote.trim(),
       });
 
       if (!res.ok) {
         setFormError(res.message);
         toast.error(res.message);
-        setIsSaveConfirmOpen(false);
         return;
       }
 
+      setScoreStatus(res.status);
       setConfirmedTotal(res.total);
       setLastSavedAt(res.updatedAt);
-      setSavedSnapshot({ scores: { ...scores }, feedback });
-      setIsSaveConfirmOpen(false);
-      toast.success("Nilai berhasil disimpan.");
+      setSavedSnapshot({ scores: { ...scores }, feedback, privateNote });
+      toast.success("Draf berhasil disimpan.");
     });
   };
 
-  const handleLockRequest = () => {
-    if (isReadOnly) return;
-    setFormError(null);
-    const numericScores = validateScores();
-    if (!numericScores) return;
-    setValidatedScoresData(numericScores);
-    setIsLockConfirmOpen(true);
-  };
-
-  const handleLockConfirm = (e: React.MouseEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) return;
     setFormError(null);
 
-    const numericScores = validateScores();
-    if (!numericScores) {
-      setIsLockConfirmOpen(false);
-      return;
-    }
+    const numericScores = collectScores(true);
+    if (!numericScores) return;
+
+    setValidatedScoresData(numericScores);
+    setIsFinalConfirmOpen(true);
+  };
+
+  const handleFinalConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isReadOnly || !validatedScoresData) return;
+    setFormError(null);
+
+    const numericScores = validatedScoresData;
 
     startTransition(async () => {
       const saveRes = await saveScore({
         tahap,
         team_id: team.id,
-        scores: numericScores,
+        mode: "final",
+        scores: buildPayloadScores(numericScores),
         feedback: feedback.trim(),
+        private_note: privateNote.trim(),
       });
 
       if (!saveRes.ok) {
         setFormError(saveRes.message);
         toast.error(saveRes.message);
-        setIsLockConfirmOpen(false);
+        setIsFinalConfirmOpen(false);
         return;
       }
 
       const lockRes = await lockScore({ tahap, team_id: team.id });
       if (!lockRes.ok) {
+        setScoreStatus(saveRes.status);
         setConfirmedTotal(saveRes.total);
         setLastSavedAt(saveRes.updatedAt);
-        setSavedSnapshot({ scores: { ...scores }, feedback });
+        setSavedSnapshot({ scores: { ...scores }, feedback, privateNote });
         setFormError(lockRes.message);
         toast.error(lockRes.message);
-        setIsLockConfirmOpen(false);
+        setIsFinalConfirmOpen(false);
         return;
       }
 
+      setScoreStatus("final");
       setConfirmedTotal(saveRes.total);
       setLastSavedAt(saveRes.updatedAt);
       setLockedAt(lockRes.lockedAt);
-      setSavedSnapshot({ scores: { ...scores }, feedback });
-      setIsLockConfirmOpen(false);
-      toast.success("Nilai berhasil disimpan dan dikunci.");
+      setSavedSnapshot({ scores: { ...scores }, feedback, privateNote });
+      setIsFinalConfirmOpen(false);
+      toast.success("Nilai final berhasil disimpan dan dikunci.");
+    });
+  };
+
+  const resetScoreState = () => {
+    setScores(() => {
+      const empty: Record<string, string> = {};
+      for (const c of rubric) empty[c.column] = "";
+      return empty;
+    });
+    setFeedback("");
+    setPrivateNote("");
+    setScoreStatus(null);
+    setConfirmedTotal(null);
+    setLastSavedAt(null);
+    setSavedSnapshot({ scores: {}, feedback: "", privateNote: "" });
+    setValidatedScoresData(null);
+    setFormError(null);
+  };
+
+  const handleRecusalOpen = () => {
+    setRecusalReason("");
+    setRecusalError(null);
+    setIsRecusalDialogOpen(true);
+  };
+
+  const handleCreateRecusal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isPending) return;
+    const trimmed = recusalReason.trim();
+    if (!trimmed) {
+      setRecusalError("Alasan recusal wajib diisi.");
+      return;
+    }
+    if (trimmed.length > 2000) {
+      setRecusalError("Alasan recusal maksimal 2000 karakter.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await createRecusal({ tahap, team_id: team.id, reason: trimmed });
+      if (!res.ok) {
+        setRecusalError(res.message);
+        return;
+      }
+      setRecusal({ reason: trimmed, created_at: new Date().toISOString() });
+      setIsRecusalDialogOpen(false);
+      setRecusalReason("");
+      resetScoreState();
+      toast.success("Recusal tersimpan. Tim ini ditandai tidak dinilai oleh Anda.");
+    });
+  };
+
+  const handleCancelRecusal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isPending) return;
+
+    startTransition(async () => {
+      const res = await cancelRecusal({ tahap, team_id: team.id });
+      if (!res.ok) {
+        setRecusalError(res.message);
+        setIsCancelRecusalOpen(false);
+        toast.error(res.message);
+        return;
+      }
+      setRecusal(null);
+      setRecusalError(null);
+      setIsCancelRecusalOpen(false);
+      toast.success("Recusal dibatalkan. Anda dapat menilai tim ini kembali.");
     });
   };
 
@@ -385,6 +484,12 @@ export function ScoringFormClient({
             <Badge variant={tahap === "final" ? "default" : "secondary"}>
               {tahap === "final" ? "Babak Final" : "Babak Awal"}
             </Badge>
+            {isRecused && (
+              <Badge variant="outline" className="gap-1 border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                <UserX className="size-3" />
+                Recusal
+              </Badge>
+            )}
             {isStageReleased && (
               <Badge
                 variant="outline"
@@ -394,7 +499,7 @@ export function ScoringFormClient({
                 Hasil Dirilis
               </Badge>
             )}
-            {!isStageReleased && isLocked && (
+            {!isRecused && !isStageReleased && isLocked && (
               <Badge
                 variant="outline"
                 className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
@@ -403,11 +508,32 @@ export function ScoringFormClient({
                 Terkunci
               </Badge>
             )}
+            {!isRecused && !isStageReleased && !isLocked && scoreStatus === "draft" && (
+              <Badge variant="secondary">Draf</Badge>
+            )}
           </div>
           <p className="text-muted-foreground text-sm font-medium pl-6">{team.team_name}</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {!isStageReleased && !isRecused && scoreStatus !== "final" && (
+            <Button variant="outline" size="sm" onClick={handleRecusalOpen} disabled={isPending} className="gap-1.5">
+              <Ban className="size-3.5" />
+              Tidak menilai tim ini
+            </Button>
+          )}
+          {!isStageReleased && isRecused && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCancelRecusalOpen(true)}
+              disabled={isPending}
+              className="gap-1.5"
+            >
+              <Undo2 className="size-3.5" />
+              Batalkan recusal
+            </Button>
+          )}
           <Button variant="outline" asChild size="sm">
             <Link href="/judge" onClick={handleBackClick}>
               <ArrowLeft className="mr-1.5 size-3.5" />
@@ -509,221 +635,316 @@ export function ScoringFormClient({
         </Card>
       )}
 
-      {/* Scoring Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
+      {/* Recusal information, replaces the scoring form */}
+      {isRecused && (
+        <Card className="border-sky-500/30">
           <CardHeader>
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <div>
-                <CardTitle className="text-lg">Formulir Penilaian Rubrik</CardTitle>
-                <CardDescription>
-                  Masukkan nilai skala 0–100 untuk setiap kriteria. Total berbobot akan dihitung secara otomatis.
-                </CardDescription>
-              </div>
-              {lastSavedAt && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Check className="size-3.5 text-emerald-600" />
-                  <span>Tersimpan: {formatTimestampWita(lastSavedAt)}</span>
-                </div>
-              )}
-            </div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <UserX className="size-5 text-sky-600 dark:text-sky-400" />
+              Anda tidak menilai tim ini
+            </CardTitle>
+            <CardDescription>
+              Recusal dicatat pada {formatTimestampWita(recusal.created_at)}. Tim ini dihitung selesai pada progres
+              penilaian Anda.
+            </CardDescription>
           </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Alasan recusal</p>
+              <p className="whitespace-pre-wrap break-words rounded-md border bg-muted/40 p-3 text-sm">
+                {recusal.reason}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Alasan recusal hanya dapat dilihat oleh Anda dan panitia, tidak dibagikan ke tim.
+            </p>
 
-          <CardContent className="space-y-5">
-            {isStageReleased && (
+            {isStageReleased ? (
               <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
                 <Lock className="size-4 text-amber-600 dark:text-amber-400" />
                 <AlertDescription>
-                  Penilaian {tahap === "final" ? "babak final" : "babak awal"} telah dikunci karena hasil penilaian
-                  sudah dirilis oleh panitia. Formulir berada dalam mode hanya-baca (read-only).
+                  Recusal tidak dapat dibatalkan karena hasil {tahap === "final" ? "babak final" : "babak awal"} telah
+                  dirilis.
                 </AlertDescription>
               </Alert>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setIsCancelRecusalOpen(true)}
+                disabled={isPending}
+                className="gap-2"
+              >
+                <Undo2 className="size-4" />
+                {isPending ? "Memproses..." : "Batalkan recusal"}
+              </Button>
             )}
 
-            {!isStageReleased && isLocked && (
-              <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200">
-                <Lock className="size-4 text-emerald-600 dark:text-emerald-400" />
-                <AlertDescription>
-                  Nilai Anda dikunci pada {formatTimestampWita(lockedAt)} dan tidak dapat diubah lagi. Hubungi panitia
-                  jika membutuhkan perubahan.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Panel Ketentuan Juknis */}
-            <Collapsible className="rounded-lg border bg-muted/40">
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between p-3.5 text-left text-sm font-medium hover:bg-muted/60 transition-colors rounded-lg group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="size-4 text-primary" />
-                    <span>Ketentuan Juknis</span>
-                  </div>
-                  <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 pt-1 text-xs text-muted-foreground space-y-2">
-                <ol className="list-decimal pl-4 space-y-1.5 leading-relaxed">
-                  <li>
-                    Kegagalan akses atau fungsi live deployment yang berasal dari sisi peserta mengurangi nilai
-                    Fungsionalitas (C.7b).
-                  </li>
-                  <li>
-                    Penilaian alternatif lewat video dan GitHub hanya bila ada gangguan platform hosting yang dapat
-                    diverifikasi (C.7c–d).
-                  </li>
-                </ol>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {rubric.map((criterion) => {
-                const val = scores[criterion.column] ?? "";
-                return (
-                  <div
-                    key={criterion.column}
-                    className="flex flex-col justify-between space-y-3 rounded-lg border p-3.5 bg-card"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label htmlFor={`score-${criterion.column}`} className="font-medium text-sm">
-                          {criterion.label}
-                        </Label>
-                        <Badge variant="outline" className="text-xs font-mono shrink-0">
-                          Bobot {criterion.weight}%
-                        </Badge>
-                      </div>
-
-                      <Collapsible>
-                        <CollapsibleTrigger asChild>
-                          <button
-                            type="button"
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
-                          >
-                            <ChevronRight className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                            <span>Indikator penilaian</span>
-                          </button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-1.5 pb-0.5">
-                          <p className="rounded-md bg-muted/50 p-2 text-xs leading-relaxed text-muted-foreground">
-                            {criterion.indicator}
-                          </p>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
-
-                    <Input
-                      id={`score-${criterion.column}`}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={val}
-                      disabled={isInputDisabled}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      onChange={(e) => handleScoreChange(criterion.column, e.target.value)}
-                      className="font-mono text-base"
-                      required
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Feedback / Notes */}
-            <div className="space-y-1.5 pt-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="judge-feedback" className="font-medium text-sm">
-                  Masukan & Catatan Juri
-                </Label>
-                <span className="text-xs text-muted-foreground">{feedback.length} / 2000 karakter</span>
-              </div>
-              <Textarea
-                id="judge-feedback"
-                placeholder="Berikan masukan konstruktif untuk karya tim ini (opsional)..."
-                rows={4}
-                maxLength={2000}
-                value={feedback}
-                disabled={isInputDisabled}
-                onChange={(e) => setFeedback(e.target.value)}
-              />
-            </div>
-
-            {formError && (
+            {recusalError && (
               <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
+                <AlertDescription>{recusalError}</AlertDescription>
               </Alert>
-            )}
-
-            {/* Total Weighted Preview */}
-            <div className="rounded-lg border bg-muted/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <p className="font-medium text-sm flex items-center gap-1.5">
-                  <Info className="size-4 text-primary" />
-                  Total Berbobot (Pratinjau)
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Dihitung otomatis dari rubrik. Nilai resmi disimpan setelah Anda mengklik tombol simpan.
-                </p>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-bold text-3xl font-mono text-primary">{previewTotal.toFixed(2)}</span>
-                <span className="text-xs text-muted-foreground font-mono">/ 100</span>
-              </div>
-            </div>
-
-            {confirmedTotal !== null && (
-              <div className="flex items-center justify-between rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2 text-xs text-emerald-800 dark:text-emerald-300">
-                <span>Nilai tersimpan di database:</span>
-                <span className="font-bold font-mono text-sm">{confirmedTotal.toFixed(2)}</span>
-              </div>
             )}
           </CardContent>
-
-          <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
-            <Button variant="outline" type="button" asChild>
-              <Link href="/judge" onClick={handleBackClick}>
-                Kembali
-              </Link>
-            </Button>
-            {isReadOnly ? (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Lock className="size-3.5" />
-                {isStageReleased ? "Penilaian dikunci (hasil telah dirilis)" : "Nilai sudah dikunci"}
-              </span>
-            ) : (
-              <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={handleLockRequest}
-                  className="gap-2"
-                >
-                  <Lock className="size-4" />
-                  Simpan & kunci
-                </Button>
-                <Button type="submit" disabled={isPending} className="gap-2">
-                  <Save className="size-4" />
-                  {isPending ? "Menyimpan..." : "Simpan nilai"}
-                </Button>
-              </div>
-            )}
-          </CardFooter>
         </Card>
-      </form>
+      )}
 
-      {/* Dialog Konfirmasi Simpan Nilai */}
-      <AlertDialog open={isSaveConfirmOpen} onOpenChange={setIsSaveConfirmOpen}>
+      {/* Scoring Form */}
+      {!isRecused && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                <div>
+                  <CardTitle className="text-lg">Formulir Penilaian Rubrik</CardTitle>
+                  <CardDescription>
+                    Masukkan nilai skala 0–100 untuk setiap kriteria. Simpan sebagai draf bila belum lengkap, atau isi
+                    semua kriteria untuk menyimpan nilai final.
+                  </CardDescription>
+                </div>
+                {lastSavedAt && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check className="size-3.5 text-emerald-600" />
+                    <span>Tersimpan: {formatTimestampWita(lastSavedAt)}</span>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-5">
+              {isStageReleased && (
+                <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                  <Lock className="size-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription>
+                    Penilaian {tahap === "final" ? "babak final" : "babak awal"} telah dikunci karena hasil penilaian
+                    sudah dirilis oleh panitia. Formulir berada dalam mode hanya-baca (read-only).
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!isStageReleased && isLocked && (
+                <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200">
+                  <Lock className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  <AlertDescription>
+                    Nilai Anda dikunci pada {formatTimestampWita(lockedAt)} dan tidak dapat diubah lagi. Hubungi panitia
+                    jika membutuhkan perubahan.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!isReadOnly && scoreStatus === "draft" && (
+                <Alert>
+                  <Info className="size-4" />
+                  <AlertDescription>
+                    Tersimpan sebagai draf. Draf belum dihitung sebagai penilaian final dan tidak masuk peringkat sampai
+                    Anda menyimpan nilai final.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Panel Ketentuan Juknis */}
+              <Collapsible className="rounded-lg border bg-muted/40">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between p-3.5 text-left text-sm font-medium hover:bg-muted/60 transition-colors rounded-lg group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="size-4 text-primary" />
+                      <span>Ketentuan Juknis</span>
+                    </div>
+                    <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-4 pb-4 pt-1 text-xs text-muted-foreground space-y-2">
+                  <ol className="list-decimal pl-4 space-y-1.5 leading-relaxed">
+                    <li>
+                      Kegagalan akses atau fungsi live deployment yang berasal dari sisi peserta mengurangi nilai
+                      Fungsionalitas (C.7b).
+                    </li>
+                    <li>
+                      Penilaian alternatif lewat video dan GitHub hanya bila ada gangguan platform hosting yang dapat
+                      diverifikasi (C.7c–d).
+                    </li>
+                  </ol>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {rubric.map((criterion) => {
+                  const val = scores[criterion.column] ?? "";
+                  return (
+                    <div
+                      key={criterion.column}
+                      className="flex flex-col justify-between space-y-3 rounded-lg border p-3.5 bg-card"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor={`score-${criterion.column}`} className="font-medium text-sm">
+                            {criterion.label}
+                          </Label>
+                          <Badge variant="outline" className="text-xs font-mono shrink-0">
+                            Bobot {criterion.weight}%
+                          </Badge>
+                        </div>
+
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+                            >
+                              <ChevronRight className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                              <span>Indikator penilaian</span>
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pt-1.5 pb-0.5">
+                            <p className="rounded-md bg-muted/50 p-2 text-xs leading-relaxed text-muted-foreground">
+                              {criterion.indicator}
+                            </p>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+
+                      <Input
+                        id={`score-${criterion.column}`}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={val}
+                        disabled={isInputDisabled}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        onChange={(e) => handleScoreChange(criterion.column, e.target.value)}
+                        className="font-mono text-base"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Feedback for the team */}
+              <div className="space-y-1.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="judge-feedback" className="font-medium text-sm">
+                    Masukan untuk Tim
+                  </Label>
+                  <span className="text-xs text-muted-foreground">{feedback.length} / 2000 karakter</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Dibagikan secara anonim ke tim setelah hasil penilaian dirilis.
+                </p>
+                <Textarea
+                  id="judge-feedback"
+                  placeholder="Berikan masukan konstruktif untuk karya tim ini (opsional)..."
+                  rows={4}
+                  maxLength={2000}
+                  value={feedback}
+                  disabled={isInputDisabled}
+                  onChange={(e) => setFeedback(e.target.value)}
+                />
+              </div>
+
+              {/* Private note, never shared with the team */}
+              <div className="space-y-2 rounded-lg border border-dashed p-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label htmlFor="judge-private-note" className="flex items-center gap-1.5 font-medium text-sm">
+                    <StickyNote className="size-4 text-primary" />
+                    Catatan pribadi
+                  </Label>
+                  <Badge variant="outline" className="text-[11px]">
+                    Tidak dibagikan ke tim
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Catatan ini terpisah dari Masukan. Tidak dibagikan ke tim dan tidak dihitung sebagai penilaian.
+                </p>
+                <Textarea
+                  id="judge-private-note"
+                  placeholder="Catatan internal Anda untuk tim ini (opsional)..."
+                  rows={3}
+                  maxLength={2000}
+                  value={privateNote}
+                  disabled={isInputDisabled}
+                  onChange={(e) => setPrivateNote(e.target.value)}
+                />
+                <p className="text-right text-xs text-muted-foreground">{privateNote.length} / 2000 karakter</p>
+              </div>
+
+              {formError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Total Weighted Preview */}
+              <div className="rounded-lg border bg-muted/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="font-medium text-sm flex items-center gap-1.5">
+                    <Info className="size-4 text-primary" />
+                    Total Berbobot (Pratinjau)
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Dihitung otomatis dari rubrik. Nilai resmi disimpan setelah Anda mengklik tombol simpan.
+                  </p>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-bold text-3xl font-mono text-primary">{previewTotal.toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground font-mono">/ 100</span>
+                </div>
+              </div>
+
+              {confirmedTotal !== null && (
+                <div className="flex items-center justify-between rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2 text-xs text-emerald-800 dark:text-emerald-300">
+                  <span>{scoreStatus === "draft" ? "Total draf tersimpan:" : "Nilai tersimpan di database:"}</span>
+                  <span className="font-bold font-mono text-sm">{confirmedTotal.toFixed(2)}</span>
+                </div>
+              )}
+            </CardContent>
+
+            <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
+              <Button variant="outline" type="button" asChild>
+                <Link href="/judge" onClick={handleBackClick}>
+                  Kembali
+                </Link>
+              </Button>
+              {isReadOnly ? (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Lock className="size-3.5" />
+                  {isStageReleased ? "Penilaian dikunci (hasil telah dirilis)" : "Nilai sudah dikunci"}
+                </span>
+              ) : (
+                <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={handleSaveDraft}
+                    className="gap-2"
+                  >
+                    <Save className="size-4" />
+                    {isPending ? "Menyimpan..." : "Simpan draf"}
+                  </Button>
+                  <Button type="submit" disabled={isPending} className="gap-2">
+                    <ClipboardCheck className="size-4" />
+                    Simpan final
+                  </Button>
+                </div>
+              )}
+            </CardFooter>
+          </Card>
+        </form>
+      )}
+
+      {/* Dialog Konfirmasi Simpan Nilai Final */}
+      <AlertDialog open={isFinalConfirmOpen} onOpenChange={setIsFinalConfirmOpen}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Simpan Nilai</AlertDialogTitle>
+            <AlertDialogTitle>Simpan sebagai nilai final?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2 text-foreground">
                 <p className="text-muted-foreground text-sm">
-                  Periksa kembali ringkasan nilai sebelum disimpan untuk tim{" "}
-                  <span className="font-semibold text-foreground">{team.team_code}</span>:
+                  Periksa kembali ringkasan nilai untuk tim{" "}
+                  <span className="font-semibold text-foreground">{team.team_code}</span>. Nilai final akan dikunci dan
+                  tidak dapat diubah sendiri.
                 </p>
 
                 <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
@@ -768,26 +989,74 @@ export function ScoringFormClient({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Periksa lagi</AlertDialogCancel>
-            <AlertDialogAction disabled={isPending} onClick={handleSaveConfirm}>
-              {isPending ? "Menyimpan..." : "Simpan"}
+            <AlertDialogAction disabled={isPending} onClick={handleFinalConfirm}>
+              {isPending ? "Menyimpan..." : "Simpan final"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isLockConfirmOpen} onOpenChange={setIsLockConfirmOpen}>
-        <AlertDialogContent>
+      {/* Dialog Konfirmasi Recusal */}
+      <AlertDialog open={isRecusalDialogOpen} onOpenChange={setIsRecusalDialogOpen}>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Kunci nilai untuk tim ini?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Nilai yang Anda isi akan disimpan lalu dikunci. Setelah dikunci, Anda tidak dapat mengubahnya sendiri.
-              Hubungi panitia jika perlu membuka kunci.
+            <AlertDialogTitle>Tidak menilai tim ini?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2 text-foreground">
+                <p className="text-muted-foreground text-sm">
+                  Recusal menandai bahwa Anda tidak menilai tim{" "}
+                  <span className="font-semibold text-foreground">{team.team_code}</span>. Draf nilai yang tersimpan
+                  akan dihapus dan tim ini dihitung selesai pada progres Anda.
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="recusal-reason" className="text-sm font-medium">
+                    Alasan recusal <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="recusal-reason"
+                    placeholder="Jelaskan alasan Anda tidak menilai tim ini..."
+                    rows={4}
+                    maxLength={2000}
+                    value={recusalReason}
+                    disabled={isPending}
+                    onChange={(e) => {
+                      setRecusalReason(e.target.value);
+                      setRecusalError(null);
+                    }}
+                  />
+                  <p className="text-right text-xs text-muted-foreground">{recusalReason.length} / 2000 karakter</p>
+                </div>
+                {recusalError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{recusalError}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={isPending} onClick={handleLockConfirm}>
-              {isPending ? "Menyimpan..." : "Ya, simpan & kunci"}
+            <AlertDialogAction disabled={isPending} onClick={handleCreateRecusal}>
+              {isPending ? "Menyimpan..." : "Simpan recusal"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog Konfirmasi Batal Recusal */}
+      <AlertDialog open={isCancelRecusalOpen} onOpenChange={setIsCancelRecusalOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan recusal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan dapat menilai tim {team.team_code} kembali. Recusal hanya dapat dibatalkan selama hasil
+              penilaian belum dirilis.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Tutup</AlertDialogCancel>
+            <AlertDialogAction disabled={isPending} onClick={handleCancelRecusal}>
+              {isPending ? "Memproses..." : "Batalkan recusal"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

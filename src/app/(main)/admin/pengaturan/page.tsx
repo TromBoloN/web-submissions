@@ -5,7 +5,7 @@ import { SettingsClient } from "./settings-client";
 export default async function SettingsPage() {
   const supabase = await createClient();
 
-  const [settingsRes, caseStudyRes, judgesRes, teamsRes, submissionsRes, prelimScoresRes, finalScoresRes] =
+  const [settingsRes, caseStudyRes, judgesRes, teamsRes, submissionsRes, prelimScoresRes, finalScoresRes, recusalsRes] =
     await Promise.all([
       supabase
         .from("competition_settings")
@@ -18,8 +18,9 @@ export default async function SettingsPage() {
       supabase.from("profiles").select("id, full_name, judge_stage").eq("role", "judge").eq("is_active", true),
       supabase.from("teams").select("id, is_finalist, is_disqualified"),
       supabase.from("submissions").select("team_id, status"),
-      supabase.from("preliminary_scores").select("judge_id, team_id"),
-      supabase.from("final_scores").select("judge_id, team_id"),
+      supabase.from("preliminary_scores").select("judge_id, team_id, status"),
+      supabase.from("final_scores").select("judge_id, team_id, status"),
+      supabase.from("judge_recusals").select("judge_id, team_id, stage"),
     ]);
 
   if (settingsRes.error) {
@@ -44,6 +45,7 @@ export default async function SettingsPage() {
   const submissions = submissionsRes.data ?? [];
   const prelimScores = prelimScoresRes.data ?? [];
   const finalScores = finalScoresRes.data ?? [];
+  const recusals = recusalsRes.data ?? [];
 
   const submissionMap = new Map(submissions.map((s) => [s.team_id, s.status]));
 
@@ -62,17 +64,28 @@ export default async function SettingsPage() {
 
   const prelimCountByJudge = new Map<string, number>();
   for (const s of prelimScores) {
+    if (s.status !== "final") continue;
     if (prelimJudgeIds.has(s.judge_id) && eligiblePrelimTeamIds.has(s.team_id)) {
       prelimCountByJudge.set(s.judge_id, (prelimCountByJudge.get(s.judge_id) ?? 0) + 1);
     }
   }
 
+  const prelimRecusalCountByJudge = new Map<string, number>();
+  for (const r of recusals) {
+    if (r.stage !== "preliminary") continue;
+    if (prelimJudgeIds.has(r.judge_id) && eligiblePrelimTeamIds.has(r.team_id)) {
+      prelimRecusalCountByJudge.set(r.judge_id, (prelimRecusalCountByJudge.get(r.judge_id) ?? 0) + 1);
+    }
+  }
+
   const prelimExpectedPerJudge = eligiblePrelimTeams.length;
   const completedPrelimJudges = prelimJudges.filter(
-    (j) => (prelimCountByJudge.get(j.id) ?? 0) >= prelimExpectedPerJudge,
+    (j) => (prelimCountByJudge.get(j.id) ?? 0) + (prelimRecusalCountByJudge.get(j.id) ?? 0) >= prelimExpectedPerJudge,
   ).length;
   const totalPrelimExpectedScores = prelimJudges.length * prelimExpectedPerJudge;
-  const completedPrelimScores = Array.from(prelimCountByJudge.values()).reduce((a, b) => a + b, 0);
+  const completedPrelimScores =
+    Array.from(prelimCountByJudge.values()).reduce((a, b) => a + b, 0) +
+    Array.from(prelimRecusalCountByJudge.values()).reduce((a, b) => a + b, 0);
 
   // Final judges & scores
   const finalJudges = judges.filter((j) => j.judge_stage === "final" || j.judge_stage === "both");
@@ -80,17 +93,28 @@ export default async function SettingsPage() {
 
   const finalCountByJudge = new Map<string, number>();
   for (const s of finalScores) {
+    if (s.status !== "final") continue;
     if (finalJudgeIds.has(s.judge_id) && eligibleFinalTeamIds.has(s.team_id)) {
       finalCountByJudge.set(s.judge_id, (finalCountByJudge.get(s.judge_id) ?? 0) + 1);
     }
   }
 
+  const finalRecusalCountByJudge = new Map<string, number>();
+  for (const r of recusals) {
+    if (r.stage !== "final") continue;
+    if (finalJudgeIds.has(r.judge_id) && eligibleFinalTeamIds.has(r.team_id)) {
+      finalRecusalCountByJudge.set(r.judge_id, (finalRecusalCountByJudge.get(r.judge_id) ?? 0) + 1);
+    }
+  }
+
   const finalExpectedPerJudge = eligibleFinalTeams.length;
   const completedFinalJudges = finalJudges.filter(
-    (j) => (finalCountByJudge.get(j.id) ?? 0) >= finalExpectedPerJudge,
+    (j) => (finalCountByJudge.get(j.id) ?? 0) + (finalRecusalCountByJudge.get(j.id) ?? 0) >= finalExpectedPerJudge,
   ).length;
   const totalFinalExpectedScores = finalJudges.length * finalExpectedPerJudge;
-  const completedFinalScores = Array.from(finalCountByJudge.values()).reduce((a, b) => a + b, 0);
+  const completedFinalScores =
+    Array.from(finalCountByJudge.values()).reduce((a, b) => a + b, 0) +
+    Array.from(finalRecusalCountByJudge.values()).reduce((a, b) => a + b, 0);
 
   const judgingStats = {
     preliminary: {

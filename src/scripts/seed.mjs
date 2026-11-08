@@ -9,10 +9,10 @@
 //
 // NEVER use this email domain for real accounts.
 
+import { createClient } from "@supabase/supabase-js";
+
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
-
-import { createClient } from "@supabase/supabase-js";
 
 const SEED_DOMAIN = "@seed.mitweek.test";
 const TEAM_CODE_PREFIX = "SEED-";
@@ -254,12 +254,38 @@ async function runSeed() {
   check(submissionError, "Gagal menyimpan submission");
 
   // 4. Preliminary scores: submitted, non-disqualified teams
+  // Also seeds one draft (partial criteria, not counted) and one recusal.
   const prelimJudges = [judgeIds.preliminary, judgeIds.both];
   const prelimRows = [];
+  let recusalTeamNumber = null;
   for (const def of teamDefs) {
     if (def.submission !== "submitted" || def.disqualified) continue;
     const scorers = def.onlyOnePrelimJudge ? [prelimJudges[0]] : prelimJudges;
     for (const judgeId of scorers) {
+      // Skip the score of the judge who recuses this team (seeded recusal below).
+      if (def.n === 5 && judgeId === judgeIds.preliminary) {
+        recusalTeamNumber = def.n;
+        continue;
+      }
+
+      // One partial draft: missing criteria are stored as NULL and the total stays empty.
+      if (def.n === 4 && judgeId === judgeIds.both) {
+        prelimRows.push({
+          judge_id: judgeId,
+          team_id: teamIdByNumber[def.n],
+          functionality_score: randomScore(),
+          case_study_fit_score: randomScore(),
+          ui_ux_score: null,
+          code_quality_score: null,
+          documentation_score: null,
+          feedback: "Draf contoh (seed).",
+          private_note: "Catatan pribadi contoh (seed). Tidak dibagikan ke tim.",
+          status: "draft",
+          locked_at: null,
+        });
+        continue;
+      }
+
       prelimRows.push({
         judge_id: judgeId,
         team_id: teamIdByNumber[def.n],
@@ -275,6 +301,16 @@ async function runSeed() {
   }
   const { error: prelimError } = await sb.from("preliminary_scores").insert(prelimRows);
   check(prelimError, "Gagal menyimpan nilai babak awal");
+
+  if (recusalTeamNumber !== null) {
+    const { error: recusalError } = await sb.from("judge_recusals").insert({
+      judge_id: judgeIds.preliminary,
+      team_id: teamIdByNumber[recusalTeamNumber],
+      stage: "preliminary",
+      reason: "Contoh recusal (seed): juri memiliki konflik kepentingan dengan tim ini.",
+    });
+    check(recusalError, "Gagal menyimpan recusal");
+  }
 
   // 5. Final scores: finalists
   const finalJudges = [judgeIds.final, judgeIds.both];

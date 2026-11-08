@@ -355,9 +355,9 @@ export function SettingsClient({
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Progres Penilaian Juri:</span>
                     <span className="font-medium font-mono">
-                      {judgingStats.preliminary.completedScores} / {judgingStats.preliminary.totalExpectedScores} nilai
-                      ({judgingStats.preliminary.completedJudges} dari {judgingStats.preliminary.totalJudges} juri
-                      selesai)
+                      {judgingStats.preliminary.completedScores} / {judgingStats.preliminary.totalExpectedScores}{" "}
+                      penilaian ({judgingStats.preliminary.completedJudges} dari {judgingStats.preliminary.totalJudges}{" "}
+                      juri selesai)
                     </span>
                   </div>
                   <Progress
@@ -425,7 +425,7 @@ export function SettingsClient({
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Progres Penilaian Juri:</span>
                     <span className="font-medium font-mono">
-                      {judgingStats.final.completedScores} / {judgingStats.final.totalExpectedScores} nilai (
+                      {judgingStats.final.completedScores} / {judgingStats.final.totalExpectedScores} penilaian (
                       {judgingStats.final.completedJudges} dari {judgingStats.final.totalJudges} juri selesai)
                     </span>
                   </div>
