@@ -12,6 +12,8 @@ export type ShowcaseCardData = {
   githubUrl: string;
   liveDemoUrl: string;
   videoUrl: string;
+  winnerRank?: number;
+  winnerScore?: number;
 };
 
 function getInitials(value: string): string {
@@ -72,7 +74,13 @@ function ActionLink({
   );
 }
 
-export function ShowcaseCard({ data }: { data: ShowcaseCardData }) {
+export function ShowcaseCard({
+  data,
+  variant = "default",
+}: {
+  data: ShowcaseCardData;
+  variant?: "default" | "winner";
+}) {
   const cardRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const placeholderClass = useMemo(() => getPlaceholderClass(data.teamName), [data.teamName]);
@@ -104,7 +112,9 @@ export function ShowcaseCard({ data }: { data: ShowcaseCardData }) {
         isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
       } hover:-translate-y-1 hover:border-cyan-300/35 hover:bg-white/[0.07]`}
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
+      <div
+        className={`relative isolate overflow-hidden bg-slate-900 ${variant === "winner" ? "aspect-[16/9]" : "aspect-[16/10]"}`}
+      >
         {data.imageUrl ? (
           // biome-ignore lint/performance/noImgElement: public storage images are not configured as Next image domains
           <img
@@ -113,7 +123,7 @@ export function ShowcaseCard({ data }: { data: ShowcaseCardData }) {
             loading="lazy"
             width={1600}
             height={1000}
-            className="block size-full transform-gpu object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02] motion-reduce:transition-none"
+            className="block size-full object-cover"
           />
         ) : (
           <div className={`flex size-full items-center justify-center bg-gradient-to-br ${placeholderClass}`}>
@@ -125,6 +135,14 @@ export function ShowcaseCard({ data }: { data: ShowcaseCardData }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-4 p-5">
+        {variant === "winner" && data.winnerRank && (
+          <div className="flex items-center justify-between border-cyan-300/30 border-b pb-3">
+            <p className="font-display font-semibold text-cyan-200 text-sm uppercase tracking-[0.18em]">
+              Peringkat {data.winnerRank}
+            </p>
+            <p className="font-display font-semibold text-white">{data.winnerScore?.toFixed(2) ?? "-"}</p>
+          </div>
+        )}
         <div>
           <p className="mb-1 text-cyan-200/75 text-xs uppercase tracking-[0.18em]">{data.teamName}</p>
           <h2 className="font-display font-semibold text-xl text-white tracking-tight">

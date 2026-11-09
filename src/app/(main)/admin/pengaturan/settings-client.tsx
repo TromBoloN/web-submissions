@@ -53,6 +53,7 @@ import type { Json } from "@/types/database";
 
 import {
   publishShowcasePhase,
+  publishShowcaseWinners,
   unpublishShowcasePhase,
   updateCaseStudy,
   updateCompetitionDeadline,
@@ -92,6 +93,7 @@ type SettingsClientProps = {
   finalResultsReleased: boolean;
   showcasePublishedAt: string | null;
   showcaseFinalistsPublishedAt: string | null;
+  winnersPublishedAt: string | null;
   showcaseTeams: {
     id: string;
     teamName: string;
@@ -138,6 +140,7 @@ export function SettingsClient({
   finalResultsReleased,
   showcasePublishedAt,
   showcaseFinalistsPublishedAt,
+  winnersPublishedAt,
   showcaseTeams,
   judgingStats,
   caseStudy,
@@ -150,7 +153,10 @@ export function SettingsClient({
   const [isReleasePending, startReleaseTransition] = useTransition();
   const [isShowcasePending, startShowcaseTransition] = useTransition();
   const [showcaseConfirm, setShowcaseConfirm] = useState<"initial" | "finalists" | null>(null);
-  const [showcaseUnpublishConfirm, setShowcaseUnpublishConfirm] = useState<"initial" | "finalists" | null>(null);
+  const [showcaseUnpublishConfirm, setShowcaseUnpublishConfirm] = useState<"initial" | "finalists" | "winners" | null>(
+    null,
+  );
+  const [showWinnersConfirm, setShowWinnersConfirm] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     stage: "preliminary" | "final";
     targetState: boolean;
@@ -178,6 +184,12 @@ export function SettingsClient({
   const formattedCaseStudyUpdatedAt = formatUpdatedAt(caseStudy?.updatedAt ?? null);
   const canOpenSavedUrl = Boolean(currentJuknisUrl?.startsWith("https://"));
   const formattedCurrentContact = formatWhatsAppNumber(currentContactWhatsapp);
+  let unpublishTargetLabel = "Tahap 3 dan informasi pemenang";
+  if (showcaseUnpublishConfirm === "initial") {
+    unpublishTargetLabel = "Tahap 1 dan karya non-finalis";
+  } else if (showcaseUnpublishConfirm === "finalists") {
+    unpublishTargetLabel = "Tahap 2 dan karya finalis";
+  }
 
   const isReleaseAtInPast = Boolean(
     caseStudyReleaseAt &&
@@ -240,6 +252,19 @@ export function SettingsClient({
         return;
       }
       toast.success("Publikasi galeri berhasil dibatalkan.");
+      router.refresh();
+    });
+  };
+
+  const handlePublishWinners = () => {
+    setShowWinnersConfirm(false);
+    startShowcaseTransition(async () => {
+      const result = await publishShowcaseWinners();
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Pemenang berhasil diterbitkan.");
       router.refresh();
     });
   };
@@ -658,7 +683,7 @@ export function SettingsClient({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
                 <div className="rounded-lg border p-3">
                   <p className="text-muted-foreground text-xs">Ikut pamer</p>
                   <p className="mt-1 font-semibold text-xl">{showcaseTeams.length}</p>
@@ -674,6 +699,10 @@ export function SettingsClient({
                   <p className="mt-1 font-semibold text-xl">
                     {showcaseTeams.filter((team) => hasLinkWarning(team.linkCheck)).length}
                   </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground text-xs">Pemenang</p>
+                  <p className="mt-1 font-semibold text-xl">{winnersPublishedAt ? "Terbit" : "Belum"}</p>
                 </div>
               </div>
 
@@ -731,7 +760,7 @@ export function SettingsClient({
                         onClick={() => setShowcaseUnpublishConfirm("initial")}
                       >
                         <RotateCcw className="mr-1 size-3.5" />
-                        Batalkan
+                        Batalkan tahap 1
                       </Button>
                     </div>
                   ) : (
@@ -786,6 +815,44 @@ export function SettingsClient({
                 {showcaseFinalistsPublishedAt && (
                   <p className="text-muted-foreground text-xs">
                     Diterbitkan: {formatUpdatedAt(showcaseFinalistsPublishedAt) ?? "Waktu tidak tersedia"}
+                  </p>
+                )}
+                <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-sm">Tahap 3 · Pemenang</p>
+                    <p className="text-muted-foreground text-xs">
+                      Menampilkan tiga pemenang beserta nilai akhir setelah pengumuman pemenang.
+                    </p>
+                  </div>
+                  {winnersPublishedAt ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className="w-fit bg-emerald-600">Telah diterbitkan</Badge>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isShowcasePending}
+                        onClick={() => setShowcaseUnpublishConfirm("winners")}
+                      >
+                        <RotateCcw className="mr-1 size-3.5" />
+                        Batalkan pemenang
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isShowcasePending || !showcaseFinalistsPublishedAt}
+                      onClick={() => setShowWinnersConfirm(true)}
+                    >
+                      Terbitkan pemenang
+                    </Button>
+                  )}
+                </div>
+                {winnersPublishedAt && (
+                  <p className="text-muted-foreground text-xs">
+                    Diterbitkan: {formatUpdatedAt(winnersPublishedAt) ?? "Waktu tidak tersedia"}
                   </p>
                 )}
               </div>
@@ -1025,6 +1092,24 @@ export function SettingsClient({
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={showWinnersConfirm} onOpenChange={setShowWinnersConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terbitkan pemenang?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tiga tim teratas dan nilai akhir berbobotnya akan terlihat di halaman publik. Karya hanya menampilkan
+              detail dan tautan jika tim tersebut memberikan persetujuan galeri.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isShowcasePending}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePublishWinners} disabled={isShowcasePending}>
+              {isShowcasePending ? "Menerbitkan..." : "Ya, terbitkan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={Boolean(showcaseUnpublishConfirm)}
         onOpenChange={(open) => {
@@ -1035,8 +1120,8 @@ export function SettingsClient({
           <AlertDialogHeader>
             <AlertDialogTitle>Batalkan publikasi galeri?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tahap {showcaseUnpublishConfirm === "initial" ? "1 dan karya non-finalis" : "2 dan karya finalis"} akan
-              disembunyikan dari halaman publik. Pilihan peserta tetap terkunci dan tidak akan terbuka kembali.
+              {unpublishTargetLabel} akan disembunyikan dari halaman publik. Pilihan peserta tetap terkunci dan tidak
+              akan terbuka kembali.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

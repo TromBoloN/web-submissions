@@ -131,11 +131,18 @@ export function KaryaClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-semibold text-2xl">Atur Tampilan Karya</h1>
-        <p className="text-muted-foreground text-sm">
-          Tentukan informasi yang akan ditampilkan bersama karya tim Anda di galeri.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-semibold text-2xl">Atur Tampilan Karya</h1>
+          <p className="text-muted-foreground text-sm">
+            Tentukan informasi yang akan ditampilkan bersama karya tim Anda di galeri.
+          </p>
+        </div>
+        {isLocked && (
+          <Button asChild variant="outline" className="w-fit">
+            <Link href="/karya">Lihat di halaman publik</Link>
+          </Button>
+        )}
       </div>
 
       {!isSubmitted ? (
@@ -156,7 +163,7 @@ export function KaryaClient({
               </p>
             </div>
           )}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
             {!isLocked && (
               <Card>
                 <CardHeader>
@@ -218,7 +225,11 @@ export function KaryaClient({
                 </CardContent>
               </Card>
             )}
-            <div className={isLocked ? "lg:col-span-2" : ""}>
+            <div
+              className={`w-full max-w-sm lg:sticky lg:top-6 lg:mx-auto lg:self-start ${
+                isLocked ? "lg:col-start-1" : "lg:col-start-2 lg:row-start-1"
+              }`}
+            >
               <div className="mb-3 flex items-center gap-2 font-medium text-sm">
                 <ImageIcon className="size-4 text-primary" />
                 Pratinjau galeri
@@ -226,11 +237,6 @@ export function KaryaClient({
               <ShowcaseCard data={cardData} />
             </div>
           </div>
-          {isLocked && (
-            <Button asChild variant="outline">
-              <Link href="/karya">Lihat di halaman publik</Link>
-            </Button>
-          )}
         </>
       )}
     </div>

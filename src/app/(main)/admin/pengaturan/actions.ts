@@ -369,17 +369,25 @@ export async function publishShowcasePhase(phase: "initial" | "finalists"): Prom
   return { success: true };
 }
 
-export async function unpublishShowcasePhase(phase: "initial" | "finalists"): Promise<ActionResult> {
+export async function unpublishShowcasePhase(phase: "initial" | "finalists" | "winners"): Promise<ActionResult> {
   const caller = await getCurrentProfile();
   if (caller?.role !== "admin") {
     return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
   }
 
   const supabase = await createClient();
-  const update =
-    phase === "initial"
-      ? { showcase_published_at: null, updated_at: new Date().toISOString() }
-      : { showcase_finalists_published_at: null, updated_at: new Date().toISOString() };
+  const updatedAt = new Date().toISOString();
+  let update:
+    | { showcase_published_at: null; updated_at: string }
+    | { showcase_finalists_published_at: null; updated_at: string }
+    | { winners_published_at: null; updated_at: string };
+  if (phase === "initial") {
+    update = { showcase_published_at: null, updated_at: updatedAt };
+  } else if (phase === "finalists") {
+    update = { showcase_finalists_published_at: null, updated_at: updatedAt };
+  } else {
+    update = { winners_published_at: null, updated_at: updatedAt };
+  }
 
   if (phase === "initial") {
     const { data: settings, error: readError } = await supabase
@@ -394,6 +402,19 @@ export async function unpublishShowcasePhase(phase: "initial" | "finalists"): Pr
     if (settings.showcase_finalists_published_at) {
       return { success: false, error: "Batalkan publikasi finalis terlebih dahulu." };
     }
+  } else if (phase === "finalists") {
+    const { data: settings, error: readError } = await supabase
+      .from("competition_settings")
+      .select("winners_published_at")
+      .eq("id", true)
+      .single();
+    if (readError) {
+      console.error("Failed to read showcase winners state", readError);
+      return { success: false, error: "Gagal membaca status publikasi pemenang. Silakan coba lagi." };
+    }
+    if (settings.winners_published_at) {
+      return { success: false, error: "Batalkan publikasi pemenang terlebih dahulu." };
+    }
   }
 
   const { data, error } = await supabase.from("competition_settings").update(update).eq("id", true).select();
@@ -405,9 +426,18 @@ export async function unpublishShowcasePhase(phase: "initial" | "finalists"): Pr
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan." };
   }
 
+  let auditAction: string;
+  if (phase === "initial") {
+    auditAction = "showcase_phase_one_unpublished";
+  } else if (phase === "finalists") {
+    auditAction = "showcase_phase_two_unpublished";
+  } else {
+    auditAction = "showcase_winners_unpublished";
+  }
+
   await logAuditEvent({
     actorId: caller.id,
-    action: phase === "initial" ? "showcase_phase_one_unpublished" : "showcase_phase_two_unpublished",
+    action: auditAction,
     targetType: "competition_settings",
     metadata: { phase },
   });
@@ -416,6 +446,35 @@ export async function unpublishShowcasePhase(phase: "initial" | "finalists"): Pr
   revalidatePath("/admin");
   revalidatePath("/team");
   revalidatePath("/team/karya");
+  revalidatePath("/karya");
+  return { success: true };
+}
+
+export async function publishShowcaseWinners(): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("publish_showcase_winners");
+  if (error) {
+    console.error("Failed to publish showcase winners", error);
+    return { success: false, error: "Gagal menerbitkan pemenang. Silakan coba lagi." };
+  }
+  if (!data) {
+    return { success: false, error: "Pastikan tahap finalis sudah diterbitkan dan pemenang belum diterbitkan." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "showcase_winners_published",
+    targetType: "competition_settings",
+    metadata: { phase: "winners" },
+  });
+
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin");
   revalidatePath("/karya");
   return { success: true };
 }

@@ -21,7 +21,7 @@ erDiagram
 | --- | --- |
 | `profiles` | Application profile, role, judge-stage assignment, and active status linked to `auth.users`. |
 | `teams` | Team identity, roster, finalist flag, and disqualification state. |
-| `competition_settings` | The single competition settings row, deadline, guidebook URL, and release flags. |
+| `competition_settings` | The single competition settings row, deadline, guidebook URL, result-release flags, and staged showcase publication timestamps. |
 | `submissions` | One draft or submitted set of GitHub, live-demo, and video links per team. |
 | `case_study` | The single Markdown case-study row, release time, and last updater. |
 | `preliminary_scores` | One score per preliminary judge/team pair, with generated weighted total and feedback. |

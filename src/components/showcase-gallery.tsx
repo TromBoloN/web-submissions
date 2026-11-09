@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Search, Sparkles } from "lucide-react";
 
@@ -8,18 +8,70 @@ import { Input } from "@/components/ui/input";
 
 import { ShowcaseCard, type ShowcaseCardData } from "./showcase-card";
 
-export function ShowcaseGallery({ cards }: { cards: ShowcaseCardData[] }) {
-  const [query, setQuery] = useState("");
+function hash(value: string): number {
+  return Array.from(value).reduce((total, character) => (total * 31 + character.charCodeAt(0)) | 0, 7);
+}
+
+function shuffleForVisitor(cards: ShowcaseCardData[], seed: string): ShowcaseCardData[] {
+  return [...cards].sort((a, b) => hash(`${seed}:${a.teamName}`) - hash(`${seed}:${b.teamName}`));
+}
+
+export function ShowcaseGallery({
+  cards,
+  winners,
+  initialQuery = "",
+}: {
+  cards: ShowcaseCardData[];
+  winners: ShowcaseCardData[];
+  initialQuery?: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+  const [visitorSeed, setVisitorSeed] = useState("server");
+
+  useEffect(() => {
+    const storedSeed = sessionStorage.getItem("showcase-order-seed");
+    const seed = storedSeed ?? `${Date.now()}-${Math.random()}`;
+    if (!storedSeed) sessionStorage.setItem("showcase-order-seed", seed);
+    setVisitorSeed(seed);
+  }, []);
+
+  useEffect(() => {
+    const urlQuery = new URLSearchParams(window.location.search).get("q") ?? "";
+    setQuery(urlQuery);
+  }, []);
+
+  const shuffledCards = useMemo(() => shuffleForVisitor(cards, visitorSeed), [cards, visitorSeed]);
   const filteredCards = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
-    if (!normalizedQuery) return cards;
-    return cards.filter((card) =>
+    if (!normalizedQuery) return shuffledCards;
+    return shuffledCards.filter((card) =>
       `${card.teamName} ${card.title}`.toLocaleLowerCase("id-ID").includes(normalizedQuery),
     );
-  }, [cards, query]);
+  }, [query, shuffledCards]);
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    const url = new URL(window.location.href);
+    if (value.trim()) url.searchParams.set("q", value);
+    else url.searchParams.delete("q");
+    window.history.replaceState(null, "", url);
+  };
 
   return (
     <section className="space-y-6" aria-labelledby="gallery-grid-title">
+      {winners.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <p className="font-medium text-cyan-200 text-sm">Pengumuman pemenang</p>
+            <h2 className="mt-1 font-display font-semibold text-2xl text-white">Tiga karya terbaik</h2>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {winners.map((winner) => (
+              <ShowcaseCard key={`winner-${winner.teamName}`} data={winner} variant="winner" />
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-4 border-white/10 border-y py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="flex items-center gap-2 font-medium text-cyan-200 text-sm">
@@ -34,7 +86,7 @@ export function ShowcaseGallery({ cards }: { cards: ShowcaseCardData[] }) {
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => handleQueryChange(event.target.value)}
             placeholder="Cari nama tim atau karya"
             aria-label="Cari nama tim atau karya"
             className="border-white/15 bg-white/[0.06] pl-9 text-white placeholder:text-slate-500 focus-visible:ring-cyan-300"

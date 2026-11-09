@@ -5,6 +5,7 @@ import {
   ClipboardList,
   FileText,
   History,
+  Images,
   LayoutDashboard,
   Settings,
   Trophy,
@@ -94,6 +95,12 @@ export function getSidebarItems(
       title: "Dasbor",
       url: basePath,
       icon: LayoutDashboard,
+    },
+    {
+      id: "showcase",
+      title: "Tampilan Karya",
+      url: `${basePath}/karya`,
+      icon: Images,
     },
   ];
 

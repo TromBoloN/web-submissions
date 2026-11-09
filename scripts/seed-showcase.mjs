@@ -25,6 +25,7 @@ for (const file of [".env.local", ".env"]) {
 }
 
 const SHOWCASE_DOMAIN = "@showcase.mitweek.test";
+const SHOWCASE_JUDGE_DOMAIN = "@showcase-jury.mitweek.test";
 const TEAM_CODE_PREFIX = "SHOWCASE-";
 const command = process.argv[2];
 const shouldPublish = process.argv.includes("--publish");
@@ -151,7 +152,11 @@ async function listUsers() {
   for (let page = 1; ; page += 1) {
     const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 1000 });
     check(error, "Gagal membaca akun showcase");
-    users.push(...data.users.filter((user) => user.email?.endsWith(SHOWCASE_DOMAIN)));
+    users.push(
+      ...data.users.filter(
+        (user) => user.email?.endsWith(SHOWCASE_DOMAIN) || user.email?.endsWith(SHOWCASE_JUDGE_DOMAIN),
+      ),
+    );
     if (data.users.length < 1000) return users;
   }
 }
@@ -164,6 +169,20 @@ async function createUser(email) {
   });
   check(error, `Gagal membuat akun ${email}`);
   return data.user.id;
+}
+
+async function verifyShowcaseSchema() {
+  const { error } = await sb
+    .from("competition_settings")
+    .select("showcase_consent_locked_at, winners_published_at")
+    .eq("id", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      "Migration showcase belum lengkap. Jalankan 20261109000000_showcase.sql dan 20261109010000_showcase_winners.sql di Supabase SQL Editor, lalu coba lagi.",
+    );
+  }
 }
 
 async function uploadImage(profileId, teamNumber, filename) {
@@ -215,13 +234,15 @@ async function seedShowcase() {
   console.log(`Target project: ${new URL(url).host}`);
   console.log(`Akan membuat ${teams.length} akun tim showcase.`);
   if (shouldPublish) {
-    console.log("Mode publish aktif: kedua tahap galeri akan dibuat terlihat untuk pengujian.");
+    console.log("Mode publish aktif: finalis dan pemenang akan dibuat terlihat untuk pengujian.");
   }
   if (!(await confirm("Lanjutkan?"))) return;
+  await verifyShowcaseSchema();
 
   const profileRows = [];
   const teamRows = [];
   const teamIds = [];
+  const judgeIds = [];
 
   for (const team of teams) {
     const email = `team${String(team.number).padStart(2, "0")}${SHOWCASE_DOMAIN}`;
@@ -247,6 +268,24 @@ async function seedShowcase() {
       showcase_description: team.description,
     });
     teamIds.push({ profileId, team });
+  }
+
+  if (shouldPublish) {
+    for (const [number, stage] of [
+      [1, "final"],
+      [2, "both"],
+    ]) {
+      const email = `judge${String(number).padStart(2, "0")}${SHOWCASE_JUDGE_DOMAIN}`;
+      const profileId = await createUser(email);
+      judgeIds.push(profileId);
+      profileRows.push({
+        id: profileId,
+        email,
+        full_name: `Juri Showcase ${number}`,
+        role: "judge",
+        judge_stage: stage,
+      });
+    }
   }
 
   const { error: profilesError } = await sb.from("profiles").insert(profileRows);
@@ -286,6 +325,31 @@ async function seedShowcase() {
   check(submissionsError, "Gagal menyimpan submission showcase");
 
   if (shouldPublish) {
+    const teamIdByNumber = new Map(
+      teamIds.map(({ profileId, team }) => [team.number, insertedTeams.find((row) => row.profile_id === profileId).id]),
+    );
+    const finalScores = [];
+    for (const team of teams.filter((item) => item.finalist)) {
+      const baseScoreByTeam = { 1: 95, 2: 90, 3: 85, 4: 80 };
+      const baseScore = baseScoreByTeam[team.number];
+      for (const judgeId of judgeIds) {
+        finalScores.push({
+          judge_id: judgeId,
+          team_id: teamIdByNumber.get(team.number),
+          functionality_score: baseScore,
+          case_study_fit_score: baseScore,
+          ui_ux_score: baseScore,
+          code_quality_score: baseScore,
+          documentation_score: baseScore,
+          presentation_qa_score: baseScore,
+          feedback: "Data pemenang showcase (seed).",
+          status: "final",
+        });
+      }
+    }
+    const { error: finalScoresError } = await sb.from("final_scores").insert(finalScores);
+    check(finalScoresError, "Gagal menyimpan nilai final showcase");
+
     const { error: snapshotError } = await sb
       .from("teams")
       .update({ showcase_is_finalist: false })
@@ -305,13 +369,18 @@ async function seedShowcase() {
       .update({
         showcase_published_at: new Date().toISOString(),
         showcase_finalists_published_at: new Date().toISOString(),
+        winners_published_at: new Date().toISOString(),
+        showcase_consent_locked_at: new Date().toISOString(),
       })
       .eq("id", true);
     check(settingsError, "Gagal menerbitkan showcase untuk pengujian");
   }
 
   console.log("\nShowcase seed selesai.");
-  console.log(`Akun: team01${SHOWCASE_DOMAIN} sampai team12${SHOWCASE_DOMAIN}`);
+  console.log(`Akun tim: team01${SHOWCASE_DOMAIN} sampai team12${SHOWCASE_DOMAIN}`);
+  if (shouldPublish) {
+    console.log(`Akun juri: judge01${SHOWCASE_JUDGE_DOMAIN} dan judge02${SHOWCASE_JUDGE_DOMAIN}`);
+  }
   console.log("Kata sandi semua akun: nilai SEED_PASSWORD.");
   console.log("Hapus dengan: npm run seed:showcase -- clear");
 }

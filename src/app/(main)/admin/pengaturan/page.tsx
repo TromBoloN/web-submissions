@@ -10,7 +10,7 @@ export default async function SettingsPage() {
       supabase
         .from("competition_settings")
         .select(
-          "submission_closes_at, updated_at, juknis_url, contact_whatsapp, preliminary_results_released, final_results_released, showcase_published_at, showcase_finalists_published_at",
+          "submission_closes_at, updated_at, juknis_url, contact_whatsapp, preliminary_results_released, final_results_released, showcase_published_at, showcase_finalists_published_at, winners_published_at",
         )
         .eq("id", true)
         .maybeSingle(),
@@ -151,6 +151,7 @@ export default async function SettingsPage() {
       finalResultsReleased={Boolean(settings?.final_results_released)}
       showcasePublishedAt={settings?.showcase_published_at ?? null}
       showcaseFinalistsPublishedAt={settings?.showcase_finalists_published_at ?? null}
+      winnersPublishedAt={settings?.winners_published_at ?? null}
       showcaseTeams={teams
         .filter((team) => team.showcase_consent && submissionMap.get(team.id) === "submitted")
         .map((team) => {

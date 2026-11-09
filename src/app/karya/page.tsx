@@ -12,9 +12,12 @@ export const metadata: Metadata = {
 
 export default async function PublicKaryaPage() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_public_showcase");
+  const [{ data, error }, { data: winnerData, error: winnersError }] = await Promise.all([
+    supabase.rpc("get_public_showcase"),
+    supabase.rpc("get_public_showcase_winners"),
+  ]);
 
-  if (error) {
+  if (error || winnersError) {
     return (
       <main className="min-h-dvh bg-slate-950 px-4 py-10 text-slate-100 sm:px-6">
         <div className="mx-auto max-w-6xl">
@@ -26,7 +29,7 @@ export default async function PublicKaryaPage() {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const cards: ShowcaseCardData[] = (data ?? []).map((item) => ({
+  const winners: ShowcaseCardData[] = (winnersError ? [] : (winnerData ?? [])).map((item) => ({
     teamName: item.team_name,
     title: item.showcase_title,
     description: item.showcase_description,
@@ -36,7 +39,23 @@ export default async function PublicKaryaPage() {
     githubUrl: item.github_url,
     liveDemoUrl: item.live_demo_url,
     videoUrl: item.video_url,
+    winnerRank: item.winner_rank,
+    winnerScore: item.final_score,
   }));
+  const winnerNames = new Set(winners.map((winner) => winner.teamName));
+  const cards: ShowcaseCardData[] = (data ?? [])
+    .filter((item) => !winnerNames.has(item.team_name))
+    .map((item) => ({
+      teamName: item.team_name,
+      title: item.showcase_title,
+      description: item.showcase_description,
+      imageUrl: item.showcase_image_path
+        ? `${supabaseUrl}/storage/v1/object/public/web-showcase/${item.showcase_image_path}`
+        : null,
+      githubUrl: item.github_url,
+      liveDemoUrl: item.live_demo_url,
+      videoUrl: item.video_url,
+    }));
 
   return (
     <main className="min-h-dvh overflow-hidden bg-slate-950 text-slate-100">
@@ -67,7 +86,7 @@ export default async function PublicKaryaPage() {
         </header>
 
         <div className="mt-10">
-          <ShowcaseGallery cards={cards} />
+          <ShowcaseGallery cards={cards} winners={winners} />
         </div>
 
         <footer className="mt-16 border-white/10 border-t py-8 text-slate-500 text-sm leading-6">

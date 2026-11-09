@@ -90,6 +90,8 @@ export type Database = {
           preliminary_results_released: boolean;
           showcase_finalists_published_at: string | null;
           showcase_published_at: string | null;
+          showcase_consent_locked_at: string | null;
+          winners_published_at: string | null;
           submission_closes_at: string;
           updated_at: string;
         };
@@ -101,6 +103,8 @@ export type Database = {
           preliminary_results_released?: boolean;
           showcase_finalists_published_at?: string | null;
           showcase_published_at?: string | null;
+          showcase_consent_locked_at?: string | null;
+          winners_published_at?: string | null;
           submission_closes_at: string;
           updated_at?: string;
         };
@@ -112,6 +116,8 @@ export type Database = {
           preliminary_results_released?: boolean;
           showcase_finalists_published_at?: string | null;
           showcase_published_at?: string | null;
+          showcase_consent_locked_at?: string | null;
+          winners_published_at?: string | null;
           submission_closes_at?: string;
           updated_at?: string;
         };
@@ -624,6 +630,20 @@ export type Database = {
           video_url: string;
         }[];
       };
+      get_public_showcase_winners: {
+        Args: never;
+        Returns: {
+          final_score: number;
+          github_url: string;
+          live_demo_url: string;
+          showcase_description: string;
+          showcase_image_path: string | null;
+          showcase_title: string;
+          team_name: string;
+          video_url: string;
+          winner_rank: number;
+        }[];
+      };
       judge_can_score_final: { Args: { p_team_id: string }; Returns: boolean };
       judge_can_score_preliminary: {
         Args: { p_team_id: string };
@@ -633,6 +653,7 @@ export type Database = {
       submission_open: { Args: never; Returns: boolean };
       publish_showcase_phase_one: { Args: never; Returns: boolean };
       publish_showcase_phase_two: { Args: never; Returns: boolean };
+      publish_showcase_winners: { Args: never; Returns: boolean };
       save_showcase_details: {
         Args: {
           p_consent: boolean;
