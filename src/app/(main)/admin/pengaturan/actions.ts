@@ -328,3 +328,94 @@ export async function updateResultsRelease(stage: "preliminary" | "final", relea
   revalidatePath("/team", "layout");
   return { success: true };
 }
+
+export async function publishShowcasePhase(phase: "initial" | "finalists"): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const supabase = await createClient();
+  const functionName = phase === "initial" ? "publish_showcase_phase_one" : "publish_showcase_phase_two";
+  const { data, error } = await supabase.rpc(functionName);
+
+  if (error) {
+    console.error("Failed to publish showcase phase", error);
+    return { success: false, error: "Gagal menerbitkan galeri. Silakan coba lagi." };
+  }
+
+  if (!data) {
+    return {
+      success: false,
+      error:
+        phase === "initial"
+          ? "Galeri tahap awal sudah diterbitkan atau tidak dapat diterbitkan."
+          : "Pastikan galeri tahap awal sudah diterbitkan dan tahap finalis belum diterbitkan.",
+    };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: phase === "initial" ? "showcase_phase_one_published" : "showcase_phase_two_published",
+    targetType: "competition_settings",
+    metadata: { phase },
+  });
+
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin");
+  revalidatePath("/team");
+  revalidatePath("/team/karya");
+  revalidatePath("/karya");
+  return { success: true };
+}
+
+export async function unpublishShowcasePhase(phase: "initial" | "finalists"): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const supabase = await createClient();
+  const update =
+    phase === "initial"
+      ? { showcase_published_at: null, updated_at: new Date().toISOString() }
+      : { showcase_finalists_published_at: null, updated_at: new Date().toISOString() };
+
+  if (phase === "initial") {
+    const { data: settings, error: readError } = await supabase
+      .from("competition_settings")
+      .select("showcase_finalists_published_at")
+      .eq("id", true)
+      .single();
+    if (readError) {
+      console.error("Failed to read showcase publication state", readError);
+      return { success: false, error: "Gagal membaca status publikasi galeri. Silakan coba lagi." };
+    }
+    if (settings.showcase_finalists_published_at) {
+      return { success: false, error: "Batalkan publikasi finalis terlebih dahulu." };
+    }
+  }
+
+  const { data, error } = await supabase.from("competition_settings").update(update).eq("id", true).select();
+  if (error) {
+    console.error("Failed to unpublish showcase phase", error);
+    return { success: false, error: "Gagal membatalkan publikasi galeri. Silakan coba lagi." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data pengaturan kompetisi tidak ditemukan." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: phase === "initial" ? "showcase_phase_one_unpublished" : "showcase_phase_two_unpublished",
+    targetType: "competition_settings",
+    metadata: { phase },
+  });
+
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin");
+  revalidatePath("/team");
+  revalidatePath("/team/karya");
+  revalidatePath("/karya");
+  return { success: true };
+}

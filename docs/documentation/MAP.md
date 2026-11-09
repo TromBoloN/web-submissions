@@ -27,6 +27,8 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 | Judge queue         | /judge                                | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals`        |
 | Judge scoring       | /judge/nilai/[tahap]/[teamId]         | `(main)/judge/nilai/[tahap]/[teamId]`                 | `preliminary_scores`, `final_scores`, `judge_recusals` |
 | Team portal         | /team                                 | `(main)/team` (files beside `page.tsx`)               | `submissions`, own `teams` row                      |
+| Team showcase editor | /team/karya                           | `(main)/team/karya`                                   | own `teams`, own `submissions`, `competition_settings` |
+| Public showcase      | /karya                                | `karya/page.tsx`                                      | `get_public_showcase()`                             |
 | Case study          | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus`                           | `competition_settings` (markdown)                   |
 | Team results        | /team/hasil                           | `(main)/team/hasil`                                   | `get_my_results()` (RPC)                            |
 | Change password     | /<role>/kata-sandi                    | `(main)/<role>/kata-sandi`                            | Auth (shared `components/change-password-form.tsx`) |
@@ -56,6 +58,7 @@ src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl)
 src/app/(main)/dashboard/_components      shell: dashboard-shell, header, sidebar (app-sidebar, nav-main, nav-user)
 src/app/(main)/admin/akun                  account types, filters, clipboard control, and account utilities
 src/components/                      shared UI (change-password-form, markdown-content, logout-button, rubric-bars); ui/ is shadcn, do not edit
+src/components/showcase-card.tsx      shared public/team showcase card
 src/types/database.ts                generated Supabase types
 src/scripts/seed.mjs                 npm run seed / seed:clear
 ```

@@ -16,6 +16,46 @@ export type SaveSubmissionResult =
   | { ok: true; status: "draft" | "submitted"; updatedAt: string }
   | { ok: false; message: string };
 
+export type SaveShowcaseConsentResult = { ok: true; consent: boolean } | { ok: false; message: string };
+
+const showcaseConsentSchema = z.object({
+  consent: z.enum(["true", "false"]),
+});
+
+export async function saveShowcaseConsent(formData: FormData): Promise<SaveShowcaseConsentResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "team") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = showcaseConsentSchema.safeParse({
+    consent: formData.get("consent"),
+  });
+
+  if (!parsed.success) {
+    return { ok: false, message: "Pilihan pameran tidak valid." };
+  }
+
+  const consent = parsed.data.consent === "true";
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_showcase_consent", { p_consent: consent });
+
+  if (error) {
+    console.error("Failed to save showcase consent", error);
+    return { ok: false, message: "Gagal menyimpan pilihan pameran. Coba lagi." };
+  }
+
+  if (!data) {
+    return {
+      ok: false,
+      message: "Pilihan pameran tidak dapat diubah. Pastikan submission sudah terkirim dan galeri belum diterbitkan.",
+    };
+  }
+
+  revalidatePath("/team");
+  return { ok: true, consent };
+}
+
 const submissionInputSchema = z.object({
   github_url: z.string().trim().max(500, "URL repositori maksimal 500 karakter."),
   live_demo_url: z.string().trim().max(500, "URL live demo maksimal 500 karakter."),

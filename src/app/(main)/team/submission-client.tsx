@@ -68,6 +68,7 @@ type SubmissionClientProps = {
   initialClosed: boolean;
   juknisUrl: string | null;
   contactWhatsapp: string | null;
+  showcasePublishedAt: string | null;
   finalistNotice: FinalistNoticeData | null;
 };
 
@@ -307,6 +308,52 @@ function NextStepsCard({ serverNowIso }: { serverNowIso: string }) {
   );
 }
 
+function ShowcaseConsentCard({
+  isSubmitted,
+  consent,
+  showcasePublishedAt,
+}: {
+  isSubmitted: boolean;
+  consent: boolean;
+  showcasePublishedAt: string | null;
+}) {
+  let showcaseStatus = "Belum ikut dipamerkan.";
+  if (showcasePublishedAt) {
+    showcaseStatus = "Tampilan karya telah dikunci karena galeri sudah diterbitkan.";
+  } else if (consent) {
+    showcaseStatus = "Karya akan dipamerkan.";
+  }
+
+  return (
+    <Card className="gap-0 py-0">
+      <CardHeader className="p-4 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Globe className="size-4 text-primary" />
+          Pamerkan karya kamu
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Galeri tidak menampilkan nilai atau peringkat. Pemenang diumumkan terpisah. Setelah galeri diterbitkan,
+          permintaan penghapusan dapat diajukan kepada panitia dan diproses secara manual.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 p-4 pt-0">
+        {!isSubmitted ? (
+          <p className="text-muted-foreground text-xs">
+            Kirim submission terlebih dahulu untuk memilih apakah karya akan dipamerkan.
+          </p>
+        ) : (
+          <>
+            <p className="text-muted-foreground text-xs">{showcaseStatus}</p>
+            <Button asChild size="sm" variant="outline" className="w-full">
+              <Link href="/team/karya">{showcasePublishedAt ? "Lihat tampilan karya" : "Atur tampilan karya"}</Link>
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SubmissionStatusHero({
   team,
   submission,
@@ -476,6 +523,7 @@ export function SubmissionClient({
   initialClosed,
   juknisUrl,
   contactWhatsapp,
+  showcasePublishedAt,
   finalistNotice,
 }: SubmissionClientProps) {
   const router = useRouter();
@@ -1096,10 +1144,17 @@ export function SubmissionClient({
           {/* 2. Submission checklist */}
           {!isSubmitted && <SubmissionChecklist />}
 
-          {/* 3. Next Steps Timeline */}
+          {/* 3. Showcase consent */}
+          <ShowcaseConsentCard
+            isSubmitted={isSubmitted}
+            consent={team.showcase_consent}
+            showcasePublishedAt={showcasePublishedAt}
+          />
+
+          {/* 4. Next Steps Timeline */}
           <NextStepsCard serverNowIso={serverNowIso} />
 
-          {/* 3. Compact Team Info (No duplicate team code!) */}
+          {/* 5. Compact Team Info (No duplicate team code!) */}
           <Card className="gap-0 py-0">
             <CardHeader className="p-4">
               <CardTitle className="flex items-center justify-between gap-3 text-base">
@@ -1145,7 +1200,7 @@ export function SubmissionClient({
             )}
           </Card>
 
-          {/* 4. Quiet Help Card */}
+          {/* 6. Quiet Help Card */}
           <Card className="gap-0 py-0">
             <CardHeader className="p-4 pb-3">
               <CardTitle className="flex items-center gap-2 text-base">

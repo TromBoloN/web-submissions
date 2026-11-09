@@ -13,8 +13,11 @@ import {
   Clock,
   ExternalLink,
   FileText,
+  ImageIcon,
   Info,
+  Megaphone,
   MessageCircle,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,8 +49,11 @@ import {
   toWitaDateTimeLocalString,
   toWitaDateTimeLocalStringExact,
 } from "@/lib/deadline";
+import type { Json } from "@/types/database";
 
 import {
+  publishShowcasePhase,
+  unpublishShowcasePhase,
   updateCaseStudy,
   updateCompetitionDeadline,
   updateContactWhatsapp,
@@ -84,6 +90,18 @@ type SettingsClientProps = {
   updatedAt: string | null;
   preliminaryResultsReleased: boolean;
   finalResultsReleased: boolean;
+  showcasePublishedAt: string | null;
+  showcaseFinalistsPublishedAt: string | null;
+  showcaseTeams: {
+    id: string;
+    teamName: string;
+    isFinalist: boolean;
+    showcaseTitle: string;
+    showcaseDescription: string;
+    showcaseImagePath: string | null;
+    linkCheck: Json | null;
+    links: { github: string; liveDemo: string; video: string };
+  }[];
   judgingStats: JudgingProgressStats;
   caseStudy: CaseStudyData | null;
 };
@@ -99,6 +117,18 @@ function formatUpdatedAt(iso: string | null) {
   }).format(date)} WITA`;
 }
 
+function hasLinkWarning(linkCheck: Json | null): boolean {
+  if (!linkCheck || typeof linkCheck !== "object" || Array.isArray(linkCheck)) return false;
+  return Object.values(linkCheck).some(
+    (item) =>
+      typeof item === "object" &&
+      item !== null &&
+      !Array.isArray(item) &&
+      "status" in item &&
+      item.status === "warning",
+  );
+}
+
 export function SettingsClient({
   currentClosesAt,
   currentJuknisUrl,
@@ -106,6 +136,9 @@ export function SettingsClient({
   updatedAt,
   preliminaryResultsReleased,
   finalResultsReleased,
+  showcasePublishedAt,
+  showcaseFinalistsPublishedAt,
+  showcaseTeams,
   judgingStats,
   caseStudy,
 }: SettingsClientProps) {
@@ -115,6 +148,9 @@ export function SettingsClient({
   const [isDeadlinePending, startDeadlineTransition] = useTransition();
 
   const [isReleasePending, startReleaseTransition] = useTransition();
+  const [isShowcasePending, startShowcaseTransition] = useTransition();
+  const [showcaseConfirm, setShowcaseConfirm] = useState<"initial" | "finalists" | null>(null);
+  const [showcaseUnpublishConfirm, setShowcaseUnpublishConfirm] = useState<"initial" | "finalists" | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     stage: "preliminary" | "final";
     targetState: boolean;
@@ -172,6 +208,38 @@ export function SettingsClient({
       } else {
         toast.success(`Hasil penilaian ${stageLabel} berhasil dinonaktifkan.`);
       }
+      router.refresh();
+    });
+  };
+
+  const handlePublishShowcase = () => {
+    if (!showcaseConfirm) return;
+    const phase = showcaseConfirm;
+    setShowcaseConfirm(null);
+    startShowcaseTransition(async () => {
+      const result = await publishShowcasePhase(phase);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        phase === "initial" ? "Galeri tahap awal berhasil diterbitkan." : "Karya finalis berhasil diterbitkan.",
+      );
+      router.refresh();
+    });
+  };
+
+  const handleUnpublishShowcase = () => {
+    if (!showcaseUnpublishConfirm) return;
+    const phase = showcaseUnpublishConfirm;
+    setShowcaseUnpublishConfirm(null);
+    startShowcaseTransition(async () => {
+      const result = await unpublishShowcasePhase(phase);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Publikasi galeri berhasil dibatalkan.");
       router.refresh();
     });
   };
@@ -577,7 +645,154 @@ export function SettingsClient({
             </form>
           </Card>
 
-          {/* 4. Studi Kasus */}
+          {/* 4. Galeri Karya */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="size-5 text-primary" />
+                Galeri Karya
+              </CardTitle>
+              <CardDescription>
+                Tinjau karya yang bersedia dipamerkan dan terbitkan galeri dalam dua tahap. Pembatalan publikasi hanya
+                menyembunyikan galeri; pilihan peserta tetap terkunci setelah publikasi tahap 1.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground text-xs">Ikut pamer</p>
+                  <p className="mt-1 font-semibold text-xl">{showcaseTeams.length}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground text-xs">Dengan gambar</p>
+                  <p className="mt-1 font-semibold text-xl">
+                    {showcaseTeams.filter((team) => team.showcaseImagePath).length}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground text-xs">Peringatan tautan</p>
+                  <p className="mt-1 font-semibold text-xl">
+                    {showcaseTeams.filter((team) => hasLinkWarning(team.linkCheck)).length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {showcaseTeams.length === 0 ? (
+                  <p className="rounded-lg border border-dashed p-4 text-muted-foreground text-sm">
+                    Belum ada submission terkirim yang memilih ikut galeri.
+                  </p>
+                ) : (
+                  showcaseTeams.map((team) => (
+                    <div key={team.id} className="rounded-lg border p-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{team.showcaseTitle || team.teamName}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {team.teamName} · {team.isFinalist ? "Finalis" : "Non-finalis"}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          {!team.showcaseImagePath && (
+                            <Badge variant="outline" className="border-amber-500/40 text-amber-600 text-xs">
+                              <ImageIcon className="mr-1 size-3" />
+                              Tanpa gambar
+                            </Badge>
+                          )}
+                          {hasLinkWarning(team.linkCheck) && (
+                            <Badge variant="outline" className="border-amber-500/40 text-amber-600 text-xs">
+                              <AlertTriangle className="mr-1 size-3" />
+                              Tautan diperingatkan
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-sm">Tahap 1 · Non-finalis</p>
+                    <p className="text-muted-foreground text-xs">
+                      Menampilkan karya ikut pamer selain finalis dan membekukan status finalis serta pilihan peserta.
+                    </p>
+                  </div>
+                  {showcasePublishedAt ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className="w-fit bg-emerald-600">Telah diterbitkan</Badge>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isShowcasePending}
+                        onClick={() => setShowcaseUnpublishConfirm("initial")}
+                      >
+                        <RotateCcw className="mr-1 size-3.5" />
+                        Batalkan
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isShowcasePending || showcaseTeams.length === 0}
+                      onClick={() => setShowcaseConfirm("initial")}
+                    >
+                      Terbitkan tahap 1
+                    </Button>
+                  )}
+                </div>
+                {showcasePublishedAt && (
+                  <p className="text-muted-foreground text-xs">
+                    Diterbitkan: {formatUpdatedAt(showcasePublishedAt) ?? "Waktu tidak tersedia"}
+                  </p>
+                )}
+                <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-sm">Tahap 2 · Finalis</p>
+                    <p className="text-muted-foreground text-xs">
+                      Menambahkan karya finalis yang ikut pamer setelah pengumuman pemenang.
+                    </p>
+                  </div>
+                  {showcaseFinalistsPublishedAt ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className="w-fit bg-emerald-600">Telah diterbitkan</Badge>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isShowcasePending}
+                        onClick={() => setShowcaseUnpublishConfirm("finalists")}
+                      >
+                        <RotateCcw className="mr-1 size-3.5" />
+                        Batalkan
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isShowcasePending || !showcasePublishedAt}
+                      onClick={() => setShowcaseConfirm("finalists")}
+                    >
+                      Terbitkan finalis
+                    </Button>
+                  )}
+                </div>
+                {showcaseFinalistsPublishedAt && (
+                  <p className="text-muted-foreground text-xs">
+                    Diterbitkan: {formatUpdatedAt(showcaseFinalistsPublishedAt) ?? "Waktu tidak tersedia"}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 5. Studi Kasus */}
           <Card>
             <CardHeader>
               <div>
@@ -783,6 +998,55 @@ export function SettingsClient({
           </Card>
         </div>
       </div>
+
+      <AlertDialog
+        open={Boolean(showcaseConfirm)}
+        onOpenChange={(open) => {
+          if (!open) setShowcaseConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {showcaseConfirm === "initial" ? "Terbitkan galeri tahap 1?" : "Terbitkan karya finalis?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {showcaseConfirm === "initial"
+                ? "Karya non-finalis yang telah memilih ikut pamer akan terlihat di halaman publik. Status finalis dan pilihan pameran akan dibekukan."
+                : "Karya finalis yang telah memilih ikut pamer akan ditambahkan ke halaman publik."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isShowcasePending}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePublishShowcase} disabled={isShowcasePending}>
+              {isShowcasePending ? "Menerbitkan..." : "Ya, terbitkan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(showcaseUnpublishConfirm)}
+        onOpenChange={(open) => {
+          if (!open) setShowcaseUnpublishConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan publikasi galeri?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tahap {showcaseUnpublishConfirm === "initial" ? "1 dan karya non-finalis" : "2 dan karya finalis"} akan
+              disembunyikan dari halaman publik. Pilihan peserta tetap terkunci dan tidak akan terbuka kembali.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isShowcasePending}>Kembali</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnpublishShowcase} disabled={isShowcasePending}>
+              {isShowcasePending ? "Membatalkan..." : "Ya, batalkan publikasi"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirmation Dialog for Results Release */}
       <AlertDialog

@@ -17,6 +17,7 @@
     "restore": "node scripts/restore.mjs",
     "seed": "node --env-file=.env src/scripts/seed.mjs seed",
     "seed:clear": "node --env-file=.env src/scripts/seed.mjs clear",
+    "seed:showcase": "node --env-file=.env scripts/seed-showcase.mjs",
     "onboard": "node --env-file=.env scripts/import-registrations.mjs",
     "whatsapp": "node --env-file=.env scripts/whatsapp-links.mjs"
   },

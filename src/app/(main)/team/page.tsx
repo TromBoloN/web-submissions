@@ -11,7 +11,7 @@ export default async function TeamPage() {
     supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
     supabase
       .from("competition_settings")
-      .select("submission_closes_at, juknis_url, contact_whatsapp")
+      .select("submission_closes_at, juknis_url, contact_whatsapp, showcase_published_at")
       .eq("id", true)
       .maybeSingle(),
     supabase.rpc("get_my_finalist_notice"),
@@ -46,6 +46,7 @@ export default async function TeamPage() {
       initialClosed={initialClosed}
       juknisUrl={settingsRes.data?.juknis_url ?? null}
       contactWhatsapp={settingsRes.data?.contact_whatsapp ?? null}
+      showcasePublishedAt={settingsRes.data?.showcase_published_at ?? null}
       finalistNotice={finalistNotice}
     />
   );

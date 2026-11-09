@@ -10,14 +10,18 @@ export default async function SettingsPage() {
       supabase
         .from("competition_settings")
         .select(
-          "submission_closes_at, updated_at, juknis_url, contact_whatsapp, preliminary_results_released, final_results_released",
+          "submission_closes_at, updated_at, juknis_url, contact_whatsapp, preliminary_results_released, final_results_released, showcase_published_at, showcase_finalists_published_at",
         )
         .eq("id", true)
         .maybeSingle(),
       supabase.from("case_study").select("title, content_md, release_at, updated_at").eq("id", true).maybeSingle(),
       supabase.from("profiles").select("id, full_name, judge_stage").eq("role", "judge").eq("is_active", true),
-      supabase.from("teams").select("id, is_finalist, is_disqualified"),
-      supabase.from("submissions").select("team_id, status"),
+      supabase
+        .from("teams")
+        .select(
+          "id, team_name, is_finalist, is_disqualified, showcase_consent, showcase_title, showcase_description, showcase_image_path, showcase_is_finalist",
+        ),
+      supabase.from("submissions").select("team_id, status, link_check, github_url, live_demo_url, video_url"),
       supabase.from("preliminary_scores").select("judge_id, team_id, status"),
       supabase.from("final_scores").select("judge_id, team_id, status"),
       supabase.from("judge_recusals").select("judge_id, team_id, stage"),
@@ -145,6 +149,27 @@ export default async function SettingsPage() {
       updatedAt={settings?.updated_at ?? null}
       preliminaryResultsReleased={Boolean(settings?.preliminary_results_released)}
       finalResultsReleased={Boolean(settings?.final_results_released)}
+      showcasePublishedAt={settings?.showcase_published_at ?? null}
+      showcaseFinalistsPublishedAt={settings?.showcase_finalists_published_at ?? null}
+      showcaseTeams={teams
+        .filter((team) => team.showcase_consent && submissionMap.get(team.id) === "submitted")
+        .map((team) => {
+          const submission = submissions.find((item) => item.team_id === team.id);
+          return {
+            id: team.id,
+            teamName: team.team_name,
+            isFinalist: team.is_finalist,
+            showcaseTitle: team.showcase_title,
+            showcaseDescription: team.showcase_description,
+            showcaseImagePath: team.showcase_image_path,
+            linkCheck: submission?.link_check ?? null,
+            links: {
+              github: submission?.github_url ?? "",
+              liveDemo: submission?.live_demo_url ?? "",
+              video: submission?.video_url ?? "",
+            },
+          };
+        })}
       judgingStats={judgingStats}
       caseStudy={
         caseStudy
