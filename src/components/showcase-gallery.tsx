@@ -17,23 +17,6 @@ function shuffleForVisitor(cards: ShowcaseCardData[], seed: string): ShowcaseCar
   return [...cards].sort((a, b) => hash(`${seed}:${a.teamName}`) - hash(`${seed}:${b.teamName}`));
 }
 
-function useCountdown(targetTimestamp: number) {
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const diff = Math.max(0, targetTimestamp - now);
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((diff / (1000 * 60)) % 60);
-  const seconds = Math.floor((diff / 1000) % 60);
-
-  return { days, hours, minutes, seconds };
-}
-
 /**
  * Confetti particle burst for Rank 1
  */
@@ -143,21 +126,19 @@ function WinnersPodium({
  * Locked Vault State: Sebentar lagi, 18 Nov
  */
 function LockedVaultState() {
-  const { days, hours, minutes, seconds } = useCountdown(KARYA_DATES.galleryReleaseTimestamp);
-
   return (
     <div className="guardian-card relative overflow-hidden bg-white p-6 sm:p-10 text-center shadow-[6px_6px_0_#262470] dark:bg-slate-900">
       <div className="mx-auto max-w-2xl space-y-6">
         {/* Status Pill */}
         <div className="inline-flex items-center gap-2 rounded-full border-2 border-[#262470] bg-[#2FBF71] px-4 py-1 text-xs font-black uppercase text-[#262470] shadow-[3px_3px_0_#262470]">
           <Shield className="size-3.5 fill-current" />
-          <span>TERBUKA UNTUK SEMUA · SEBENTAR LAGI, 18 NOV</span>
+          <span>STATUS: TERKUNCI · MENUNGGU RILIS</span>
         </div>
 
         <div>
           <h3 className="font-display font-black text-2xl sm:text-3xl text-foreground">Kenalan sama para penjaga.</h3>
           <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed font-medium">
-            Arsip karya dari teman-temanmu sedang dipersiapkan dan akan dibuka penuh untuk umum pada{" "}
+            Arsip karya dari tim peserta sedang dipersiapkan dan akan dibuka penuh untuk umum pada{" "}
             <span className="font-extrabold text-[#262470] dark:text-[#3FA9D9]">
               {KARYA_DATES.galleryReleaseDateFull}
             </span>
@@ -165,67 +146,45 @@ function LockedVaultState() {
           </p>
         </div>
 
-        {/* Monospace Countdown Blocks */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-mono">
-          <div className="guardian-card flex flex-col items-center justify-center bg-[#F7F9FF] px-4 py-2.5 sm:px-6 sm:py-3 shadow-[3px_3px_0_#262470] dark:bg-slate-800">
-            <span className="text-2xl sm:text-3xl font-black text-[#262470] dark:text-[#3FA9D9]">
-              {String(days).padStart(2, "0")}
-            </span>
-            <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground">HARI</span>
-          </div>
-
-          <span className="text-xl font-black text-[#262470]">:</span>
-
-          <div className="guardian-card flex flex-col items-center justify-center bg-[#F7F9FF] px-4 py-2.5 sm:px-6 sm:py-3 shadow-[3px_3px_0_#262470] dark:bg-slate-800">
-            <span className="text-2xl sm:text-3xl font-black text-[#262470] dark:text-[#3FA9D9]">
-              {String(hours).padStart(2, "0")}
-            </span>
-            <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground">JAM</span>
-          </div>
-
-          <span className="text-xl font-black text-[#262470]">:</span>
-
-          <div className="guardian-card flex flex-col items-center justify-center bg-[#F7F9FF] px-4 py-2.5 sm:px-6 sm:py-3 shadow-[3px_3px_0_#262470] dark:bg-slate-800">
-            <span className="text-2xl sm:text-3xl font-black text-[#262470] dark:text-[#3FA9D9]">
-              {String(minutes).padStart(2, "0")}
-            </span>
-            <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground">MENIT</span>
-          </div>
-
-          <span className="text-xl font-black text-[#262470]">:</span>
-
-          <div className="guardian-card flex flex-col items-center justify-center bg-[#F7F9FF] px-4 py-2.5 sm:px-6 sm:py-3 shadow-[3px_3px_0_#262470] dark:bg-slate-800">
-            <span className="text-2xl sm:text-3xl font-black text-[#262470] dark:text-[#3FA9D9]">
-              {String(seconds).padStart(2, "0")}
-            </span>
-            <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground">DETIK</span>
-          </div>
+        {/* Static Date Display */}
+        <div className="guardian-card inline-flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 bg-[#F7F9FF] px-6 py-3.5 shadow-[4px_4px_0_#262470] dark:bg-slate-800 border-2 border-[#262470]">
+          <span className="font-mono text-xs font-black uppercase tracking-wider text-[#262470] dark:text-[#3FA9D9]">
+            JADWAL PEMBUKAAN GALERI:
+          </span>
+          <span className="font-display font-black text-sm sm:text-base text-foreground">
+            {KARYA_DATES.galleryPlannedText}
+          </span>
         </div>
 
-        {/* Roadmap Timeline */}
-        <div className="mt-8 pt-6 border-t-2 border-[#262470]/20 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          <div className="guardian-card p-4 bg-[#F7F9FF] dark:bg-slate-800">
-            <div className="flex items-center justify-between mb-1">
+        {/* Roadmap Timeline (3 Stages from Juknis) */}
+        <div className="mt-8 pt-6 border-t-2 border-[#262470]/20 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+          <div className="guardian-card p-4 bg-[#F7F9FF] dark:bg-slate-800 border-2 border-[#262470]">
+            <div className="flex items-center justify-between mb-1.5">
               <span className="font-mono text-[10px] font-extrabold uppercase text-[#262470] dark:text-[#3FA9D9]">
                 TAHAP 01
               </span>
               <span className="rounded bg-[#2FBF71] px-2 py-0.5 text-[9px] font-black text-[#262470]">SELANJUTNYA</span>
             </div>
-            <h4 className="font-display font-bold text-sm text-foreground">{KARYA_DATES.galleryReleaseNodeLabel}</h4>
-            <p className="mt-1 text-xs text-muted-foreground font-medium">
-              Pembukaan ruang galeri untuk seluruh karya peserta yang bersedia dibagikan.
-            </p>
+            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage1Label}</h4>
+            <p className="mt-1 text-xs text-muted-foreground font-medium leading-relaxed">{KARYA_DATES.stage1Desc}</p>
           </div>
 
-          <div className="guardian-card p-4 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-between mb-1">
+          <div className="guardian-card p-4 bg-white dark:bg-slate-900 border-2 border-[#262470]">
+            <div className="flex items-center justify-between mb-1.5">
               <span className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground">TAHAP 02</span>
               <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-bold text-muted-foreground">FINAL</span>
             </div>
-            <h4 className="font-display font-bold text-sm text-foreground">{KARYA_DATES.winnersReleaseNodeLabel}</h4>
-            <p className="mt-1 text-xs text-muted-foreground font-medium">
-              Pengumuman resmi karya finalis dan penyerahan penghargaan juara MIT-WEEK 2026.
-            </p>
+            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage2Label}</h4>
+            <p className="mt-1 text-xs text-muted-foreground font-medium leading-relaxed">{KARYA_DATES.stage2Desc}</p>
+          </div>
+
+          <div className="guardian-card p-4 bg-white dark:bg-slate-900 border-2 border-[#262470]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground">TAHAP 03</span>
+              <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-bold text-muted-foreground">JUARA</span>
+            </div>
+            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage3Label}</h4>
+            <p className="mt-1 text-xs text-muted-foreground font-medium leading-relaxed">{KARYA_DATES.stage3Desc}</p>
           </div>
         </div>
       </div>
@@ -307,88 +266,90 @@ export function ShowcaseGallery({
       {/* Winners Section if released */}
       {enrichedWinners.length > 0 && <WinnersPodium winners={enrichedWinners} onOpenDetail={setSelectedCard} />}
 
-      {/* Main Gallery Section Header */}
-      <div className="space-y-6 pt-4 border-t-2 border-[#262470]/20">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 font-mono text-xs font-extrabold uppercase text-[#262470] dark:text-[#3FA9D9]">
-              <Sparkles className="size-3.5 text-[#2FBF71]" />
-              <span>KOLEKSI LENGKAP KARYA</span>
-            </div>
-            <h2 id="gallery-grid-title" className="font-display font-black text-2xl sm:text-3xl text-foreground">
-              Jelajahi Karya Para Penjaga
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-              Temukan solusi nyata dan inovasi digital yang dikembangkan oleh seluruh tim peserta.
-            </p>
-          </div>
-
-          {/* Search Input & Campus Filter */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-            {uniqueCampuses.length > 2 && (
-              <select
-                id="filter-campus"
-                value={selectedCampus}
-                aria-label="Saring berdasarkan kampus"
-                onChange={(e) => setSelectedCampus(e.target.value)}
-                className="rounded-xl border-2 border-[#262470] bg-white px-3 py-2 text-xs font-bold text-[#262470] shadow-[3px_3px_0_#262470] dark:bg-slate-800 dark:text-slate-200 focus:outline-none"
-              >
-                {uniqueCampuses.map((c) => (
-                  <option key={c} value={c}>
-                    {c === "Semua" ? "Semua Kampus" : c}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <div className="relative w-full sm:w-72 md:w-80">
-              <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#262470] dark:text-[#3FA9D9]" />
-              <Input
-                value={query}
-                onChange={(e) => handleQueryChange(e.target.value)}
-                placeholder="Cari nama tim atau karya..."
-                className="guardian-card h-10 w-full pl-10 pr-4 text-xs font-semibold shadow-[3px_3px_0_#262470]"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Gallery Cards or Vault / Empty State */}
-      {cards.length === 0 && <LockedVaultState />}
-
-      {cards.length > 0 && filteredCards.length === 0 && (
-        <div className="guardian-card p-10 text-center bg-white dark:bg-slate-900 shadow-[4px_4px_0_#262470]">
-          <p className="font-display font-bold text-lg text-foreground">Tidak ada karya yang cocok</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Coba sesuaikan kata kunci pencarian atau pilih kampus lain.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setQuery("");
-              setSelectedCampus("Semua");
-            }}
-            className="guardian-btn-secondary mt-4 px-4 py-1.5 text-xs"
-          >
-            Reset Pencarian
-          </button>
-        </div>
-      )}
-
-      {cards.length > 0 && filteredCards.length > 0 && (
-        /* Bento Layout: Mixed Tile Sizes */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredCards.map((card, idx) => {
-            const isBentoHero = idx === 0 && filteredCards.length > 2;
-
-            return (
-              <div key={`gallery-${card.teamName}`} className={isBentoHero ? "md:col-span-2 md:row-span-1" : ""}>
-                <ShowcaseCard data={card} onOpenDetail={setSelectedCard} />
+      {/* Main Gallery Cards or Vault State */}
+      {cards.length === 0 ? (
+        <LockedVaultState />
+      ) : (
+        <>
+          {/* Main Gallery Section Header */}
+          <div className="space-y-6 pt-4 border-t-2 border-[#262470]/20">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs font-extrabold uppercase text-[#262470] dark:text-[#3FA9D9]">
+                  <Sparkles className="size-3.5 text-[#2FBF71]" />
+                  <span>KOLEKSI LENGKAP KARYA</span>
+                </div>
+                <h2 id="gallery-grid-title" className="font-display font-black text-2xl sm:text-3xl text-foreground">
+                  Jelajahi Karya Para Penjaga
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                  Temukan solusi nyata dan inovasi digital yang dikembangkan oleh seluruh tim peserta.
+                </p>
               </div>
-            );
-          })}
-        </div>
+
+              {/* Search Input & Campus Filter */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                {uniqueCampuses.length > 2 && (
+                  <select
+                    id="filter-campus"
+                    value={selectedCampus}
+                    aria-label="Saring berdasarkan kampus"
+                    onChange={(e) => setSelectedCampus(e.target.value)}
+                    className="rounded-xl border-2 border-[#262470] bg-white px-3 py-2 text-xs font-bold text-[#262470] shadow-[3px_3px_0_#262470] dark:bg-slate-800 dark:text-slate-200 focus:outline-none"
+                  >
+                    {uniqueCampuses.map((c) => (
+                      <option key={c} value={c}>
+                        {c === "Semua" ? "Semua Kampus" : c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <div className="relative w-full sm:w-72 md:w-80">
+                  <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#262470] dark:text-[#3FA9D9]" />
+                  <Input
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    placeholder="Cari nama tim atau karya..."
+                    className="guardian-card h-10 w-full pl-10 pr-4 text-xs font-semibold shadow-[3px_3px_0_#262470]"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {filteredCards.length === 0 ? (
+            <div className="guardian-card p-10 text-center bg-white dark:bg-slate-900 shadow-[4px_4px_0_#262470]">
+              <p className="font-display font-bold text-lg text-foreground">Tidak ada karya yang cocok</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Coba sesuaikan kata kunci pencarian atau pilih kampus lain.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setSelectedCampus("Semua");
+                }}
+                className="guardian-btn-secondary mt-4 px-4 py-1.5 text-xs"
+              >
+                Reset Pencarian
+              </button>
+            </div>
+          ) : (
+            /* Bento Layout: Mixed Tile Sizes */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredCards.map((card, idx) => {
+                const isBentoHero = idx === 0 && filteredCards.length > 2;
+
+                return (
+                  <div key={`gallery-${card.teamName}`} className={isBentoHero ? "md:col-span-2 md:row-span-1" : ""}>
+                    <ShowcaseCard data={card} onOpenDetail={setSelectedCard} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

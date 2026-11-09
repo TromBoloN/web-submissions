@@ -393,47 +393,50 @@ export function ShowcaseDetailModal({ card, onClose }: { card: ShowcaseCardData 
               Tentang Karya
             </h2>
             <p className="text-sm text-foreground/90 leading-relaxed font-medium">
-              {card.description || "Solusi inovatif untuk menciptakan ruang digital yang aman dan terlindung."}
+              {card.description || "Solusi inovatif karya tim peserta MIT-WEEK 2026."}
             </p>
           </div>
 
-          {/* Section: Cara Kerjanya */}
-          <div className="rounded-2xl border-2 border-[#262470] bg-white p-4 sm:p-5 shadow-[3px_3px_0_#262470] dark:bg-slate-900">
-            <h2 className="font-display font-extrabold text-base uppercase text-[#262470] dark:text-[#3FA9D9] mb-2.5">
-              2. Cara Solusi Ini Melindungi Pengguna
-            </h2>
-            <ul className="space-y-2 text-sm text-foreground/90 font-medium">
-              {(
-                card.story?.howItWorks ?? [
-                  "Menganalisis potensi ancaman secara proaktif saat pengguna beraktivitas online.",
-                  "Memberikan edukasi visual yang transparan mengenai indikasi bahaya.",
-                  "Menyediakan panduan langkah pengamanan mandiri yang mudah diterapkan.",
-                ]
-              ).map((point, idx) => (
-                <li key={point} className="flex items-start gap-2.5">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-[#262470] bg-[#2FBF71] text-[10px] font-black text-[#262470]">
-                    {idx + 1}
-                  </span>
-                  <span>{point}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Section: Catatan Dewan Juri (if any) */}
+          {card.committeeNote && (
+            <div className="rounded-2xl border-2 border-[#262470] bg-[#F7F9FF] p-4 sm:p-5 shadow-[3px_3px_0_#262470] dark:bg-slate-800">
+              <h2 className="font-display font-extrabold text-base uppercase text-[#262470] dark:text-[#3FA9D9] mb-1.5 flex items-center gap-1.5">
+                <Quote className="size-4 fill-current" />
+                <span>Catatan Dewan Juri</span>
+              </h2>
+              <p className="italic text-sm text-foreground/90 leading-relaxed font-medium">"{card.committeeNote}"</p>
+            </div>
+          )}
 
-          {/* Section: Kenapa kami bikin ini (Team Quote) */}
-          <div className="rounded-2xl border-2 border-[#262470] bg-[#262470] p-4 sm:p-5 text-white shadow-[3px_3px_0_#5B4FC9]">
-            <h2 className="font-display font-extrabold text-base uppercase text-[#2FBF71] mb-1.5 flex items-center gap-1.5">
-              <Quote className="size-4 fill-current" />
-              <span>Kenapa Kami Bikin Ini</span>
-            </h2>
-            <p className="italic text-sm text-white/95 leading-relaxed font-medium">
-              "
-              {card.story?.whyWeMadeThis ??
-                card.quote ??
-                "Kami ingin menciptakan ruang digital yang aman dan inklusif untuk siapa saja."}
-              "
-            </p>
-          </div>
+          {/* Section: Cara Kerjanya (if real story provided) */}
+          {card.story?.howItWorks && card.story.howItWorks.length > 0 && (
+            <div className="rounded-2xl border-2 border-[#262470] bg-white p-4 sm:p-5 shadow-[3px_3px_0_#262470] dark:bg-slate-900">
+              <h2 className="font-display font-extrabold text-base uppercase text-[#262470] dark:text-[#3FA9D9] mb-2.5">
+                Cara Solusi Ini Bekerja
+              </h2>
+              <ul className="space-y-2 text-sm text-foreground/90 font-medium">
+                {card.story.howItWorks.map((point, idx) => (
+                  <li key={point} className="flex items-start gap-2.5">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-[#262470] bg-[#2FBF71] text-[10px] font-black text-[#262470]">
+                      {idx + 1}
+                    </span>
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Section: Kutipan Tim (if provided) */}
+          {card.quote && (
+            <div className="rounded-2xl border-2 border-[#262470] bg-[#262470] p-4 sm:p-5 text-white shadow-[3px_3px_0_#5B4FC9]">
+              <h2 className="font-display font-extrabold text-base uppercase text-[#2FBF71] mb-1.5 flex items-center gap-1.5">
+                <Quote className="size-4 fill-current" />
+                <span>Kutipan Tim</span>
+              </h2>
+              <p className="italic text-sm text-white/95 leading-relaxed font-medium">"{card.quote}"</p>
+            </div>
+          )}
 
           {/* Team Members List */}
           {card.teamMembers && card.teamMembers.length > 0 && (

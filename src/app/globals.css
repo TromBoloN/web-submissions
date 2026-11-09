@@ -86,14 +86,16 @@
   --circuit-pulse-cyan: #0284c7;
   --circuit-pulse-amber: #1e293b;
 
-  /* Guardians Design System Tokens */
-  --ink: #262470;
-  --hero-from: #262470;
-  --hero-to: #6f8fd0;
+  /* Guardians Design System Tokens (Poster: Deep Navy, Cornflower/Periwinkle, Neon Green, Violet) */
+  --ink: #1d1a5c;
+  --hero-from: #eef2ff;
+  --hero-to: #cadbf7;
+  --hero-fg: #1d1a5c;
+  --hero-fg-muted: #333878;
   --surface: #f7f9ff;
-  --safe: #2fbf71;
+  --safe: #00e676;
   --link: #3fa9d9;
-  --guardian-accent: #5b4fc9;
+  --guardian-accent: #5b3fd6;
   --shadow-hard: 4px 4px 0 var(--ink);
   --shadow-hard-lg: 6px 6px 0 var(--ink);
   --shadow-hard-sm: 2px 2px 0 var(--ink);
@@ -171,6 +173,8 @@
   --ink: #8ba9ec;
   --hero-from: #13172e;
   --hero-to: #222d4a;
+  --hero-fg: #f7f9ff;
+  --hero-fg-muted: #94a3b8;
   --surface: #0a0d17;
   --safe: #2fbf71;
   --link: #62bdf0;
@@ -965,14 +969,21 @@
 }
 
 .guardian-hero-mesh {
-  background: linear-gradient(135deg, #262470 0%, #3a4188 50%, #6f8fd0 100%);
+  background: linear-gradient(135deg, #eef2ff 0%, #e0ebff 50%, #cadbf7 100%);
+  color: var(--hero-fg);
 }
 
 .dark .guardian-hero-mesh {
   background: linear-gradient(135deg, #13172e 0%, #1e2646 50%, #253358 100%);
+  color: var(--hero-fg);
 }
 
 .guardian-hero-grain {
+  background-image: radial-gradient(rgba(29, 26, 92, 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.dark .guardian-hero-grain {
   background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 0);
   background-size: 24px 24px;
 }
@@ -983,9 +994,9 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: -0.035em;
-  color: #ffffff;
-  -webkit-text-stroke: 2.5px #262470;
-  text-shadow: 5px 5px 0 #262470;
+  color: #1d1a5c;
+  -webkit-text-stroke: 2px #1d1a5c;
+  text-shadow: 4px 4px 0 #7f9bd6;
 }
 
 .dark .guardian-title-giant {

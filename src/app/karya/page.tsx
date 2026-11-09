@@ -7,9 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 import { GuardianBackground, GuardianFooter, KaryaHero, KaryaThemeToggle } from "./karya-hero";
 
 export const metadata: Metadata = {
-  title: "Kenalan Sama Para Penjaga | Galeri Karya MIT-WEEK 2026",
+  title: "Galeri Karya · MIT-WEEK 2026 | Web Development",
   description:
-    "Ruang pameran karya peserta kompetisi MIT-WEEK 2026: Guardians of the Digital Space. Temukan solusi inovatif perlindungan ruang digital.",
+    "Pameran karya Web Development Competition MIT-WEEK 2026: Guardians of the Digital Space. Menampilkan karya inovatif dari tim peserta yang bersedia ditampilkan.",
   robots: { index: false, follow: false },
 };
 
