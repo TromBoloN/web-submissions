@@ -4,11 +4,12 @@ import type { ShowcaseCardData } from "@/components/showcase-card";
 import { ShowcaseGallery } from "@/components/showcase-gallery";
 import { createClient } from "@/lib/supabase/server";
 
-import { KaryaBackgroundCircuit, KaryaHero, KaryaThemeToggle } from "./karya-hero";
+import { GuardianBackground, GuardianFooter, KaryaHero, KaryaThemeToggle } from "./karya-hero";
 
 export const metadata: Metadata = {
-  title: "Karya Peserta | MIT-WEEK 2026",
-  description: "Galeri karya peserta kompetisi MIT-WEEK 2026: Guardians of the Digital Space.",
+  title: "Kenalan Sama Para Penjaga | Galeri Karya MIT-WEEK 2026",
+  description:
+    "Ruang pameran karya peserta kompetisi MIT-WEEK 2026: Guardians of the Digital Space. Temukan solusi inovatif perlindungan ruang digital.",
   robots: { index: false, follow: false },
 };
 
@@ -23,7 +24,7 @@ export default async function PublicKaryaPage() {
     return (
       <main className="min-h-dvh bg-background px-4 py-10 text-foreground sm:px-6">
         <div className="mx-auto max-w-6xl">
-          <h1 className="font-display font-semibold text-3xl">Karya Peserta</h1>
+          <h1 className="font-display font-semibold text-3xl">Kenalan Sama Para Penjaga</h1>
           <p className="mt-3 text-muted-foreground">Galeri belum dapat dimuat. Silakan coba lagi nanti.</p>
         </div>
       </main>
@@ -44,6 +45,7 @@ export default async function PublicKaryaPage() {
     winnerRank: item.winner_rank,
     winnerScore: item.final_score,
   }));
+
   const winnerNames = new Set(winners.map((winner) => winner.teamName));
   const cards: ShowcaseCardData[] = (data ?? [])
     .filter((item) => !winnerNames.has(item.team_name))
@@ -60,53 +62,25 @@ export default async function PublicKaryaPage() {
     }));
 
   return (
-    <main className="karya-page min-h-dvh overflow-hidden bg-background text-foreground">
-      {/* Fixed Background Circuit with sparse pulses */}
-      <KaryaBackgroundCircuit />
+    <main className="karya-page relative min-h-dvh overflow-hidden bg-[#F7F9FF] text-[#262470] dark:bg-[#0a0d17] dark:text-slate-100">
+      {/* Calm Guardian Surface Background */}
+      <GuardianBackground />
 
-      {/* Theme Toggle Button portaled to document.body */}
+      {/* Floating Theme Toggle */}
       <KaryaThemeToggle />
 
-      {/* Main Widened Container (1360-1440px) */}
+      {/* Main Container */}
       <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8 xl:px-10">
-        {/* Hero Section & Stat Strip */}
+        {/* Section 4.1 & 4.2: Hero & Fact Strip */}
         <KaryaHero count={cards.length} />
 
-        {/* Gallery Section */}
+        {/* Section 4.3 & 4.4: Winners Podium & Bento Gallery */}
         <div className="mt-12 sm:mt-16">
           <ShowcaseGallery cards={cards} winners={winners} serverNow={Date.now()} />
         </div>
 
-        {/* Footer with Circuit Trace ending at node // END */}
-        <footer className="mt-20 border-t border-border/80 pt-8 pb-14 text-foreground/90 text-sm">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1.5 text-xs sm:text-sm">
-              <p className="font-semibold text-foreground">MIT-WEEK 2026 · Pameran Digital</p>
-              <p className="text-foreground/80 dark:text-slate-300">
-                Galeri tidak menampilkan nilai atau peringkat. Pemenang diumumkan terpisah.
-              </p>
-              <p className="font-medium text-foreground dark:text-slate-200">
-                Untuk permintaan penghapusan karya, silakan hubungi panitia MIT-WEEK 2026.
-              </p>
-            </div>
-
-            {/* Trace ending at node with // END */}
-            <div className="flex items-center gap-3 self-start font-mono text-xs text-signal sm:self-center">
-              <svg
-                className="h-4 w-16 stroke-current text-signal/60"
-                viewBox="0 0 64 16"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path d="M0 8h46l8-6h10" strokeWidth="1.5" />
-                <circle cx="60" cy="2" r="2.5" className="fill-signal" />
-              </svg>
-              <span className="border border-signal/40 bg-signal/10 px-2.5 py-0.5 tracking-widest text-[11px] text-signal font-semibold">
-                SYS {"//"} END
-              </span>
-            </div>
-          </div>
-        </footer>
+        {/* Section 4.6: Footer with Bird Easter Egg & Sign-off */}
+        <GuardianFooter />
       </div>
     </main>
   );

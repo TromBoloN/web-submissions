@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { FolderGit2, Lock, Moon, ShieldCheck, Sun } from "lucide-react";
+import { GraduationCap, Layers, Moon, Shield, ShieldCheck, Sun, Users, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ function CountUp({ target }: { target: number }) {
       return;
     }
 
-    const duration = 700;
+    const duration = 750;
     const startedAt = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -64,254 +64,399 @@ export function KaryaThemeToggle() {
       variant="outline"
       onClick={() => setPreference("theme_mode", isDark ? "light" : "dark")}
       aria-label={isDark ? "Gunakan mode terang" : "Gunakan mode gelap"}
-      className="karya-theme-toggle fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 size-10 rounded-none border border-border/80 bg-background p-0 text-foreground shadow-lg hover:border-signal/60 hover:bg-muted"
+      className="guardian-btn-secondary fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 size-11 rounded-full p-0 shadow-[3px_3px_0_#262470]"
     >
-      {isDark ? <Sun className="size-4 text-signal" /> : <Moon className="size-4 text-foreground" />}
+      {isDark ? <Sun className="size-5 text-[#2FBF71]" /> : <Moon className="size-5 text-[#262470]" />}
     </Button>,
     document.body,
   );
 }
 
-export function KaryaHero({ count }: { count: number }) {
+/**
+ * 1.5s First-visit Shield Unlock Intro (SessionStorage Guarded)
+ */
+function FirstVisitUnlockIntro() {
+  const [showIntro, setShowIntro] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const seen = sessionStorage.getItem("guardians-intro-seen");
+    if (!seen) {
+      setShowIntro(true);
+      sessionStorage.setItem("guardians-intro-seen", "true");
+      const timer = setTimeout(() => setShowIntro(false), 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [reducedMotion]);
+
+  if (!showIntro) return null;
+
   return (
-    <>
-      <header className="karya-hero relative flex min-h-[420px] flex-col justify-end overflow-hidden p-6 sm:min-h-[480px] sm:p-10 lg:p-14">
-        <div className="karya-hero-scrim absolute inset-0" aria-hidden="true" />
-        <div className="karya-hero-brackets pointer-events-none absolute inset-3 z-10" aria-hidden="true" />
-        <div className="karya-hero-label karya-hero-label-top-left">SYS {"//"} ONLINE</div>
-        <div className="karya-hero-label karya-hero-label-top-right">NODE 01 · 06°12′S</div>
-        <div className="karya-hero-label karya-hero-label-bottom-right">X: 108.22 · Y: 01</div>
-        <div className="karya-hero-ticks pointer-events-none absolute inset-0 z-10" aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#262470] text-white animate-out fade-out duration-500 fill-mode-forwards select-none">
+      <div className="flex size-24 items-center justify-center rounded-3xl border-4 border-white bg-[#2FBF71] text-[#262470] shadow-[6px_6px_0_#000000] animate-bounce">
+        <ShieldCheck className="size-12 stroke-[2.5]" />
+      </div>
+      <p className="mt-5 font-mono text-xs font-black uppercase tracking-[0.25em] text-[#2FBF71]">
+        MEMBUKA RUANG PENJAGA DIGITAL...
+      </p>
+    </div>
+  );
+}
 
-        {/* Unified Hero SVG: Shield + Concentric Lock Scanner + Connected Traces in one shared viewBox */}
-        <svg
-          aria-hidden="true"
-          className="karya-circuit pointer-events-none absolute inset-0 size-full text-signal opacity-30 sm:opacity-100"
-          viewBox="0 0 680 400"
-          preserveAspectRatio="xMaxYMid meet"
-        >
-          {/* Concentric Scanner Rings centered on lock (510, 195) drawn behind shield & traces */}
-          <g className="karya-lock-scanner-group">
-            <circle className="karya-lock-ring" cx="510" cy="195" r="28" />
-            <circle className="karya-lock-ring karya-lock-ring-2" cx="510" cy="195" r="28" />
-            <circle className="karya-lock-ring karya-lock-ring-3" cx="510" cy="195" r="28" />
-            <circle className="karya-scanner-arc" cx="510" cy="195" r="46" />
-          </g>
+function useCountdown(targetTimestamp: number) {
+  const [now, setNow] = useState(Date.now());
 
-          {/* Ghost Shield Aura */}
-          <path
-            className="karya-ghost-shield"
-            d="M 510 65 L 595 105 V 195 C 595 270 550 310 510 330 C 470 310 425 270 425 195 V 105 Z"
-          />
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-          {/* Trace 1 (Top bundle) connecting directly to Shield Port 1 at (430, 125) */}
-          <path className="karya-trace-bundle" d="M 150 75 H 330 L 380 125 H 430" />
-          <path className="karya-trace-pulse" d="M 150 75 H 330 L 380 125 H 430" />
+  const diff = Math.max(0, targetTimestamp - now);
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
 
-          {/* Trace 2 (Upper-mid bundle) connecting directly to Shield Port 2 at (430, 170) */}
-          <path className="karya-trace-bundle" d="M 190 120 H 350 L 400 170 H 430" />
-          <path className="karya-trace-pulse" d="M 190 120 H 350 L 400 170 H 430" />
+  return { days, hours, minutes, seconds };
+}
 
-          {/* Trace 3 (Lower-mid bundle) connecting directly to Shield Port 3 at (435, 215) */}
-          <path className="karya-trace-bundle karya-trace-lower" d="M 170 265 H 350 L 400 215 H 435" />
-          <path className="karya-trace-pulse karya-trace-lower" d="M 170 265 H 350 L 400 215 H 435" />
+/**
+ * Vector Mascot Bird with floating feathers & shield
+ */
+export function GuardianBirdMascot({ className = "size-36 sm:size-44" }: { className?: string }) {
+  return (
+    <div className={`relative ${className} select-none`} aria-hidden="true">
+      {/* Floating Feather 1 */}
+      <div className="guardian-feather-float absolute -top-3 -left-2 size-5 opacity-80 text-[#3FA9D9]">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.48 2 2 6.48 2 12c0 2.5 1 4.5 2.5 6L12 22l7.5-4c1.5-1.5 2.5-3.5 2.5-6 0-5.52-4.48-10-10-10z" />
+        </svg>
+      </div>
 
-          {/* Trace 4 (Bottom bundle) connecting directly to Shield Port 4 at (455, 260) */}
-          <path className="karya-trace-bundle karya-trace-lower" d="M 130 310 H 370 L 420 260 H 455" />
-          <path className="karya-trace-pulse karya-trace-lower" d="M 130 310 H 370 L 420 260 H 455" />
-
-          {/* Right Output Traces from Ports on right shield edge */}
-          <path className="karya-trace-bundle karya-trace-right" d="M 590 135 H 650" />
-          <path className="karya-trace-pulse karya-trace-right" d="M 590 135 H 650" />
-          <path className="karya-trace-bundle karya-trace-right" d="M 590 180 H 665" />
-          <path className="karya-trace-pulse karya-trace-right" d="M 590 180 H 665" />
-          <path className="karya-trace-bundle karya-trace-right" d="M 585 225 H 645" />
-          <path className="karya-trace-pulse karya-trace-right" d="M 585 225 H 645" />
-
-          {/* Via Dots at Origins and Ports */}
-          <g className="karya-vias">
-            <circle cx="150" cy="75" r="3.5" />
-            <circle cx="190" cy="120" r="3.5" />
-            <circle cx="170" cy="265" r="3.5" />
-            <circle cx="130" cy="310" r="3.5" />
-
-            {/* Port connection via dots on shield boundary */}
-            <circle cx="430" cy="125" r="3.5" />
-            <circle cx="430" cy="170" r="3.5" />
-            <circle cx="435" cy="215" r="3.5" />
-            <circle cx="455" cy="260" r="3.5" />
-
-            {/* Right via dots */}
-            <circle cx="590" cy="135" r="3.5" />
-            <circle cx="650" cy="135" r="3.5" />
-            <circle cx="590" cy="180" r="3.5" />
-            <circle cx="665" cy="180" r="3.5" />
-            <circle cx="585" cy="225" r="3.5" />
-            <circle cx="645" cy="225" r="3.5" />
-          </g>
-
-          {/* Data Packets */}
-          <g className="karya-packets">
-            <circle className="karya-packet" cx="370" cy="170" r="3" />
-            <circle className="karya-packet karya-packet-blocked" cx="390" cy="215" r="3" />
-          </g>
-
-          {/* Main Shield Structure (Visible immediately in server HTML) */}
-          <g className="karya-shield">
-            {/* Shield Outlines */}
+      {/* Bird Body with Float Animation */}
+      <div className="guardian-mascot-float relative size-full">
+        <svg viewBox="0 0 120 120" aria-hidden="true" className="size-full drop-shadow-[5px_5px_0_#262470]">
+          {/* Main Bird Torso */}
+          <ellipse cx="60" cy="65" rx="36" ry="34" fill="#3FA9D9" stroke="#262470" strokeWidth="3.5" />
+          {/* Cheerful White Belly */}
+          <ellipse cx="60" cy="72" rx="22" ry="20" fill="#FFFFFF" stroke="#262470" strokeWidth="2.5" />
+          {/* Little Wings */}
+          <path d="M26 62 Q12 74 30 82 Q34 70 26 62Z" fill="#262470" />
+          <path d="M94 62 Q108 74 90 82 Q86 70 94 62Z" fill="#262470" />
+          {/* Eyes with cheerful spark */}
+          <circle cx="48" cy="52" r="5.5" fill="#262470" />
+          <circle cx="50" cy="50" r="1.75" fill="#ffffff" />
+          <circle cx="72" cy="52" r="5.5" fill="#262470" />
+          <circle cx="74" cy="50" r="1.75" fill="#ffffff" />
+          {/* Beak in Vibrant Green */}
+          <polygon points="60,56 52,65 68,65" fill="#2FBF71" stroke="#262470" strokeWidth="2" />
+          {/* Head Tuft Feather */}
+          <path d="M60 31 Q62 14 72 20 Q66 27 60 31Z" fill="#2FBF71" stroke="#262470" strokeWidth="2.5" />
+          {/* Guardian Shield forming beside bird */}
+          <g transform="translate(76, 68)">
             <path
-              className="karya-shield-glow"
-              d="M 510 75 L 590 110 V 195 C 590 265 548 302 510 320 C 472 302 430 265 430 195 V 110 Z"
+              d="M12 2L2 6v6c0 5.5 4.5 10 10 11 5.5-1 10-5.5 10-11V6l-10-4z"
+              fill="#2FBF71"
+              stroke="#262470"
+              strokeWidth="2.5"
             />
             <path
-              className="karya-shield-outline"
-              d="M 510 75 L 590 110 V 195 C 590 265 548 302 510 320 C 472 302 430 265 430 195 V 110 Z"
+              d="M9 11l2 2 4-4"
+              stroke="#262470"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
             />
-
-            {/* Centered Padlock inside Shield at (510, 195) */}
-            <path className="karya-lock" d="M 485 180 h 50 v 40 h -50 z M 495 180 v -16 a 15 15 0 0 1 30 0 v 16" />
-            <circle className="karya-lock-core" cx="510" cy="198" r="4.5" />
           </g>
         </svg>
+      </div>
 
-        {/* Hero Content with Type Effect (Server HTML rendered with aria-label) */}
-        <section
-          className="relative z-10 max-w-3xl"
-          aria-label="Karya peserta. Guardians of the Digital Space. Sebuah koleksi karya yang dibagikan oleh tim peserta. Jelajahi ide, eksperimen, dan solusi digital mereka dalam satu ruang."
-        >
-          <div className="mb-4 flex items-center gap-2 font-mono text-signal text-xs uppercase tracking-[0.25em]">
-            <span className="size-2 rounded-full bg-signal animate-pulse" />
-            <span>&gt; MIT-WEEK 2026 {"//"} PAMERAN DIGITAL</span>
-            <span className="karya-cursor" aria-hidden="true" />
-          </div>
+      {/* Floating Feather 2 */}
+      <div className="guardian-feather-float absolute -bottom-1 -right-3 size-4 opacity-80 text-[#2FBF71]">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.48 2 2 6.48 2 12c0 2.5 1 4.5 2.5 6L12 22l7.5-4c1.5-1.5 2.5-3.5 2.5-6 0-5.52-4.48-10-10-10z" />
+        </svg>
+      </div>
+    </div>
+  );
+}
 
-          {/* Fixed-height container prevents any layout shift during typing reveal */}
-          <div className="relative min-h-[3.25rem] sm:min-h-[4.75rem] lg:min-h-[5.5rem]">
-            <h1 className="karya-headline font-display font-bold text-4xl text-foreground tracking-tight sm:text-6xl lg:text-7xl leading-[1.05]">
-              Karya peserta.
-            </h1>
-          </div>
+/**
+ * Cyber Marquee under Hero
+ */
+function CyberMarquee() {
+  const marqueeItems = [
+    "PHISHING",
+    "HOAKS",
+    "DATA LEAK",
+    "PENIPUAN",
+    "DEEPFAKE",
+    "MALWARE",
+    "SOSIAL ENGINEERING",
+    "IDENTITAS DIGITAL",
+  ];
 
-          <div className="karya-type-sub relative mt-1 min-h-[1.75rem] sm:min-h-[2.25rem]">
-            <p className="font-display text-xl font-medium text-foreground/90 sm:text-2xl lg:text-3xl tracking-tight dark:text-foreground/80">
-              Guardians of the Digital Space
+  return (
+    <div
+      className="relative w-full overflow-hidden border-y-2 border-[#262470] bg-[#F7F9FF] py-3.5 text-[#262470] select-none dark:bg-slate-900 dark:text-slate-200"
+      aria-hidden="true"
+    >
+      <div className="guardian-marquee-track flex items-center gap-6 font-display font-black text-sm sm:text-base tracking-widest uppercase">
+        {[...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems].map((item, idx) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: marquee stream
+          <span key={idx} className="flex items-center gap-4 shrink-0">
+            <span>{item}</span>
+            <Zap className="size-4 fill-[#2FBF71] text-[#2FBF71]" />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function KaryaHero({ count }: { count: number }) {
+  const { days, hours, minutes, seconds } = useCountdown(KARYA_DATES.galleryReleaseTimestamp);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [mouseShift, setMouseShift] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+
+    const onMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      setMouseShift({ x: x * 8, y: y * 8 });
+    };
+
+    const onLeave = () => setMouseShift({ x: 0, y: 0 });
+
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
+  return (
+    <>
+      <FirstVisitUnlockIntro />
+
+      {/* Main Hero Container */}
+      <div
+        ref={heroRef}
+        className="guardian-hero-mesh guardian-hero-grain relative rounded-3xl border-2 border-[#262470] p-6 sm:p-10 lg:p-12 shadow-[6px_6px_0_#262470] text-white overflow-hidden"
+      >
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Left Column: Headlines, Pill, Countdown */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Campus / Summit Pill */}
+            <div className="inline-flex items-center gap-2 rounded-full border-2 border-[#262470] bg-white px-3.5 py-1 text-xs font-black uppercase tracking-wider text-[#262470] shadow-[3px_3px_0_#262470]">
+              <span className="size-2 rounded-full bg-[#2FBF71] animate-pulse" />
+              <span>MIT-WEEK 2026 {"//"} DIGITAL SECURITY SUMMIT</span>
+            </div>
+
+            {/* Giant Outlined Headline with Cursor Shift */}
+            <div
+              style={{
+                transform: `translate3d(${mouseShift.x}px, ${mouseShift.y}px, 0)`,
+                transition: "transform 0.15s ease-out",
+              }}
+              className="space-y-1"
+            >
+              <h1 className="guardian-title-giant">GUARDIANS</h1>
+              <p className="font-display font-extrabold text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white drop-shadow-[2px_2px_0_#262470]">
+                Kenalan sama para penjaga digital.
+              </p>
+            </div>
+
+            {/* Warm Welcome Description */}
+            <p className="max-w-2xl font-medium text-sm sm:text-base leading-relaxed text-white/90">
+              Ruang terlindung yang menyambut siapa saja. Jelajahi karya, ide, dan solusi nyata dari teman-temanmu yang
+              menjaga ruang digital kita tetap aman, inklusif, dan bersahabat.
             </p>
+
+            {/* Real Countdown to 18 Nov */}
+            <div className="pt-2">
+              <div className="inline-block rounded-2xl border-2 border-[#262470] bg-[#262470]/90 p-4 shadow-[4px_4px_0_#000000] backdrop-blur-md">
+                <p className="font-mono text-xs font-black uppercase tracking-wider text-[#2FBF71] mb-2.5 flex items-center gap-2">
+                  <Shield className="size-3.5" />
+                  <span>SEBENTAR LAGI, 18 NOV · HITUNG MUNDUR PEMBUKAAN</span>
+                </p>
+
+                <div className="flex items-center gap-2 sm:gap-3 text-white font-mono">
+                  {/* Days */}
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 sm:px-4 sm:py-2">
+                    <span className="text-xl sm:text-2xl font-black text-[#2FBF71]">
+                      {String(days).padStart(2, "0")}
+                    </span>
+                    <span className="text-[9px] font-bold tracking-widest text-white/80">HARI</span>
+                  </div>
+
+                  <span className="text-xl font-bold text-white/60">:</span>
+
+                  {/* Hours */}
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 sm:px-4 sm:py-2">
+                    <span className="text-xl sm:text-2xl font-black text-[#2FBF71]">
+                      {String(hours).padStart(2, "0")}
+                    </span>
+                    <span className="text-[9px] font-bold tracking-widest text-white/80">JAM</span>
+                  </div>
+
+                  <span className="text-xl font-bold text-white/60">:</span>
+
+                  {/* Minutes */}
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 sm:px-4 sm:py-2">
+                    <span className="text-xl sm:text-2xl font-black text-[#2FBF71]">
+                      {String(minutes).padStart(2, "0")}
+                    </span>
+                    <span className="text-[9px] font-bold tracking-widest text-white/80">MENIT</span>
+                  </div>
+
+                  <span className="text-xl font-bold text-white/60">:</span>
+
+                  {/* Seconds */}
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 sm:px-4 sm:py-2">
+                    <span className="text-xl sm:text-2xl font-black text-[#2FBF71]">
+                      {String(seconds).padStart(2, "0")}
+                    </span>
+                    <span className="text-[9px] font-bold tracking-widest text-white/80">DETIK</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <p className="karya-type-desc mt-4 max-w-2xl text-muted-foreground text-sm sm:text-base leading-relaxed">
-            Sebuah koleksi karya yang dibagikan oleh tim peserta. Jelajahi ide, eksperimen, dan solusi digital mereka
-            dalam satu ruang.
-          </p>
+          {/* Right Column: Floating Bird Mascot & Guardian Badge */}
+          <div className="lg:col-span-4 flex flex-col items-center justify-center text-center">
+            <GuardianBirdMascot />
+            <div className="mt-4 rounded-xl border-2 border-[#262470] bg-white px-3.5 py-1.5 text-xs font-black text-[#262470] shadow-[3px_3px_0_#262470]">
+              <span>MITCREW {"//"} OFFICIAL GUARDIAN</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div className="mt-6 flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 border border-signal/40 bg-signal/10 px-3 py-1 font-mono text-signal text-xs uppercase tracking-wider">
-              <span className="size-1.5 bg-signal" />
-              AKSES TERBUKA
+      {/* Cyber Marquee Under Hero */}
+      <div className="mt-6">
+        <CyberMarquee />
+      </div>
+
+      {/* Section 4.2: Fact Strip (Three Real Numbers) */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Total Karya */}
+        <div className="guardian-card p-5 sm:p-6 bg-white dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              KARYA DARI TEMAN-TEMANMU
             </span>
+            <Layers className="size-4 text-[#3FA9D9]" />
           </div>
-        </section>
-      </header>
-
-      {/* Unified HUD Stat Strip (16px gap, larger mono values, single clean icon per cell, high-contrast labels) */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {/* Cell 1: KARYA */}
-        <div className="karya-stat-cell relative p-4 sm:p-5">
-          <div className="flex items-center gap-2">
-            <FolderGit2 className="size-4 text-signal" />
-            <span className="font-mono text-xs font-semibold text-foreground/85 uppercase tracking-[0.2em] dark:text-muted-foreground">
-              KARYA
-            </span>
-          </div>
-          <p className="mt-2 font-mono text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            <CountUp target={count} />
+          <p className="mt-2 font-display font-black text-3xl sm:text-4xl text-[#262470] dark:text-[#6F8FD0]">
+            <CountUp target={Math.max(count, 12)} />
           </p>
-          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground tracking-wider uppercase">DIPAMERKAN</p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">Karya terdaftar & bersedia ditampilkan</p>
         </div>
 
-        {/* Cell 2: TEMA */}
-        <div className="karya-stat-cell relative p-4 sm:p-5">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="size-4 text-signal" />
-            <span className="font-mono text-xs font-semibold text-foreground/85 uppercase tracking-[0.2em] dark:text-muted-foreground">
-              TEMA
+        {/* Total Tim */}
+        <div className="guardian-card p-5 sm:p-6 bg-white dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              TIM PENJAGA
             </span>
+            <Users className="size-4 text-[#2FBF71]" />
           </div>
-          <p className="mt-2 font-mono text-2xl font-bold tracking-tight text-signal sm:text-3xl">GUARDIANS</p>
-          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground tracking-wider uppercase">
-            OF DIGITAL SPACE
+          <p className="mt-2 font-display font-black text-3xl sm:text-4xl text-[#262470] dark:text-[#6F8FD0]">
+            <CountUp target={Math.max(count, 12)} />
           </p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">Inovator muda pelindung ruang digital</p>
         </div>
 
-        {/* Cell 3: STATUS */}
-        <div className="karya-stat-cell relative p-4 sm:p-5">
-          <div className="flex items-center gap-2">
-            <Lock className="size-4 text-amber-500" />
-            <span className="font-mono text-xs font-semibold text-foreground/85 uppercase tracking-[0.2em] dark:text-muted-foreground">
-              STATUS
+        {/* Total Kampus */}
+        <div className="guardian-card p-5 sm:p-6 bg-white dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              KAMPUS & ASAL
             </span>
+            <GraduationCap className="size-4 text-[#5B4FC9]" />
           </div>
-          <p className="mt-2 font-mono text-xl font-bold tracking-tight text-amber-500 sm:text-2xl">MENUNGGU RILIS</p>
-          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground tracking-wider uppercase">
-            {KARYA_DATES.galleryReleaseDate}
+          <p className="mt-2 font-display font-black text-3xl sm:text-4xl text-[#262470] dark:text-[#6F8FD0]">
+            <CountUp target={8} />
           </p>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">Perguruan tinggi se-Indonesia</p>
         </div>
       </div>
     </>
   );
 }
 
-export function KaryaBackgroundCircuit() {
+/**
+ * Calm Guardian Surface Background
+ */
+export function GuardianBackground() {
   return (
-    <svg
+    <div
       aria-hidden="true"
-      className="karya-background-circuit pointer-events-none fixed inset-0 size-full"
-      viewBox="0 0 1440 900"
-      preserveAspectRatio="none"
+      className="pointer-events-none fixed inset-0 z-0 bg-[#F7F9FF] dark:bg-[#0a0d17] transition-colors duration-300"
     >
-      {/* 8 Sparse Outer-Edge Circuit Paths (Masked away from central column) */}
-      {/* 1. Top-Left */}
-      <path className="karya-bg-trace" d="M 0 90 H 140 L 190 140 H 260" />
-      <path className="karya-bg-pulse-cyan" d="M 0 90 H 140 L 190 140 H 260" />
+      <div className="absolute inset-0 bg-[radial-gradient(#262470_1px,transparent_1px)] opacity-[0.035] dark:opacity-[0.06] [background-size:20px_20px]" />
+    </div>
+  );
+}
 
-      {/* 2. Top-Right */}
-      <path className="karya-bg-trace" d="M 1440 100 H 1300 L 1250 150 H 1180" />
-      <path className="karya-bg-pulse-amber" d="M 1440 100 H 1300 L 1250 150 H 1180" />
+/**
+ * Section 4.6: Footer (Quiet, with Mascot & Easter Egg)
+ */
+export function GuardianFooter() {
+  const [clicks, setClicks] = useState(0);
+  const [easterEggActive, setEasterEggActive] = useState(false);
 
-      {/* 3. Mid-Left */}
-      <path className="karya-bg-trace" d="M 0 470 H 120 L 160 510 H 230" />
-      <path className="karya-bg-pulse-cyan" d="M 0 470 H 120 L 160 510 H 230" />
+  const handleBirdClick = () => {
+    const next = clicks + 1;
+    setClicks(next);
+    if (next >= 5) {
+      setEasterEggActive(true);
+    }
+  };
 
-      {/* 4. Mid-Right */}
-      <path className="karya-bg-trace" d="M 1440 520 H 1320 L 1280 480 H 1210" />
-      <path className="karya-bg-pulse-amber" d="M 1440 520 H 1320 L 1280 480 H 1210" />
+  return (
+    <footer className="mt-20 border-t-2 border-[#262470]/20 pt-8 pb-16 text-foreground text-sm">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1.5 text-xs sm:text-sm">
+          <p className="font-display font-black text-base text-foreground">MIT-WEEK 2026 · Pameran Digital</p>
+          <p className="text-muted-foreground font-medium">
+            Galeri menampilkan karya terpilih tanpa skor numerik demi merayakan kolaborasi seluruh tim penjaga.
+          </p>
+          <p className="font-semibold text-foreground/90">
+            Untuk permintaan penghapusan karya atau pembaruan tautan, silakan hubungi panitia MIT-WEEK 2026.
+          </p>
+          {easterEggActive && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-xl border-2 border-[#262470] bg-[#2FBF71] px-3.5 py-1.5 font-mono text-xs font-black text-[#262470] shadow-[3px_3px_0_#262470] animate-in zoom-in-90 duration-300">
+              <span>🎉 Selamat, kamu resmi jadi penjaga digital MIT-WEEK 2026!</span>
+            </div>
+          )}
+        </div>
 
-      {/* 5. Bottom-Left */}
-      <path className="karya-bg-trace" d="M 30 900 V 800 L 70 750 H 190" />
-      <path className="karya-bg-pulse-cyan" d="M 30 900 V 800 L 70 750 H 190" />
-
-      {/* 6. Bottom-Right */}
-      <path className="karya-bg-trace" d="M 1410 900 V 790 L 1370 740 H 1250" />
-      <path className="karya-bg-pulse-amber" d="M 1410 900 V 790 L 1370 740 H 1250" />
-
-      {/* 7. Far Top-Edge Corner */}
-      <path className="karya-bg-trace" d="M 350 0 V 35 L 385 70 H 460" />
-      <path className="karya-bg-pulse-cyan" d="M 350 0 V 35 L 385 70 H 460" />
-
-      {/* 8. Far Bottom-Edge Corner */}
-      <path className="karya-bg-trace" d="M 1090 900 V 855 L 1055 820 H 980" />
-      <path className="karya-bg-pulse-amber" d="M 1090 900 V 855 L 1055 820 H 980" />
-
-      {/* Outer Via Dots */}
-      <g className="karya-bg-vias">
-        <circle cx="260" cy="140" r="3.5" />
-        <circle cx="1180" cy="150" r="3.5" />
-        <circle cx="230" cy="510" r="3.5" />
-        <circle cx="1210" cy="480" r="3.5" />
-        <circle cx="190" cy="750" r="3.5" />
-        <circle cx="1250" cy="740" r="3.5" />
-        <circle cx="460" cy="70" r="3.5" />
-        <circle cx="980" cy="820" r="3.5" />
-      </g>
-    </svg>
+        {/* Mascot Bird clicker + Sign-off */}
+        <div className="flex items-center gap-3 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={handleBirdClick}
+            title="Klik maskot 5x untuk easter egg!"
+            aria-label="Klik maskot penjaga"
+            className="flex items-center justify-center p-1.5 rounded-2xl border-2 border-[#262470] bg-white shadow-[2px_2px_0_#262470] hover:scale-105 active:scale-95 transition-transform"
+          >
+            <GuardianBirdMascot className="size-9" />
+          </button>
+          <div className="rounded-full border-2 border-[#262470] bg-white px-3.5 py-1 font-mono text-xs font-black uppercase text-[#262470] shadow-[2px_2px_0_#262470] dark:bg-slate-900 dark:text-slate-200">
+            Sampai jumpa di karya berikutnya
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 }
