@@ -80,6 +80,11 @@
   --brand-green-foreground: oklch(0.25 0.07 155);
   --signal: oklch(0.715 0.143 215.221);
   --hero: oklch(0.129 0.042 264.695);
+  --signal-warm: oklch(0.78 0.16 75);
+  --karya-ink: oklch(0.24 0.07 268);
+  --circuit-trace: oklch(0.24 0.07 268 / 10%);
+  --circuit-pulse-cyan: #0284c7;
+  --circuit-pulse-amber: #1e293b;
 
   /* surfaces */
   --background: oklch(0.975 0.012 255);
@@ -164,6 +169,11 @@
   --sidebar-ring: oklch(0.65 0.17 277);
   --signal: oklch(0.789 0.154 211.53);
   --hero: oklch(0.129 0.042 264.695);
+  --signal-warm: oklch(0.82 0.17 78);
+  --karya-ink: oklch(0.88 0.03 260);
+  --circuit-trace: oklch(1 0 0 / 10%);
+  --circuit-pulse-cyan: var(--signal);
+  --circuit-pulse-amber: var(--signal-warm);
 }
 
 @layer base {
@@ -229,6 +239,576 @@
 
   .dark .portal-hero .text-foreground {
     color: white;
+  }
+
+  .karya-hero-content-ready {
+    animation: karya-content-in 500ms ease-out both;
+  }
+
+  .karya-page {
+    background-image:
+      radial-gradient(circle at 50% 0%, color-mix(in oklab, var(--signal) 12%, transparent), transparent 34rem),
+      linear-gradient(color-mix(in oklab, var(--karya-ink) 9%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--karya-ink) 9%, transparent) 1px, transparent 1px),
+      radial-gradient(circle at 20% 58%, color-mix(in oklab, var(--signal) 8%, transparent), transparent 24rem);
+    background-position:
+      top center,
+      center,
+      center,
+      center;
+    background-size:
+      auto,
+      120px 120px,
+      120px 120px,
+      auto;
+    mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+  }
+
+  .karya-theme-toggle {
+    bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .karya-background-circuit {
+    z-index: -1;
+    opacity: 0.85;
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, transparent 35%, black 75%);
+  }
+
+  .karya-bg-trace {
+    fill: none;
+    stroke: var(--circuit-trace);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.25;
+  }
+
+  .karya-bg-pulse-cyan {
+    fill: none;
+    stroke: var(--circuit-pulse-cyan);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+    stroke-dasharray: 12 180;
+    animation: karya-bg-pulse 10s linear infinite;
+  }
+
+  .karya-bg-pulse-amber {
+    fill: none;
+    stroke: var(--circuit-pulse-amber);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+    stroke-dasharray: 10 200;
+    animation: karya-bg-pulse 14s -4s linear infinite;
+  }
+
+  .karya-bg-vias circle {
+    fill: var(--background);
+    stroke: var(--circuit-trace);
+    stroke-width: 1.5;
+  }
+
+  .karya-hero {
+    position: relative;
+    border: 1px solid color-mix(in oklab, var(--signal) 30%, var(--border));
+    background-color: var(--background);
+    background-image:
+      radial-gradient(circle at 82% 45%, color-mix(in oklab, var(--signal) 18%, transparent), transparent 40%),
+      linear-gradient(90deg, var(--background), color-mix(in oklab, var(--signal) 5%, var(--background)));
+    clip-path: polygon(
+      0.75rem 0,
+      calc(100% - 0.75rem) 0,
+      100% 0.75rem,
+      100% calc(100% - 0.75rem),
+      calc(100% - 0.75rem) 100%,
+      0.75rem 100%,
+      0 calc(100% - 0.75rem),
+      0 0.75rem
+    );
+  }
+
+  .dark .karya-hero {
+    background-color: var(--hero);
+    background-image:
+      radial-gradient(circle at 82% 45%, color-mix(in oklab, var(--signal) 22%, transparent), transparent 40%),
+      linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--hero) 96%, transparent),
+        color-mix(in oklab, var(--hero) 70%, transparent)
+      );
+    border-color: color-mix(in oklab, var(--signal) 35%, var(--border));
+  }
+
+  .karya-hero-scrim {
+    z-index: 1;
+    background: linear-gradient(
+      90deg,
+      var(--background) 0%,
+      color-mix(in oklab, var(--background) 92%, transparent) 42%,
+      transparent 76%
+    );
+    pointer-events: none;
+  }
+
+  .karya-hero::after {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 3px,
+      color-mix(in oklab, var(--signal) 4%, transparent) 4px,
+      transparent 5px
+    );
+    content: "";
+    pointer-events: none;
+  }
+
+  .karya-hero-brackets {
+    pointer-events: none;
+  }
+
+  .karya-hero-brackets::before,
+  .karya-hero-brackets::after {
+    position: absolute;
+    width: 3rem;
+    height: 3rem;
+    border-color: var(--signal);
+    content: "";
+  }
+
+  .karya-hero-brackets::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+  }
+
+  .karya-hero-brackets::after {
+    right: -1px;
+    bottom: -1px;
+    border-right: 2px solid;
+    border-bottom: 2px solid;
+  }
+
+  .karya-hero-label {
+    position: absolute;
+    z-index: 10;
+    color: color-mix(in oklab, var(--signal) 65%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .karya-hero-label-top-left {
+    top: 1.25rem;
+    left: 1.5rem;
+  }
+
+  .karya-hero-label-top-right {
+    top: 1.25rem;
+    right: 4.5rem;
+  }
+
+  .karya-hero-label-bottom-right {
+    right: 1.5rem;
+    bottom: 1.25rem;
+  }
+
+  .karya-hero-ticks {
+    background:
+      linear-gradient(var(--signal), var(--signal)) 14% 0 / 1px 8px no-repeat,
+      linear-gradient(var(--signal), var(--signal)) 28% 100% / 1px 8px no-repeat,
+      linear-gradient(var(--signal), var(--signal)) 72% 0 / 1px 8px no-repeat,
+      linear-gradient(var(--signal), var(--signal)) 86% 100% / 1px 8px no-repeat;
+    opacity: 0.35;
+  }
+
+  .dark .karya-hero-scrim {
+    background: linear-gradient(
+      90deg,
+      var(--hero) 0%,
+      color-mix(in oklab, var(--hero) 92%, transparent) 42%,
+      transparent 76%
+    );
+  }
+
+  .karya-headline {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    animation: karya-type-reveal 0.8s cubic-bezier(0.2, 0, 0.2, 1) both;
+  }
+
+  .karya-type-sub {
+    animation: karya-fade-up 0.4s 0.55s ease-out both;
+  }
+
+  .karya-type-desc {
+    animation: karya-fade-up 0.4s 0.85s ease-out both;
+  }
+
+  .karya-circuit {
+    z-index: 0;
+    opacity: 0.85;
+    overflow: visible;
+  }
+
+  .karya-trace-bundle {
+    fill: none;
+    stroke: color-mix(in oklab, var(--karya-ink) 54%, transparent);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+  }
+
+  .karya-trace-pulse {
+    fill: none;
+    stroke: var(--signal);
+    stroke-dasharray: 18 240;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.5;
+    animation: karya-trace-pulse 3.5s linear infinite;
+  }
+
+  .karya-trace-lower {
+    animation-delay: -1.2s;
+  }
+
+  .karya-trace-right {
+    animation-delay: -2s;
+  }
+
+  .karya-vias circle {
+    fill: var(--background);
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+
+  .karya-ghost-shield {
+    fill: color-mix(in oklab, var(--signal) 3%, transparent);
+    stroke: color-mix(in oklab, var(--signal) 15%, transparent);
+    stroke-width: 1;
+  }
+
+  .karya-shield-outline,
+  .karya-shield-glow,
+  .karya-lock {
+    fill: none;
+    stroke: currentColor;
+    stroke-linejoin: round;
+    stroke-width: 2.5;
+  }
+
+  .karya-shield-glow {
+    stroke: var(--karya-ink);
+    stroke-width: 12;
+    opacity: 0.14;
+  }
+
+  .karya-shield {
+    opacity: 1;
+  }
+
+  .karya-lock-ring {
+    fill: none;
+    stroke: var(--signal);
+    stroke-width: 1.25;
+    transform-origin: 510px 195px;
+    animation: karya-lock-pulse 5s cubic-bezier(0.2, 0.4, 0.4, 1) infinite;
+  }
+
+  .karya-lock-ring-2 {
+    animation-delay: -1.65s;
+  }
+
+  .karya-lock-ring-3 {
+    animation-delay: -3.3s;
+  }
+
+  .karya-scanner-arc {
+    fill: none;
+    stroke: color-mix(in oklab, var(--signal) 55%, transparent);
+    stroke-dasharray: 20 40;
+    stroke-linecap: round;
+    stroke-width: 1;
+    transform-origin: 510px 195px;
+    animation: karya-scanner-rotate 16s linear infinite;
+  }
+
+  .karya-radar {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+    opacity: 0;
+    transform-origin: center;
+    animation: karya-radar-pulse 2.8s ease-out infinite;
+  }
+
+  .karya-radar-two {
+    animation-delay: 1.2s;
+  }
+
+  .karya-lock-core {
+    fill: currentColor;
+    opacity: 1;
+  }
+
+  .karya-packet {
+    fill: var(--signal);
+    animation: karya-packet-move 2.4s 1.5s linear infinite;
+  }
+
+  .karya-packet-blocked {
+    fill: var(--signal-warm);
+    animation-delay: 2s;
+  }
+
+  .karya-cursor {
+    display: inline-block;
+    width: 0.45em;
+    height: 1em;
+    margin-left: 0.25rem;
+    background: currentColor;
+    vertical-align: -0.15em;
+    animation: karya-cursor-blink 900ms steps(2, jump-none) infinite;
+  }
+
+  .karya-stat-cell {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    clip-path: polygon(
+      0.5rem 0,
+      calc(100% - 0.5rem) 0,
+      100% 0.5rem,
+      100% calc(100% - 0.5rem),
+      calc(100% - 0.5rem) 100%,
+      0.5rem 100%,
+      0 calc(100% - 0.5rem),
+      0 0.5rem
+    );
+  }
+
+  .karya-vault {
+    position: relative;
+    background-color: var(--card);
+    border: 1px solid color-mix(in oklab, var(--signal-warm) 45%, var(--border));
+    clip-path: polygon(
+      0.75rem 0,
+      calc(100% - 0.75rem) 0,
+      100% 0.75rem,
+      100% calc(100% - 0.75rem),
+      calc(100% - 0.75rem) 100%,
+      0.75rem 100%,
+      0 calc(100% - 0.75rem),
+      0 0.75rem
+    );
+  }
+
+  .karya-timeline-node {
+    background-color: var(--card);
+    clip-path: polygon(
+      0.5rem 0,
+      calc(100% - 0.5rem) 0,
+      100% 0.5rem,
+      100% calc(100% - 0.5rem),
+      calc(100% - 0.5rem) 100%,
+      0.5rem 100%,
+      0 calc(100% - 0.5rem),
+      0 0.5rem
+    );
+  }
+
+  .karya-ciphertext {
+    animation: karya-ciphertext-scroll 25s linear infinite;
+  }
+
+  .karya-card {
+    position: relative;
+    background-color: var(--card);
+    clip-path: polygon(
+      0.5rem 0,
+      calc(100% - 0.5rem) 0,
+      100% 0.5rem,
+      100% calc(100% - 0.5rem),
+      calc(100% - 0.5rem) 100%,
+      0.5rem 100%,
+      0 calc(100% - 0.5rem),
+      0 0.5rem
+    );
+  }
+
+  .karya-card::before,
+  .karya-card::after {
+    position: absolute;
+    z-index: 2;
+    width: 1rem;
+    height: 1rem;
+    border-color: var(--signal);
+    content: "";
+    opacity: 0.65;
+    pointer-events: none;
+    transition:
+      width 250ms ease,
+      height 250ms ease,
+      opacity 250ms ease;
+  }
+
+  .karya-card::before {
+    top: 0.65rem;
+    left: 0.65rem;
+    border-top: 1px solid;
+    border-left: 1px solid;
+  }
+
+  .karya-card::after {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+  }
+
+  .karya-card:hover::before,
+  .karya-card:hover::after {
+    width: 1.5rem;
+    height: 1.5rem;
+    opacity: 1;
+  }
+}
+
+@keyframes karya-type-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes karya-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes karya-ciphertext-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes karya-bg-pulse {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -192;
+  }
+}
+
+@keyframes karya-trace-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes karya-trace-pulse {
+  0% {
+    stroke-dashoffset: 258;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes karya-packet-move {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes karya-lock-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes karya-scanner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes karya-radar-pulse {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes karya-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .karya-circuit *,
+  .karya-headline,
+  .karya-type-sub,
+  .karya-type-desc,
+  .karya-ciphertext,
+  .karya-cursor,
+  .karya-bg-pulse-cyan,
+  .karya-bg-pulse-amber,
+  .karya-trace-pulse,
+  .karya-packet,
+  .karya-lock-ring,
+  .karya-scanner-arc,
+  .karya-radar {
+    animation: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .karya-ciphertext {
+    transform: none !important;
   }
 }
 

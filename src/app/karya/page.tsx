@@ -4,9 +4,11 @@ import type { ShowcaseCardData } from "@/components/showcase-card";
 import { ShowcaseGallery } from "@/components/showcase-gallery";
 import { createClient } from "@/lib/supabase/server";
 
+import { KaryaBackgroundCircuit, KaryaHero, KaryaThemeToggle } from "./karya-hero";
+
 export const metadata: Metadata = {
   title: "Karya Peserta | MIT-WEEK 2026",
-  description: "Galeri karya peserta MIT-WEEK 2026.",
+  description: "Galeri karya peserta kompetisi MIT-WEEK 2026: Guardians of the Digital Space.",
   robots: { index: false, follow: false },
 };
 
@@ -19,10 +21,10 @@ export default async function PublicKaryaPage() {
 
   if (error || winnersError) {
     return (
-      <main className="min-h-dvh bg-slate-950 px-4 py-10 text-slate-100 sm:px-6">
+      <main className="min-h-dvh bg-background px-4 py-10 text-foreground sm:px-6">
         <div className="mx-auto max-w-6xl">
           <h1 className="font-display font-semibold text-3xl">Karya Peserta</h1>
-          <p className="mt-3 text-slate-400">Galeri belum dapat dimuat. Silakan coba lagi nanti.</p>
+          <p className="mt-3 text-muted-foreground">Galeri belum dapat dimuat. Silakan coba lagi nanti.</p>
         </div>
       </main>
     );
@@ -58,40 +60,52 @@ export default async function PublicKaryaPage() {
     }));
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-slate-950 text-slate-100">
-      <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-        <header className="relative flex min-h-[340px] flex-col justify-end overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-cyan-950/20 sm:min-h-[370px] sm:p-10 lg:p-14">
-          <div className="absolute -top-32 -right-20 size-80 rounded-full bg-cyan-300/10 blur-3xl motion-safe:animate-pulse" />
-          <div className="absolute right-1/4 bottom-[-8rem] size-72 rounded-full bg-amber-300/10 blur-3xl" />
-          <div className="absolute top-8 right-8 hidden text-right sm:block">
-            <p className="font-display font-semibold text-4xl text-white">{cards.length}</p>
-            <p className="text-slate-400 text-xs uppercase tracking-[0.2em]">karya dipamerkan</p>
-          </div>
-          <div className="relative max-w-4xl">
-            <p className="mb-6 flex items-center gap-3 font-medium text-cyan-200 text-xs uppercase tracking-[0.28em]">
-              <span className="size-2 rounded-full bg-cyan-300 shadow-[0_0_18px] shadow-cyan-300" />
-              MIT-WEEK 2026 · Pameran digital
-            </p>
-            <h1 className="max-w-3xl font-display font-semibold text-5xl text-white leading-[0.95] tracking-[-0.06em] sm:text-7xl">
-              Karya peserta.
-            </h1>
-            <p className="mt-6 max-w-xl font-display text-2xl text-slate-300 leading-tight sm:text-3xl">
-              Guardians of the Digital Space
-            </p>
-            <p className="mt-6 max-w-2xl text-slate-400 leading-7">
-              Sebuah koleksi karya yang dibagikan oleh tim peserta. Jelajahi ide, eksperimen, dan solusi digital mereka
-              dalam satu ruang.
-            </p>
-          </div>
-        </header>
+    <main className="karya-page min-h-dvh overflow-hidden bg-background text-foreground">
+      {/* Fixed Background Circuit with sparse pulses */}
+      <KaryaBackgroundCircuit />
 
-        <div className="mt-10">
-          <ShowcaseGallery cards={cards} winners={winners} />
+      {/* Theme Toggle Button portaled to document.body */}
+      <KaryaThemeToggle />
+
+      {/* Main Widened Container (1360-1440px) */}
+      <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8 xl:px-10">
+        {/* Hero Section & Stat Strip */}
+        <KaryaHero count={cards.length} />
+
+        {/* Gallery Section */}
+        <div className="mt-12 sm:mt-16">
+          <ShowcaseGallery cards={cards} winners={winners} serverNow={Date.now()} />
         </div>
 
-        <footer className="mt-16 border-white/10 border-t py-8 text-slate-500 text-sm leading-6">
-          <p>Galeri tidak menampilkan nilai atau peringkat. Pemenang diumumkan terpisah.</p>
-          <p className="mt-1">Untuk permintaan penghapusan karya, silakan hubungi panitia MIT-WEEK 2026.</p>
+        {/* Footer with Circuit Trace ending at node // END */}
+        <footer className="mt-20 border-t border-border/80 pt-8 pb-14 text-foreground/90 text-sm">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5 text-xs sm:text-sm">
+              <p className="font-semibold text-foreground">MIT-WEEK 2026 · Pameran Digital</p>
+              <p className="text-foreground/80 dark:text-slate-300">
+                Galeri tidak menampilkan nilai atau peringkat. Pemenang diumumkan terpisah.
+              </p>
+              <p className="font-medium text-foreground dark:text-slate-200">
+                Untuk permintaan penghapusan karya, silakan hubungi panitia MIT-WEEK 2026.
+              </p>
+            </div>
+
+            {/* Trace ending at node with // END */}
+            <div className="flex items-center gap-3 self-start font-mono text-xs text-signal sm:self-center">
+              <svg
+                className="h-4 w-16 stroke-current text-signal/60"
+                viewBox="0 0 64 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path d="M0 8h46l8-6h10" strokeWidth="1.5" />
+                <circle cx="60" cy="2" r="2.5" className="fill-signal" />
+              </svg>
+              <span className="border border-signal/40 bg-signal/10 px-2.5 py-0.5 tracking-widest text-[11px] text-signal font-semibold">
+                SYS {"//"} END
+              </span>
+            </div>
+          </div>
         </footer>
       </div>
     </main>

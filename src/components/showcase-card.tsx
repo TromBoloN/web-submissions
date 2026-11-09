@@ -29,9 +29,9 @@ function getInitials(value: string): string {
 function getPlaceholderClass(value: string): string {
   const hash = Array.from(value).reduce((total, character) => total + character.charCodeAt(0), 0);
   return [
-    "from-cyan-500/30 via-slate-950 to-amber-400/20",
-    "from-violet-500/30 via-slate-950 to-cyan-400/20",
-    "from-amber-500/30 via-slate-950 to-rose-400/20",
+    "from-signal/30 via-card to-brand-green/20",
+    "from-brand-purple/30 via-card to-signal/20",
+    "from-brand-green/30 via-card to-brand-purple/20",
   ][hash % 3];
 }
 
@@ -41,6 +41,26 @@ function getDomainLabel(url: string): string {
   } catch {
     return "Tautan";
   }
+}
+
+function ScoreCountUp({ target, active }: { target: number; active: boolean }) {
+  const [score, setScore] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const duration = 700;
+    const startedAt = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      setScore(progress * target);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [active, target]);
+
+  return <>{score.toFixed(2)}</>;
 }
 
 function ActionLink({
@@ -63,8 +83,8 @@ function ActionLink({
       rel="noopener noreferrer"
       className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${
         primary
-          ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
-          : "border border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50 hover:bg-white/10"
+          ? "bg-signal text-primary-foreground hover:bg-signal/85"
+          : "border border-border bg-card/60 text-card-foreground hover:border-signal/50 hover:bg-accent"
       }`}
     >
       {icon}
@@ -108,12 +128,15 @@ export function ShowcaseCard({
   return (
     <article
       ref={cardRef}
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/10 transition-[border-color,background-color,transform,opacity] duration-700 ease-out motion-reduce:transition-none ${
+      style={
+        variant === "winner" ? { transitionDelay: `${Math.max(0, 3 - (data.winnerRank ?? 3)) * 180}ms` } : undefined
+      }
+      className={`karya-card group flex h-full flex-col overflow-hidden border border-border bg-card shadow-2xl shadow-black/10 transition-[border-color,background-color,transform,opacity] duration-700 ease-out motion-reduce:transition-none ${
         isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-      } hover:-translate-y-1 hover:border-cyan-300/35 hover:bg-white/[0.07]`}
+      } hover:-translate-y-1 hover:border-signal/60 hover:bg-accent`}
     >
       <div
-        className={`relative isolate overflow-hidden bg-slate-900 ${variant === "winner" ? "aspect-[16/9]" : "aspect-[16/10]"}`}
+        className={`relative isolate overflow-hidden bg-muted ${variant === "winner" ? "aspect-[16/9]" : "aspect-[16/10]"}`}
       >
         {data.imageUrl ? (
           // biome-ignore lint/performance/noImgElement: public storage images are not configured as Next image domains
@@ -127,7 +150,7 @@ export function ShowcaseCard({
           />
         ) : (
           <div className={`flex size-full items-center justify-center bg-gradient-to-br ${placeholderClass}`}>
-            <span className="font-display font-semibold text-6xl text-white/85 tracking-tight">
+            <span className="font-display font-semibold text-6xl text-foreground/85 tracking-tight">
               {getInitials(data.teamName)}
             </span>
             <span className="sr-only">Tidak ada gambar pratinjau</span>
@@ -137,19 +160,23 @@ export function ShowcaseCard({
       <div className="flex flex-1 flex-col gap-4 p-5">
         {variant === "winner" && data.winnerRank && (
           <div className="flex items-center justify-between border-cyan-300/30 border-b pb-3">
-            <p className="font-display font-semibold text-cyan-200 text-sm uppercase tracking-[0.18em]">
+            <p className="font-display font-semibold text-signal text-sm uppercase tracking-[0.18em]">
               Peringkat {data.winnerRank}
             </p>
-            <p className="font-display font-semibold text-white">{data.winnerScore?.toFixed(2) ?? "-"}</p>
+            <p className="font-display font-semibold text-foreground">
+              {data.winnerScore === undefined ? "-" : <ScoreCountUp target={data.winnerScore} active={isVisible} />}
+            </p>
           </div>
         )}
         <div>
-          <p className="mb-1 text-cyan-200/75 text-xs uppercase tracking-[0.18em]">{data.teamName}</p>
-          <h2 className="font-display font-semibold text-xl text-white tracking-tight">
+          <p className="mb-1 text-signal/80 text-xs uppercase tracking-[0.18em]">{data.teamName}</p>
+          <h2 className="font-display font-semibold text-xl text-foreground tracking-tight">
             {data.title || data.teamName}
           </h2>
         </div>
-        <p className="line-clamp-3 min-h-[4.5rem] text-slate-300 text-sm leading-6">{data.description || "\u00a0"}</p>
+        <p className="line-clamp-3 min-h-[4.5rem] text-muted-foreground text-sm leading-6">
+          {data.description || "\u00a0"}
+        </p>
         <div className="mt-auto grid gap-2">
           <ActionLink
             href={data.liveDemoUrl}
