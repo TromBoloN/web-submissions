@@ -16,7 +16,7 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 | Screen              | URL                                   | Folder (under `src/app/`)                             | Data                                                |
 | ------------------- | ------------------------------------- | ----------------------------------------------------- | --------------------------------------------------- |
 | Login               | /login                                | `(auth)/login`, `(auth)/_components`                  | Auth                                                |
-| Admin dashboard     | /admin                                | `(main)/admin/page.tsx`                               | counts and deadline status                          |
+| Admin dashboard     | /admin                                | `(main)/admin` (`page.tsx`, `dashboard-client.tsx`, `dashboard-countdown.tsx`) | counts, deadline, submissions, judging, ranking, audit |
 | Accounts            | /admin/akun                           | `(main)/admin/akun`                                   | `profiles` + Auth (service role)                    |
 | Audit               | /admin/audit                          | `(main)/admin/audit/page.tsx`                        | `audit_logs` + `profiles`                           |
 | Finalists           | /admin/finalis                        | `(main)/admin/finalis`                                | `teams.is_finalist`, ranking views                  |
@@ -32,7 +32,7 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 | Change password     | /<role>/kata-sandi                    | `(main)/<role>/kata-sandi`                            | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized        | /unauthorized                         | `(main)/unauthorized`                                 | none                                                |
 
-Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
+Admin dashboard parts: `dashboard-client.tsx` (metric cards, progress ring, phase timeline, chase/judging/ranking panels, release controls, exports, health, activity) and `dashboard-countdown.tsx` (server-synced WITA countdown). Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
 
 ## Shared code
 
