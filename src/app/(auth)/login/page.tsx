@@ -1,14 +1,16 @@
+import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
+import { createClient as createPlainClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 
 import { Card } from "@/components/ui/card";
 import { APP_CONFIG } from "@/config/app-config";
 import { getCurrentProfile, getDashboardPath } from "@/lib/auth";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
-import { createClient } from "@/lib/supabase/server";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
+import type { Database } from "@/types/database";
 
 import { LoginForm } from "../_components/login-form";
 
@@ -18,6 +20,31 @@ export const metadata: Metadata = {
   alternates: { canonical: "/login" },
 };
 
+// The contact number is public and rarely changes, so fetch it at most once per 5 minutes
+// instead of once per /login request. Errors are thrown so a failure is never cached.
+const getCachedContactWhatsapp = unstable_cache(
+  async (): Promise<string | null> => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Supabase public configuration is missing.");
+
+    const client = createPlainClient<Database>(url, key);
+    const { data, error } = await client.rpc("get_public_contact_whatsapp");
+    if (error) throw new Error("Failed to load contact number.");
+    return data ?? null;
+  },
+  ["public-contact-whatsapp"],
+  { revalidate: 300 },
+);
+
+async function loadContactWhatsapp(): Promise<string | null> {
+  try {
+    return await getCachedContactWhatsapp();
+  } catch {
+    return null;
+  }
+}
+
 export default async function LoginPage() {
   const profile = await getCurrentProfile();
 
@@ -25,8 +52,7 @@ export default async function LoginPage() {
     redirect(getDashboardPath(profile.role));
   }
 
-  const supabase = await createClient();
-  const { data: contactWhatsapp } = await supabase.rpc("get_public_contact_whatsapp");
+  const contactWhatsapp = await loadContactWhatsapp();
   const formattedContact = formatWhatsAppNumber(contactWhatsapp);
 
   return (
