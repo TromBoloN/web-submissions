@@ -1105,9 +1105,9 @@ html {
    ========================================================================== */
 
 .karya-page {
-  --bg: #dfe6fa;
-  --bg1: #c6dbf6;
-  --bg2: #ece8ff;
+  --bg: #e7ecfb;
+  --bg1: #d9e4f8;
+  --bg2: #f0ecff;
   --ink: #0f1330;
   --card: #ffffff;
   --line: #0f1330;
@@ -1115,7 +1115,7 @@ html {
   --acc: #22d395;
   --acci: #05704a;
   --vio: #6a4df0;
-  --muted: #47507a;
+  --muted: #374264;
   --ts: #0f1330;
   --edge: color-mix(in srgb, var(--line) 20%, transparent);
   --glass: color-mix(in srgb, var(--card) 84%, transparent);
@@ -1147,7 +1147,7 @@ html {
   --acc: #4be39a;
   --acci: #4be39a;
   --vio: #8da2f5;
-  --muted: #9ba4d6;
+  --muted: #b7bfe9;
   --ts: #05071a;
 }
 
@@ -1156,6 +1156,7 @@ html {
 }
 .karya-page .muted {
   color: var(--muted);
+  font-weight: 500;
 }
 .karya-page .acc {
   color: var(--acci);
@@ -1174,14 +1175,14 @@ html {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.22;
+  opacity: 0.16;
 }
 .karya-page .bgfx::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(color-mix(in srgb, var(--line) 16%, transparent) 1.2px, transparent 1.5px) 0 0 / 28px 28px;
+    radial-gradient(color-mix(in srgb, var(--line) 12%, transparent) 1.2px, transparent 1.5px) 0 0 / 28px 28px;
 }
 .karya-page .g1 {
   transform-origin: 1180px 330px;
@@ -1214,12 +1215,10 @@ html {
 
 /* Primitives */
 .karya-page .box {
-  background: var(--glass);
+  background: var(--card);
   border: 1px solid var(--edge);
   border-radius: 18px;
   box-shadow: 5px 5px 0 var(--shadow);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
-  backdrop-filter: blur(16px) saturate(130%);
 }
 .karya-page .btn {
   display: inline-flex;
@@ -1579,7 +1578,7 @@ html {
 }
 .karya-page .ds {
   color: var(--muted);
-  line-height: 1.45;
+  line-height: 1.55;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -1693,6 +1692,9 @@ html {
 }
 
 /* Timeline */
+.karya-page #tlist li.box {
+  border: 2.5px solid var(--line);
+}
 .karya-page #tlist li:not(:last-child)::after {
   content: "";
   position: absolute;
@@ -1704,7 +1706,7 @@ html {
     top: 50%;
     left: 100%;
     width: 1.5rem;
-    border-top-width: 1px;
+    border-top-width: 2.5px;
   }
 }
 @media (max-width: 767px) {
@@ -1712,12 +1714,12 @@ html {
     top: 100%;
     left: 2rem;
     height: 1.5rem;
-    border-left-width: 1px;
+    border-left-width: 2.5px;
   }
 }
 .karya-page .st {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 6px;

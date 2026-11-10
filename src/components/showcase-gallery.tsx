@@ -171,7 +171,7 @@ function LockedVaultState() {
 
           <div className="guardian-card p-4 bg-white dark:bg-slate-900 border-2 border-[#262470]">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground">TAHAP 02</span>
+              <span className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground">TAHAP 1.5</span>
               <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-bold text-muted-foreground">FINAL</span>
             </div>
             <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage2Label}</h4>

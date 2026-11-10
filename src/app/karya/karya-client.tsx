@@ -74,6 +74,7 @@ type StageStatus = keyof typeof STAGE_LABELS;
 
 const TIMELINE_STAGES = [
   { label: KARYA_DATES.stage1Label, description: KARYA_DATES.stage1Desc },
+  { label: KARYA_DATES.stage2Label, description: KARYA_DATES.stage2Desc },
   { label: KARYA_DATES.stage3Label, description: KARYA_DATES.stage3Desc },
 ] as const;
 
@@ -303,7 +304,7 @@ export function KaryaClient({
   if (isLocked) {
     activeStage = -1;
   } else if (isWin) {
-    activeStage = 1;
+    activeStage = 2;
   }
   const showFinalists = isLocked || (isWin ? remainingFinalists.length > 0 : finalists.length > 0);
 
@@ -429,7 +430,7 @@ export function KaryaClient({
         {/* Schedule Timeline */}
         <section id="tl" className="mt-10" aria-label="Jadwal">
           <p className="mono muted mb-3 text-xs">Jadwal · Web Development Competition MIT-WEEK 2026</p>
-          <ol id="tlist" className="mx-auto grid w-full max-w-4xl gap-6 md:grid-cols-2">
+          <ol id="tlist" className="grid w-full gap-6 md:grid-cols-3">
             {TIMELINE_STAGES.map((stage, index) => {
               const status = getStageStatus(index, activeStage);
               const isDone = status === "done";
@@ -476,7 +477,7 @@ export function KaryaClient({
                     <span className={`st ${status}`}>{STAGE_LABELS[status]}</span>
                   </div>
                   <h3 className="mt-3 font-extrabold leading-tight">{stage.label}</h3>
-                  {isLocked && <p className="tdesc muted mt-1 text-sm leading-snug">{stage.description}</p>}
+                  {isLocked && <p className="tdesc muted mt-1 text-sm leading-relaxed">{stage.description}</p>}
                 </li>
               );
             })}
