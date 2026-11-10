@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { LayoutGrid, List } from "lucide-react";
+
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import { KARYA_DATES } from "./karya-constants";
@@ -356,11 +358,13 @@ export function KaryaClient({
           <div className="ld-p ld-t" />
           <div className="ld-p ld-b" />
           <div className="ld-c">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle className="dr" cx="60" cy="60" r="55" pathLength="1" />
-              <polygon className="dr h" points="60,14 100,37 100,83 60,106 20,83 20,37" pathLength="1" />
-              <polygon className="fl" points="60,30 86,45 86,75 60,90 34,75 34,45" />
-            </svg>
+            <div className="ld-mark">
+              <svg className="ld-ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle className="dr" cx="60" cy="60" r="55" pathLength="1" />
+                <polygon className="dr h" points="60,14 100,37 100,83 60,106 20,83 20,37" pathLength="1" />
+              </svg>
+              <KaryaLogo className="ld-logo-mark" />
+            </div>
             <p className="mono font-semibold">Menyiapkan ruang yang aman</p>
           </div>
         </button>
@@ -563,11 +567,25 @@ export function KaryaClient({
 
             <div id="tools" className="flex flex-wrap items-center gap-3">
               <fieldset className="flex gap-2 border-0 p-0 m-0" aria-label="Tampilan karya">
-                <button type="button" className="btn" aria-pressed={view === "grid"} onClick={() => setView("grid")}>
-                  Grid
+                <button
+                  type="button"
+                  className="btn ico"
+                  aria-pressed={view === "grid"}
+                  aria-label="Tampilan grid"
+                  title="Tampilan grid"
+                  onClick={() => setView("grid")}
+                >
+                  <LayoutGrid aria-hidden="true" />
                 </button>
-                <button type="button" className="btn" aria-pressed={view === "list"} onClick={() => setView("list")}>
-                  List
+                <button
+                  type="button"
+                  className="btn ico"
+                  aria-pressed={view === "list"}
+                  aria-label="Tampilan list"
+                  title="Tampilan list"
+                  onClick={() => setView("list")}
+                >
+                  <List aria-hidden="true" />
                 </button>
               </fieldset>
               {!isLocked && (
@@ -590,7 +608,7 @@ export function KaryaClient({
 
           {/* Locked State Grid Skeletons */}
           {isLocked && view === "grid" && (
-            <div className="view-anim mt-8 grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="view-anim works-grid mt-8">
               {Array.from({ length: 6 }).map((_, idx) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items
                 <SkeletonCard key={`skel-all-${idx}`} />
@@ -610,7 +628,7 @@ export function KaryaClient({
 
           {/* Released State Grid View */}
           {!isLocked && view === "grid" && (
-            <div className="view-anim mt-8 grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="view-anim works-grid mt-8">
               {filteredRestCards.map((item) => (
                 <CardView key={item.teamName} item={item} onOpenModal={() => setActiveModalItem(item)} />
               ))}

@@ -1322,9 +1322,18 @@ html {
 .karya-page .ld.open .ld-c {
   opacity: 0;
 }
-.karya-page .ld svg {
+.karya-page .ld-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 120px;
   height: 120px;
+}
+.karya-page .ld-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 .karya-page .ld .dr {
   fill: none;
@@ -1337,10 +1346,13 @@ html {
 .karya-page .ld .dr.h {
   animation-delay: 0.35s;
 }
-.karya-page .ld .fl {
-  fill: var(--acc);
+.karya-page .ld .ld-logo-mark {
+  position: relative;
+  z-index: 1;
+  width: 60px;
+  height: 60px;
   opacity: 0;
-  animation: karya-lf 0.5s 1.2s forwards;
+  animation: karya-loader-logo 0.55s 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .karya-page .ld p {
   font-size: 12px;
@@ -1350,6 +1362,16 @@ html {
 @keyframes karya-draw {
   to {
     stroke-dashoffset: 0;
+  }
+}
+@keyframes karya-loader-logo {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 @keyframes karya-lf {
@@ -1636,6 +1658,37 @@ html {
   }
   .karya-page .fin.n2 > * {
     flex-basis: calc((100% - 1.75rem) / 2);
+  }
+}
+
+/* Participant works */
+.karya-page .works-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+}
+.karya-page .works-grid > * {
+  flex: 0 1 100%;
+  max-width: 24rem;
+}
+@media (min-width: 640px) {
+  .karya-page .works-grid {
+    gap: 1.75rem;
+  }
+  .karya-page .works-grid > * {
+    flex-basis: calc((100% - 1.75rem) / 2);
+    max-width: none;
+  }
+}
+@media (min-width: 1024px) {
+  .karya-page .works-grid > * {
+    flex-basis: calc((100% - 3.5rem) / 3);
+  }
+}
+@media (min-width: 1536px) {
+  .karya-page .works-grid > * {
+    flex-basis: calc((100% - 5.25rem) / 4);
   }
 }
 
