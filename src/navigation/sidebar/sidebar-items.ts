@@ -73,6 +73,7 @@ export function getSidebarItems(
           { id: "submissions", title: "Submission", url: "/admin/submission", icon: FileText },
           { id: "ranking", title: "Peringkat", url: "/admin/peringkat", icon: Award },
           { id: "finalists", title: "Finalis", url: "/admin/finalis", icon: Trophy },
+          { id: "karya", title: "Karya", url: "/karya", icon: Images },
         ],
       },
       {
@@ -96,13 +97,19 @@ export function getSidebarItems(
       url: basePath,
       icon: LayoutDashboard,
     },
-    {
+  ];
+
+  if (isJudge) {
+    // Judges only visit the public gallery; they do not have a showcase editor.
+    items.push({ id: "karya", title: "Karya", url: "/karya", icon: Images });
+  } else {
+    items.push({
       id: "showcase",
       title: "Tampilan Karya",
-      url: `${basePath}/karya`,
+      url: "/team/karya",
       icon: Images,
-    },
-  ];
+    });
+  }
 
   if (role === "team" && resultsReleased === true) {
     items.push({

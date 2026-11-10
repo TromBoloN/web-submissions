@@ -22,6 +22,7 @@ import {
   FileText,
   Globe,
   HelpCircle,
+  Images,
   MessageCircle,
   RotateCw,
   StickyNote,
@@ -1125,6 +1126,12 @@ export function SubmissionClient({
         <div className="space-y-6">
           {/* 1. Resource links */}
           <div className="grid grid-cols-2 gap-2">
+            <Button asChild variant="outline" size="sm" className="justify-start gap-2">
+              <Link href="/karya">
+                <Images className="size-4 text-primary" />
+                <span>Lihat Karya Peserta</span>
+              </Link>
+            </Button>
             <Button asChild variant="outline" size="sm" className="justify-start gap-2">
               <Link href="/team/studi-kasus">
                 <BookOpen className="size-4 text-primary" />

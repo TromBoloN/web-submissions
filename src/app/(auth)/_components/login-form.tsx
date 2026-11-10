@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 
+import Link from "next/link";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
@@ -106,6 +108,9 @@ export function LoginForm() {
       <Button className="h-10 w-full" type="submit" disabled={isPending}>
         {isPending && <Spinner className="size-4" />}
         {isPending ? "Memproses..." : "Masuk"}
+      </Button>
+      <Button asChild variant="outline" className="h-10 w-full">
+        <Link href="/karya">Lihat Karya Peserta</Link>
       </Button>
     </form>
   );

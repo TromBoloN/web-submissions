@@ -145,11 +145,9 @@ export function KaryaClient({
             Tentukan informasi yang akan ditampilkan bersama karya tim Anda di galeri.
           </p>
         </div>
-        {isLocked && (
-          <Button asChild variant="outline" className="w-fit">
-            <Link href="/karya">Lihat di halaman publik</Link>
-          </Button>
-        )}
+        <Button asChild variant="outline" className="w-fit">
+          <Link href="/karya">Lihat Karya Peserta</Link>
+        </Button>
       </div>
 
       {!isSubmitted ? (

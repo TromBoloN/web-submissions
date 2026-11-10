@@ -15,7 +15,7 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 
 | Screen              | URL                                   | Folder (under `src/app/`)                             | Data                                                |
 | ------------------- | ------------------------------------- | ----------------------------------------------------- | --------------------------------------------------- |
-| Login               | /login                                | `(auth)/login`, `(auth)/_components`                  | Auth                                                |
+| Login               | /login                                | `(auth)/login`, `(auth)/_components`                  | Auth, tautan galeri publik                          |
 | Admin dashboard     | /admin                                | `(main)/admin` (`page.tsx`, `dashboard-client.tsx`, `dashboard-countdown.tsx`) | counts, deadline, submissions, judging, ranking, audit |
 | Accounts            | /admin/akun                           | `(main)/admin/akun`                                   | `profiles` + Auth (service role)                    |
 | Audit               | /admin/audit                          | `(main)/admin/audit/page.tsx`                        | `audit_logs` + `profiles`                           |
@@ -36,6 +36,8 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 
 Admin dashboard parts: `dashboard-client.tsx` (metric cards, progress ring, phase timeline, chase/judging/ranking panels, release controls, exports, health, activity) and `dashboard-countdown.tsx` (server-synced WITA countdown). Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
 
+Public gallery access: `/login` shows a secondary "Lihat Karya Peserta" button; admin and judges get a **Karya** sidebar item (`/karya`); teams keep their **Tampilan Karya** editor (`/team/karya`) and reach the gallery from the portal and showcase editor.
+
 ## Shared code
 
 ```
@@ -54,7 +56,7 @@ src/lib/data-table-features.ts       TanStack Table v9 helpers
 src/lib/supabase/client.ts           browser client
 src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
-src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl)
+src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased)
 src/app/(main)/dashboard/_components      shell: dashboard-shell, header, sidebar (app-sidebar, nav-main, nav-user)
 src/app/(main)/admin/akun                  account types, filters, clipboard control, and account utilities
 src/components/                      shared UI (change-password-form, markdown-content, logout-button, rubric-bars); ui/ is shadcn, do not edit
