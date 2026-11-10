@@ -1,26 +1,37 @@
 import type { Metadata } from "next";
 
-import type { ShowcaseCardData } from "@/components/showcase-card";
-import { ShowcaseGallery } from "@/components/showcase-gallery";
+import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-import { GuardianBackground, GuardianFooter, KaryaHero, KaryaThemeToggle } from "./karya-hero";
+import { KaryaClient, type KaryaItem } from "./karya-client";
 
 export const metadata: Metadata = {
-  title: "Galeri Karya · MIT-WEEK 2026 | Web Development",
+  title: "GUARDIANS · Galeri Karya MIT-WEEK 2026",
   description:
-    "Pameran karya Web Development Competition MIT-WEEK 2026: Guardians of the Digital Space. Menampilkan karya inovatif dari tim peserta yang bersedia ditampilkan.",
+    "Ruang pameran karya peserta Web Development Competition MIT-WEEK 2026: Guardians of the Digital Space. Menampilkan karya inovatif dari tim peserta.",
   robots: { index: false, follow: false },
 };
 
 export default async function PublicKaryaPage() {
   const supabase = await createClient();
-  const [{ data, error }, { data: winnerData, error: winnersError }] = await Promise.all([
+
+  const [
+    { data: rawShowcase, error: showcaseError },
+    { data: rawWinners, error: winnersError },
+    { data: settings },
+    { data: finalistTeams },
+  ] = await Promise.all([
     supabase.rpc("get_public_showcase"),
     supabase.rpc("get_public_showcase_winners"),
+    adminClient
+      .from("competition_settings")
+      .select("showcase_published_at, showcase_finalists_published_at, winners_published_at")
+      .eq("id", true)
+      .single(),
+    adminClient.from("teams").select("team_name").eq("showcase_is_finalist", true),
   ]);
 
-  if (error || winnersError) {
+  if (showcaseError || winnersError) {
     return (
       <main className="min-h-dvh bg-background px-4 py-10 text-foreground sm:px-6">
         <div className="mx-auto max-w-6xl">
@@ -32,10 +43,23 @@ export default async function PublicKaryaPage() {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const winners: ShowcaseCardData[] = (winnersError ? [] : (winnerData ?? [])).map((item) => ({
+
+  const isWinnersPublished = Boolean(settings?.winners_published_at);
+  const isGalleryPublished = Boolean(settings?.showcase_published_at);
+
+  let initialState: "locked" | "open" | "win" = "locked";
+  if (isWinnersPublished) {
+    initialState = "win";
+  } else if (isGalleryPublished) {
+    initialState = "open";
+  }
+
+  const finalistNames = new Set((finalistTeams ?? []).map((t) => t.team_name));
+
+  const winners: KaryaItem[] = (isWinnersPublished ? (rawWinners ?? []) : []).map((item) => ({
     teamName: item.team_name,
-    title: item.showcase_title,
-    description: item.showcase_description,
+    title: item.showcase_title || item.team_name,
+    description: item.showcase_description || "Solusi inovatif ruang digital.",
     imageUrl: item.showcase_image_path
       ? `${supabaseUrl}/storage/v1/object/public/web-showcase/${item.showcase_image_path}`
       : null,
@@ -44,44 +68,23 @@ export default async function PublicKaryaPage() {
     videoUrl: item.video_url,
     winnerRank: item.winner_rank,
     winnerScore: item.final_score,
+    isFinalist: true,
   }));
 
-  const winnerNames = new Set(winners.map((winner) => winner.teamName));
-  const cards: ShowcaseCardData[] = (data ?? [])
-    .filter((item) => !winnerNames.has(item.team_name))
-    .map((item) => ({
-      teamName: item.team_name,
-      title: item.showcase_title,
-      description: item.showcase_description,
-      imageUrl: item.showcase_image_path
-        ? `${supabaseUrl}/storage/v1/object/public/web-showcase/${item.showcase_image_path}`
-        : null,
-      githubUrl: item.github_url,
-      liveDemoUrl: item.live_demo_url,
-      videoUrl: item.video_url,
-    }));
+  const allCards: KaryaItem[] = (rawShowcase ?? []).map((item) => ({
+    teamName: item.team_name,
+    title: item.showcase_title || item.team_name,
+    description: item.showcase_description || "Solusi inovatif ruang digital.",
+    imageUrl: item.showcase_image_path
+      ? `${supabaseUrl}/storage/v1/object/public/web-showcase/${item.showcase_image_path}`
+      : null,
+    githubUrl: item.github_url,
+    liveDemoUrl: item.live_demo_url,
+    videoUrl: item.video_url,
+    isFinalist: finalistNames.has(item.team_name),
+  }));
 
-  return (
-    <main className="karya-page relative min-h-dvh overflow-hidden bg-[#F7F9FF] text-[#262470] dark:bg-[#0a0d17] dark:text-slate-100">
-      {/* Calm Guardian Surface Background */}
-      <GuardianBackground />
+  const finalists = allCards.filter((c) => c.isFinalist);
 
-      {/* Floating Theme Toggle */}
-      <KaryaThemeToggle />
-
-      {/* Main Container */}
-      <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8 xl:px-10">
-        {/* Section 4.1 & 4.2: Hero & Fact Strip */}
-        <KaryaHero count={cards.length} />
-
-        {/* Section 4.3 & 4.4: Winners Podium & Bento Gallery */}
-        <div className="mt-12 sm:mt-16">
-          <ShowcaseGallery cards={cards} winners={winners} serverNow={Date.now()} />
-        </div>
-
-        {/* Section 4.6: Footer with Bird Easter Egg & Sign-off */}
-        <GuardianFooter />
-      </div>
-    </main>
-  );
+  return <KaryaClient initialState={initialState} cards={allCards} winners={winners} finalists={finalists} />;
 }

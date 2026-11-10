@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -1097,4 +1098,715 @@ html {
 
 .disable-transitions * {
   transition: none !important;
+}
+
+/* ==========================================================================
+   GUARDIANS · Galeri Karya MIT-WEEK 2026 Retro-Cyber Styles
+   ========================================================================== */
+
+.karya-page {
+  --bg: #dfe6fa;
+  --bg1: #c6dbf6;
+  --bg2: #ece8ff;
+  --ink: #0f1330;
+  --card: #ffffff;
+  --line: #0f1330;
+  --shadow: #0f1330;
+  --acc: #22d395;
+  --acci: #05704a;
+  --vio: #6a4df0;
+  --muted: #47507a;
+  --ts: #0f1330;
+  --edge: color-mix(in srgb, var(--line) 20%, transparent);
+  --glass: color-mix(in srgb, var(--card) 84%, transparent);
+  --soft:
+    0 24px 60px -34px color-mix(in srgb, var(--shadow) 55%, transparent),
+    0 2px 8px color-mix(in srgb, var(--shadow) 10%, transparent);
+  --soft-strong:
+    0 34px 80px -40px color-mix(in srgb, var(--shadow) 65%, transparent),
+    0 4px 14px color-mix(in srgb, var(--shadow) 12%, transparent);
+  --hex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48'%3E%3Cpath d='M14 0l14 8v16l-14 8-14-8V8zM14 32v16' fill='none' stroke='%23000' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-color: var(--bg);
+  background-image: none;
+  color: var(--ink);
+  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+  position: relative;
+  isolation: isolate;
+}
+
+:is(.dark, [data-theme-mode="dark"]) .karya-page,
+.karya-page[data-theme="dark"] {
+  --bg: #090c1d;
+  --bg1: #0d1332;
+  --bg2: #090c1d;
+  --ink: #e9ecff;
+  --card: #131a3b;
+  --line: #8da2f5;
+  --shadow: #5d73e0;
+  --acc: #4be39a;
+  --acci: #4be39a;
+  --vio: #8da2f5;
+  --muted: #9ba4d6;
+  --ts: #05071a;
+}
+
+.karya-page .mono {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+.karya-page .muted {
+  color: var(--muted);
+}
+.karya-page .acc {
+  color: var(--acci);
+}
+
+/* Atmosphere */
+.karya-page .bgfx {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: linear-gradient(180deg, var(--bg1), var(--bg2));
+  pointer-events: none;
+}
+.karya-page .bgfx svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.22;
+}
+.karya-page .bgfx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(color-mix(in srgb, var(--line) 16%, transparent) 1.2px, transparent 1.5px) 0 0 / 28px 28px;
+}
+.karya-page .g1 {
+  transform-origin: 1180px 330px;
+  animation: karya-spin 160s linear infinite;
+  will-change: transform;
+}
+.karya-page .g2 {
+  transform-origin: 260px 760px;
+  animation: karya-spin 120s linear infinite reverse;
+  will-change: transform;
+}
+@keyframes karya-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.karya-page .lens {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--vio);
+  opacity: 0.7;
+  -webkit-mask-image: var(--hex), radial-gradient(circle 200px at var(--mx, 60%) var(--my, 40%), #000, transparent);
+  mask-image: var(--hex), radial-gradient(circle 200px at var(--mx, 60%) var(--my, 40%), #000, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* Primitives */
+.karya-page .box {
+  background: var(--glass);
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  box-shadow: 5px 5px 0 var(--shadow);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+.karya-page .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--edge);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  color: var(--ink);
+  box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--shadow) 70%, transparent);
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s,
+    background-color 0.18s;
+}
+.karya-page .btn:hover {
+  transform: translateY(-1px);
+  background: var(--card);
+  box-shadow: 0 16px 30px -18px color-mix(in srgb, var(--shadow) 80%, transparent);
+}
+.karya-page .btn.pri,
+.karya-page .btn[aria-pressed="true"] {
+  background: var(--acc);
+  color: #06150d;
+}
+.karya-page .btn.pri {
+  flex: 1;
+}
+.karya-page .btn.ico {
+  width: 42px;
+  padding: 9px 0;
+}
+.karya-page .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--glass);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 12px 28px -22px color-mix(in srgb, var(--shadow) 80%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  backdrop-filter: blur(12px) saturate(130%);
+}
+.karya-page .pill::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--acc);
+}
+
+/* Loader */
+.karya-page .ld {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.karya-page .ld-p {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: var(--bg);
+  transition: transform 1s cubic-bezier(0.77, 0, 0.18, 1);
+}
+.karya-page .ld-t {
+  top: 0;
+  border-bottom: 1px solid var(--edge);
+}
+.karya-page .ld-b {
+  bottom: 0;
+}
+.karya-page .ld.open .ld-t {
+  transform: translateY(-101%);
+}
+.karya-page .ld.open .ld-b {
+  transform: translateY(101%);
+}
+.karya-page .ld-c {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  transition: opacity 0.35s;
+}
+.karya-page .ld.open .ld-c {
+  opacity: 0;
+}
+.karya-page .ld svg {
+  width: 120px;
+  height: 120px;
+}
+.karya-page .ld .dr {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.5;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: karya-draw 1.1s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+.karya-page .ld .dr.h {
+  animation-delay: 0.35s;
+}
+.karya-page .ld .fl {
+  fill: var(--acc);
+  opacity: 0;
+  animation: karya-lf 0.5s 1.2s forwards;
+}
+.karya-page .ld p {
+  font-size: 12px;
+  opacity: 0;
+  animation: karya-lf 0.8s 0.6s forwards;
+}
+@keyframes karya-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes karya-lf {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Entrance */
+.karya-page .lw {
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1.05;
+  padding: 0.06em 0.1em 0.14em 0;
+  margin: -0.06em -0.1em -0.14em 0;
+  vertical-align: top;
+}
+.karya-page .ltr {
+  display: inline-block;
+  transform: translateY(118%);
+  will-change: transform;
+}
+.karya-page.go .ltr {
+  animation: karya-up 1.2s calc(var(--i, 0) * 110ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes karya-up {
+  from {
+    transform: translateY(118%);
+  }
+  to {
+    transform: none;
+  }
+}
+.karya-page .rise {
+  opacity: 0;
+  transform: translateY(14px);
+  will-change: opacity, transform;
+}
+.karya-page.go .rise {
+  animation: karya-rise 1s var(--e, 0s) cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@keyframes karya-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.karya-page .view-anim {
+  animation: karya-view-in 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes karya-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.karya-page .ttl {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--ts);
+  paint-order: stroke fill;
+  text-shadow: 5px 5px 0 var(--ts);
+  font-size: clamp(2.7rem, 13vw, 7.5rem);
+  transition: font-size 0.6s;
+}
+@media (min-width: 1024px) {
+  .karya-page .ttl {
+    font-size: clamp(3rem, 7.4vw, 7.5rem);
+  }
+}
+.karya-page .compact .ttl {
+  font-size: clamp(2.2rem, 8vw, 3.8rem) !important;
+  text-shadow: 3px 3px 0 var(--ts);
+  -webkit-text-stroke-width: 2px;
+}
+.karya-page .compact .hx {
+  display: none !important;
+}
+.karya-page .hero {
+  border: 2.5px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 8px 8px 0 var(--shadow);
+  background: color-mix(in srgb, var(--card) 40%, transparent);
+}
+.karya-page .hero .pill {
+  background: var(--card);
+  border: 2.5px solid var(--line);
+  box-shadow: 3px 3px 0 var(--shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.karya-page .orbit {
+  transform-origin: 50% 50%;
+  animation: karya-spin 9s linear infinite;
+  will-change: transform;
+}
+
+/* Card */
+.karya-page .card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.karya-page .card:hover,
+.karya-page .card:focus-within {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+.karya-page .thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-bottom: 1px solid var(--edge);
+  overflow: hidden;
+  flex: none;
+}
+.karya-page .thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.karya-page .fb {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.karya-page .chip {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-weight: 800;
+  font-size: 24px;
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.karya-page .hatch {
+  display: grid;
+  place-items: center;
+  background: var(--card)
+    repeating-linear-gradient(45deg, transparent 0 9px, color-mix(in srgb, var(--line) 40%, transparent) 9px 11px);
+}
+.karya-page .hatch svg {
+  width: 38px;
+  height: 38px;
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  padding: 7px;
+}
+.karya-page .btn.ico svg {
+  width: 18px;
+  height: 18px;
+}
+.karya-page .cb {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px 18px;
+  flex: 1;
+}
+.karya-page .tm {
+  font-size: 12px;
+  color: var(--muted);
+}
+.karya-page .tt {
+  text-align: left;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.4em;
+  cursor: pointer;
+}
+.karya-page .tt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.karya-page .ds {
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 4.35em;
+}
+.karya-page .act {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.karya-page .bar {
+  display: block;
+  height: 1rem;
+  background: var(--ink);
+  border-radius: 4px;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+.karya-page .off {
+  opacity: 0.4;
+  pointer-events: none;
+  box-shadow: none;
+}
+.karya-page .rank {
+  font-weight: 800;
+  font-size: 3.4rem;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 2.5px var(--ink);
+}
+.karya-page .p1 {
+  order: 1;
+}
+.karya-page .p2 {
+  order: 2;
+}
+.karya-page .p3 {
+  order: 3;
+}
+@media (min-width: 768px) {
+  .karya-page .p2 {
+    order: 1;
+    margin-top: 44px;
+  }
+  .karya-page .p1 {
+    order: 2;
+  }
+  .karya-page .p3 {
+    order: 3;
+    margin-top: 44px;
+  }
+}
+
+/* Finalists */
+.karya-page .fin {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.75rem;
+}
+.karya-page .fin > * {
+  flex: 0 1 100%;
+  max-width: 24rem;
+}
+@media (min-width: 640px) {
+  .karya-page .fin > * {
+    flex-basis: calc((100% - 1.75rem) / 2);
+    max-width: none;
+  }
+}
+@media (min-width: 1024px) {
+  .karya-page .fin > * {
+    flex-basis: calc((100% - 3.5rem) / 3);
+  }
+  .karya-page .fin.n2 > * {
+    flex-basis: calc((100% - 1.75rem) / 2);
+  }
+}
+
+/* Timeline */
+.karya-page #tlist li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border: 0 dashed var(--line);
+}
+@media (min-width: 768px) {
+  .karya-page #tlist li:not(:last-child)::after {
+    top: 50%;
+    left: 100%;
+    width: 1.5rem;
+    border-top-width: 1px;
+  }
+}
+@media (max-width: 767px) {
+  .karya-page #tlist li:not(:last-child)::after {
+    top: 100%;
+    left: 2rem;
+    height: 1.5rem;
+    border-left-width: 1px;
+  }
+}
+.karya-page .st {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--edge);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.karya-page .st.now {
+  background: var(--acc);
+  color: #06150d;
+}
+.karya-page .st.next {
+  background: var(--card);
+}
+.karya-page .st.done,
+.karya-page .st.later {
+  opacity: 0.6;
+}
+
+/* List view */
+.karya-page .list {
+  border-top: 1px solid var(--edge);
+  margin-top: 2rem;
+}
+.karya-page .row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--edge);
+  transition:
+    padding 0.25s,
+    background 0.25s;
+}
+.karya-page .row:hover,
+.karya-page .row:focus-within {
+  padding-left: 16px;
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+}
+.karya-page .row .thumb {
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+}
+.karya-page .row .tt {
+  min-height: 0;
+  -webkit-line-clamp: 1;
+  font-size: clamp(1.25rem, 3.6vw, 2.4rem);
+}
+.karya-page .row .act {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+}
+.karya-page .row .btn.pri {
+  flex: none;
+}
+@media (min-width: 768px) {
+  .karya-page .row {
+    grid-template-columns: 84px 1fr auto;
+  }
+  .karya-page .row .act {
+    grid-column: auto;
+  }
+}
+.karya-page #fp {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 270px;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity 0.2s;
+  will-change: transform;
+}
+.karya-page #fp.on {
+  opacity: 1;
+}
+.karya-page #fp .thumb {
+  border: 0;
+}
+
+/* Floating controls */
+.karya-page .fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  cursor: pointer;
+  transition: transform 0.25s;
+}
+.karya-page .fab.box > svg {
+  width: 22px;
+  height: 22px;
+}
+.karya-page .fab.spin svg {
+  animation: karya-iconspin 0.7s cubic-bezier(0.5, 0, 0.2, 1.4);
+}
+@keyframes karya-iconspin {
+  from {
+    transform: rotate(-200deg) scale(0.2);
+  }
+}
+
+/* Theme switch wipe */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .karya-page .ltr,
+  .karya-page .rise,
+  .karya-page .view-anim {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .karya-page .orbit,
+  .karya-page .g1,
+  .karya-page .g2 {
+    animation: none !important;
+  }
+}
+
+/* Detail dialog */
+.karya-page dialog.box {
+  padding: 0;
+  width: min(640px, calc(100vw - 24px));
+  color: var(--ink);
+  overflow: hidden;
+}
+.karya-page dialog::backdrop {
+  background: rgba(5, 8, 25, 0.65);
 }

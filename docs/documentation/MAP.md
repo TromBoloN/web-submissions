@@ -28,7 +28,7 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 | Judge scoring       | /judge/nilai/[tahap]/[teamId]         | `(main)/judge/nilai/[tahap]/[teamId]`                 | `preliminary_scores`, `final_scores`, `judge_recusals` |
 | Team portal         | /team                                 | `(main)/team` (files beside `page.tsx`)               | `submissions`, own `teams` row                      |
 | Team showcase editor | /team/karya                           | `(main)/team/karya`                                   | own `teams`, own `submissions`, `competition_settings` |
-| Public showcase      | /karya                                | `karya` (`page.tsx`, `karya-hero.tsx`, `karya-constants.ts`) | `get_public_showcase()`, `get_public_showcase_winners()` |
+| Public showcase      | /karya                                | `karya` (`page.tsx`, `karya-client.tsx`, `karya-logo.tsx`) | `get_public_showcase()`, `get_public_showcase_winners()` |
 | Case study          | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus`                           | `competition_settings` (markdown)                   |
 | Team results        | /team/hasil                           | `(main)/team/hasil`                                   | `get_my_results()` (RPC)                            |
 | Change password     | /<role>/kata-sandi                    | `(main)/<role>/kata-sandi`                            | Auth (shared `components/change-password-form.tsx`) |

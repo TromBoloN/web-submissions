@@ -329,34 +329,55 @@ export async function updateResultsRelease(stage: "preliminary" | "final", relea
   return { success: true };
 }
 
-export async function publishShowcasePhase(phase: "initial" | "finalists"): Promise<ActionResult> {
+export async function publishShowcasePhase(phase: "initial" | "finalists" | "gallery"): Promise<ActionResult> {
   const caller = await getCurrentProfile();
   if (caller?.role !== "admin") {
     return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
   }
 
   const supabase = await createClient();
-  const functionName = phase === "initial" ? "publish_showcase_phase_one" : "publish_showcase_phase_two";
-  const { data, error } = await supabase.rpc(functionName);
 
-  if (error) {
-    console.error("Failed to publish showcase phase", error);
-    return { success: false, error: "Gagal menerbitkan galeri. Silakan coba lagi." };
+  if (phase === "gallery") {
+    const { data: d1, error: e1 } = await supabase.rpc("publish_showcase_phase_one");
+    if (e1 || !d1) {
+      console.error("Failed to publish showcase phase 1", e1);
+      return { success: false, error: "Gagal menerbitkan galeri tahap awal. Silakan coba lagi." };
+    }
+    const { data: d2, error: e2 } = await supabase.rpc("publish_showcase_phase_two");
+    if (e2 || !d2) {
+      console.error("Failed to publish showcase phase 2", e2);
+      return { success: false, error: "Gagal menerbitkan karya finalis. Silakan coba lagi." };
+    }
+  } else {
+    const functionName = phase === "initial" ? "publish_showcase_phase_one" : "publish_showcase_phase_two";
+    const { data, error } = await supabase.rpc(functionName);
+
+    if (error) {
+      console.error("Failed to publish showcase phase", error);
+      return { success: false, error: "Gagal menerbitkan galeri. Silakan coba lagi." };
+    }
+
+    if (!data) {
+      return {
+        success: false,
+        error:
+          phase === "initial"
+            ? "Galeri tahap awal sudah diterbitkan atau tidak dapat diterbitkan."
+            : "Pastikan galeri tahap awal sudah diterbitkan dan tahap finalis belum diterbitkan.",
+      };
+    }
   }
 
-  if (!data) {
-    return {
-      success: false,
-      error:
-        phase === "initial"
-          ? "Galeri tahap awal sudah diterbitkan atau tidak dapat diterbitkan."
-          : "Pastikan galeri tahap awal sudah diterbitkan dan tahap finalis belum diterbitkan.",
-    };
+  let auditAction = "showcase_gallery_published";
+  if (phase === "initial") {
+    auditAction = "showcase_phase_one_published";
+  } else if (phase === "finalists") {
+    auditAction = "showcase_phase_two_published";
   }
 
   await logAuditEvent({
     actorId: caller.id,
-    action: phase === "initial" ? "showcase_phase_one_published" : "showcase_phase_two_published",
+    action: auditAction,
     targetType: "competition_settings",
     metadata: { phase },
   });
@@ -369,7 +390,9 @@ export async function publishShowcasePhase(phase: "initial" | "finalists"): Prom
   return { success: true };
 }
 
-export async function unpublishShowcasePhase(phase: "initial" | "finalists" | "winners"): Promise<ActionResult> {
+export async function unpublishShowcasePhase(
+  phase: "initial" | "finalists" | "winners" | "gallery",
+): Promise<ActionResult> {
   const caller = await getCurrentProfile();
   if (caller?.role !== "admin") {
     return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
@@ -377,6 +400,52 @@ export async function unpublishShowcasePhase(phase: "initial" | "finalists" | "w
 
   const supabase = await createClient();
   const updatedAt = new Date().toISOString();
+
+  if (phase === "gallery") {
+    const { data: settings, error: readError } = await supabase
+      .from("competition_settings")
+      .select("winners_published_at")
+      .eq("id", true)
+      .single();
+
+    if (readError) {
+      console.error("Failed to read showcase publication state", readError);
+      return { success: false, error: "Gagal membaca status publikasi galeri. Silakan coba lagi." };
+    }
+    if (settings.winners_published_at) {
+      return { success: false, error: "Batalkan publikasi pemenang terlebih dahulu." };
+    }
+
+    const { data, error } = await supabase
+      .from("competition_settings")
+      .update({
+        showcase_published_at: null,
+        showcase_finalists_published_at: null,
+        updated_at: updatedAt,
+      })
+      .eq("id", true)
+      .select();
+
+    if (error || !data || data.length === 0) {
+      console.error("Failed to unpublish showcase gallery", error);
+      return { success: false, error: "Gagal membatalkan publikasi galeri. Silakan coba lagi." };
+    }
+
+    await logAuditEvent({
+      actorId: caller.id,
+      action: "showcase_gallery_unpublished",
+      targetType: "competition_settings",
+      metadata: { phase },
+    });
+
+    revalidatePath("/admin/pengaturan");
+    revalidatePath("/admin");
+    revalidatePath("/team");
+    revalidatePath("/team/karya");
+    revalidatePath("/karya");
+    return { success: true };
+  }
+
   let update:
     | { showcase_published_at: null; updated_at: string }
     | { showcase_finalists_published_at: null; updated_at: string }
