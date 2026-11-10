@@ -104,6 +104,9 @@
   /* surfaces */
   --background: oklch(0.975 0.012 255);
   --foreground: oklch(0.24 0.07 268);
+  /* Scrollbars pick up the text color so they fade into the surface in both themes. */
+  --scrollbar-thumb: color-mix(in oklab, var(--foreground) 22%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 42%, transparent);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.24 0.07 268);
   --popover: oklch(1 0 0);
@@ -223,6 +226,37 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Subtle, theme-aware scrollbars: no OS chrome, no arrows, translucent thumb. */
+  * {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
   }
 
   body::before {
@@ -1109,6 +1143,9 @@ html {
   --bg1: #d9e4f8;
   --bg2: #f0ecff;
   --ink: #0f1330;
+  /* Public gallery has its own light/dark palette, so scrollbars follow --ink. */
+  --scrollbar-thumb: color-mix(in oklab, var(--ink) 24%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--ink) 46%, transparent);
   --card: #ffffff;
   --line: #0f1330;
   --shadow: #0f1330;
