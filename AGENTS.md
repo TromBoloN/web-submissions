@@ -5,7 +5,7 @@ Rules for AI agents. Project context: `AI.md`. File locations: `docs/documentati
 ## Read first
 
 - `MAP.md`: before searching the repo.
-- `docs/documentation/*.md`: full docs.
+- `docs/documentation/*.md`: full docs. Styling: `DESIGN-SYSTEM.md`. Team phases, schedule and dates: `COMPETITION-PHASES.md`. Settings: `ADMIN-SETTINGS.md`. Tables, RPCs and pending migrations: `DATA-MODEL.md`.
 - `AI.md`: before touching scoring, deadlines, submissions, results, roles, exports, or when a decision is unclear. Open decisions are listed there: ask, never decide.
 - `docs/development/*.md`: current task. If it conflicts with these rules, stop and ask.
 

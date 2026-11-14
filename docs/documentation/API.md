@@ -10,11 +10,12 @@ When documenting a new public API, include authentication, input validation, res
 
 | Area | Routes | Role |
 | --- | --- | --- |
-| Authentication | `/login` | Public |
-| Admin | `/admin`, `/admin/akun`, `/admin/finalis`, `/admin/pengaturan`, `/admin/peringkat`, `/admin/submission`, `/admin/tim` | `admin` |
+| Public | `/login`, `/karya` (gallery, data only via anon RPCs) | Anyone |
+| Admin | `/admin`, `/admin/akun`, `/admin/audit`, `/admin/finalis`, `/admin/peringkat`, `/admin/submission`, `/admin/tim` | `admin` |
+| Admin settings | `/admin/pengaturan` (overview), `/pengumpulan`, `/hasil`, `/galeri`, `/studi-kasus`, `/tautan` | `admin` |
 | Judge | `/judge`, `/judge/nilai/[tahap]/[teamId]`, `/judge/studi-kasus` | `judge` |
-| Team | `/team`, `/team/hasil`, `/team/studi-kasus` | `team` |
-| Shared | `/<role>/kata-sandi`, `/unauthorized` | Authenticated / role-aware |
+| Team | `/team`, `/team/karya`, `/team/hasil` (only once results are released), `/team/studi-kasus` | `team` |
+| Shared | `/` (redirect), `/<role>/kata-sandi`, `/unauthorized` | Authenticated / role-aware |
 
 The authoritative screen-to-source map is [MAP.md](./MAP.md).
 
@@ -35,8 +36,13 @@ Exports administrator-only preliminary/final ranking data. It has the same authe
 | Authentication/profile | `src/lib/auth.ts` | `getCurrentProfile()` uses `getUser()` and `profiles`; `requireRole()` redirects unauthorized page requests. |
 | Team mutations | `src/app/(main)/team/actions.ts` | Validates submission input and relies on session ownership, RLS, deadline helpers, and database constraints. |
 | Judge mutations | `src/app/(main)/judge/nilai/actions.ts` | Saves drafts or locked scores for the authenticated judge and permitted stage. |
-| Admin mutations | `src/app/(main)/admin/*/actions.ts` | Performs admin-only account, team, finalist, settings, and submission operations. |
+| Admin mutations | `src/app/(main)/admin/*/actions.ts` | Performs admin-only account, team, finalist, settings, and submission operations. Settings actions live in `admin/pengaturan/actions.ts` (see [Admin settings](./ADMIN-SETTINGS.md)). |
+| Team showcase | `src/app/(main)/team/karya/actions.ts` | Saves consent, title, description and image path through `save_showcase_details()`; images upload to the `web-showcase` bucket from the browser. |
 | Team results | `get_my_results()` in `20261026000000_team_results.sql` | Authenticated RPC that derives the caller's team and returns only released, anonymized results. |
+| Finalist notice | `get_my_finalist_notice()` | Authenticated RPC returning the caller's published finalist/non-finalist message. |
+| Public data | `get_public_showcase()`, `get_public_showcase_winners()`, `get_public_contact_whatsapp()` | Anon-callable RPCs returning public fields only. |
+
+The full function catalog, including the pending stage and final-presentation functions, is in [Data model](./DATA-MODEL.md#database-functions).
 
 ## Error behavior
 

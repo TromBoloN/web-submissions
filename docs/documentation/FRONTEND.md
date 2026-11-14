@@ -19,12 +19,17 @@ Add a new screen to `src/navigation/sidebar/sidebar-items.ts`, update [MAP.md](.
 
 - UI text is Indonesian and follows the project vocabulary: Akun, Tim, Finalis, Pengaturan, Submission, Peringkat, Nilai, Masukan, Draf, and Terkirim.
 - Use `id-ID`, `Asia/Makassar`, and WITA for dates; do not use the device clock for deadline decisions.
-- Use semantic Tailwind tokens rather than literal colors.
+- Use tokens, never literal colors: shadcn semantic tokens for forms/admin, Guardian brand tokens for brand surfaces. Follow the loud/calm rule. Full reference: [Design system](./DESIGN-SYSTEM.md).
+- Design at 360px first: collapse columns, give wide sequences a mobile variant, never cause horizontal page scroll.
+- Respect `prefers-reduced-motion` for every animation and hover effect.
+- Restyle shadcn primitives from the outside with `className`; add `.press` to restyled buttons.
 - Preserve nearby screens' density, spacing, radii, keyboard behavior, visible focus, and mobile layout.
 - Only render `http` and `https` values as external links, with `target="_blank"` and `rel="noopener noreferrer"`.
 - Display scores with two decimal places and never show judge identity or internal IDs to teams.
 
 ## State and theme
+
+Theme switching for users is the shared two-state `ThemeToggle` (`src/components/theme-toggle.tsx`): light/dark only, flipping relative to the applied `.dark` class. Do not add another toggle.
 
 Preferences and theme code lives under `src/lib/preferences`, `src/stores/preferences`, `src/server/server-actions.ts`, `src/styles/presets`, and theme boot/generation files. Reuse those mechanisms rather than introducing a second state or theme system.
 

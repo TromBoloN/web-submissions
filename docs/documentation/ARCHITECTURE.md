@@ -53,8 +53,22 @@ Route groups `(auth)` and `(main)` do not appear in URLs. `(main)` contains the 
 2. The scoring page loads the judge's permitted stage and submission.
 3. The judge saves a draft or locks a score through a server action.
 4. `judge_can_score_preliminary` or `judge_can_score_final`, plus RLS and release-lock triggers, enforce the write boundary.
-5. An admin changes the stage release flag in `/admin/pengaturan`.
+5. An admin changes the stage release flag in `/admin/pengaturan/hasil`.
 6. The `get_my_results()` security-definer function exposes only released, authorized aggregates and anonymized feedback to the owning team.
+
+### Team dashboard phases
+
+1. `/team/page.tsx` loads the team, submission, settings and finalist notice with the server clock time (`serverNowIso`).
+2. `resolveTeamPhase()` turns those into one phase (`open`, `closed`, `review`, `finalist`, `final`, `results`, `not-finalist`, `missed`, `disqualified`).
+3. The phase picks the hero and the layout: form-centred while open, a bento of receipt, journey track and cards afterwards.
+
+Details and test recipes: [Competition phases](./COMPETITION-PHASES.md).
+
+### Public gallery
+
+1. `/karya` is allowed without a session by `src/proxy.ts`.
+2. The page calls anon-executable `SECURITY DEFINER` RPCs (`get_public_showcase`, `get_public_showcase_winners`). `anon` has no table access.
+3. Admins publish the gallery in two stages from `/admin/pengaturan/galeri`; publishing stage 1 freezes team consent and the finalist snapshot.
 
 ## Authentication and authorization
 
@@ -72,4 +86,6 @@ Route groups `(auth)` and `(main)` do not appear in URLs. `(main)` contains the 
 - **Database-calculated totals:** score totals are generated in PostgreSQL and mirrored by `src/lib/rubric.ts` for the live UI preview. Change both only when the rubric is intentionally changed.
 - **Exclusive deadline:** the database stores the first instant that is no longer accepted; the UI presents the previous minute as the last accepted WITA minute.
 - **Released results RPC:** teams do not receive direct score-table access. The RPC derives the caller's team from `auth.uid()` and strips judge identity and unreleased data.
+- **Phase as a pure function:** the team dashboard derives its state from server time and data in one place (`team-phase.ts`) so every component agrees and the device clock never decides.
+- **Settings split by concern:** `/admin/pengaturan` is a layout with sub-routes, so each section loads only its own data and adding a section is one registry entry.
 - **Audit logging:** sensitive account, team, result-release, and judging mutations write an audit event through the server-only service-role client. Audit metadata is limited to action context and never includes credentials, scores, feedback, or personal data.

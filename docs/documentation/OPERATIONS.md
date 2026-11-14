@@ -11,7 +11,7 @@ Never copy production data into a developer project without an approved, privacy
 
 ## Deployment checklist
 
-1. Apply approved Supabase migrations in order.
+1. Apply approved Supabase migrations in order, then regenerate `src/types/database.ts` (UTF-8) and commit it with the app change that uses the new schema.
 2. Configure public Supabase variables and the server-only service-role key in the hosting provider.
 3. Run `npm run lint`, `npm run check`, and `npm run build`.
 4. Verify `/login`, one admin page, one judge flow, one team flow, and both CSV routes with appropriate roles.
@@ -51,6 +51,14 @@ Check the competition deadline in WITA, `team_can_submit`, team disqualification
 ### Scores or results look wrong
 
 Check the stage release flags, `judge_can_score_*`, score-lock triggers, `src/lib/rubric.ts`, generated database totals, and ranking views. Do not expose raw judge scores or manually bypass the release boundary.
+
+### A competition date has to change
+
+Until the stages migration is applied and wired in, dates live in five files; see [Competition phases](./COMPETITION-PHASES.md#where-the-schedule-is-hardcoded-until-the-stages-migration-is-live). The submission deadline itself is changed in `/admin/pengaturan/pengumpulan` and needs no deploy. Everything else needs a code change and redeploy.
+
+### The gallery badge or team phase looks wrong
+
+Check `competition_settings.showcase_published_at`, `final_results_released`, the finalist notice's `is_published`, and the team's `is_finalist`/`is_disqualified`. Phases use server time in WITA; compare against the dates in `team-schedule.ts`.
 
 ### Export is unavailable
 

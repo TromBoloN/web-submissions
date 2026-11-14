@@ -41,6 +41,10 @@ The build receives Supabase configuration from the repository secrets
 placeholders only to allow Next.js module evaluation; it does not connect to Supabase or
 replace deployment environment variables.
 
+Unit tests live in `tests/**/*.test.ts` (Vitest, see `vitest.config.mts`) and currently cover `src/lib/deadline.ts` and `src/lib/rubric.ts`. UI, phase and role flows have no automated tests, so list manual verification steps in the PR description. Pure helpers such as `resolveTeamPhase()` and `daysBetweenDateKeys()` are good candidates for new tests.
+
+If a dev server is running while routes or layouts change, `tsc` may report stale errors under `.next/dev/types`; restart the dev server or run a build to regenerate them.
+
 For database or authorization changes, also verify the relevant role flows and release/deadline edge cases against a non-production Supabase project.
 
 ## Pull requests

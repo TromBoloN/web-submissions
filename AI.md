@@ -83,3 +83,24 @@ Secrets
 - Each screen: `page.tsx` (server component, fetches data), `*-client.tsx` (client), `actions.ts` (server actions), side by side. Keep a component in its route until a second route needs it.
 - Add new screens to `src/navigation/sidebar/sidebar-items.ts`.
 - Use `@/` aliases. Biome style: double quotes, semicolons, two-space indent, sorted imports, 120-character lines.
+
+## Current state (updated 2026-11-14)
+
+- Team portal redesign ("Guardian" look) is implemented: phase-aware hero, journey track, Guardian ID card, ticket receipt, bento layout, restyled sidebar, shared `ThemeToggle`. See `docs/documentation/DESIGN-SYSTEM.md` and `docs/documentation/COMPETITION-PHASES.md`.
+- `/admin/pengaturan` is split into sub-routes (`pengumpulan`, `hasil`, `galeri`, `studi-kasus`, `tautan`). See `docs/documentation/ADMIN-SETTINGS.md`.
+- The competition schedule is still hardcoded in five files (listed in COMPETITION-PHASES.md). Two migrations that move it to the database are written but NOT applied:
+  - `supabase/migrations/20261114000000_competition_stages.sql`
+  - `supabase/migrations/20261114010000_event_identity_and_final_details.sql`
+  If `competition_stages` is missing from `src/types/database.ts`, they are not applied. Do not write code against those tables until the owner has applied them and regenerated the types.
+- Direction: the owner wants the site as dynamic as possible (comprehensive admin settings). Planned order: (1) stages as data, (2) event identity + final details, (3) content store for copy, (4) settings polish + phase preview.
+
+## Open decisions (ask, never decide)
+
+- Judges with `judge_stage = 'both'` can read final logistics through `get_my_final_presentation()`. Confirm this is intended before relying on it.
+- `finalist_count` is display-only. Should the admin Finalis screen enforce it?
+- Rubric weights: keep them out of settings entirely, or allow edits only until the first score is saved? Currently out of settings.
+- Content store for copy (checklist items, FAQ, rules, gallery text): table design and how `/karya` copy reaches anon users (must be an anon-callable SECURITY DEFINER RPC, never a table grant).
+- Event name/edition as settings so a next edition needs no code change (single competition at a time, not multi-tenant).
+- Migrating the remaining raw hex colors in `src/app/karya/*` and `src/components/showcase-card.tsx` to tokens (separate step, may change how `/karya` looks).
+- Floating dock / icon-rail navigation: deferred, because the shell is shared with admin and judge.
+- Audit gaps: deadline, juknis, contact and case-study saves do not write audit events.
