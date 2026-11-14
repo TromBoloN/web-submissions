@@ -1,8 +1,20 @@
 import Link from "next/link";
 
-import { BookOpenCheck, CheckCircle2, Clock, Lightbulb, Lock, ShieldCheck, Sparkles, Target } from "lucide-react";
+import {
+  BookOpenCheck,
+  BookText,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Lightbulb,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  Target,
+} from "lucide-react";
 
 import { CaseStudyCountdown } from "@/app/(main)/team/studi-kasus/case-study-countdown";
+import { CaseStudyToc } from "@/app/(main)/team/studi-kasus/case-study-toc";
 import { MarkdownContent } from "@/components/markdown-content";
 import { type RubricBarItem, RubricBars } from "@/components/rubric-bars";
 import { Badge } from "@/components/ui/badge";
@@ -17,8 +29,17 @@ type CaseStudyData = {
   updatedAt: string;
 };
 
+/** The team's saved links, used to tick the deliverables checklist. Team view only. */
+export type CaseStudySubmission = {
+  status: "draft" | "submitted";
+  githubUrl: string | null;
+  liveDemoUrl: string | null;
+  videoUrl: string | null;
+};
+
 type CaseStudyViewProps = {
   userRole: "team" | "judge";
+  submission?: CaseStudySubmission | null;
   caseStudy: CaseStudyData | null;
   releaseAt: string | null;
   deadlineIso?: string | null;
@@ -92,6 +113,62 @@ function getTableOfContents(content: string) {
     .slice(0, 10);
 }
 
+const ARTICLE_ID = "case-study-article";
+
+const GITHUB_PATTERN = /^https:\/\/github\.com\/.+/i;
+const HTTP_PATTERN = /^https?:\/\/.+/i;
+
+function ReadyChecklist({ submission }: { submission: CaseStudySubmission | null }) {
+  const items = [
+    { id: "repo", label: "Repositori kode", ok: GITHUB_PATTERN.test(submission?.githubUrl?.trim() ?? "") },
+    {
+      id: "demo",
+      label: "Live demo yang dapat diakses publik",
+      ok: HTTP_PATTERN.test(submission?.liveDemoUrl?.trim() ?? ""),
+    },
+    {
+      id: "video",
+      label: "Video demonstrasi maksimal 5 menit",
+      ok: HTTP_PATTERN.test(submission?.videoUrl?.trim() ?? ""),
+    },
+  ];
+  const doneCount = items.filter((item) => item.ok).length;
+
+  let statusLabel = "Belum ada karya tersimpan";
+  if (submission?.status === "submitted") statusLabel = "Terkirim";
+  else if (submission) statusLabel = "Draf tersimpan";
+
+  return (
+    <div className="w-full space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-medium">
+          Status: <span className="text-foreground">{statusLabel}</span>
+        </span>
+        <span className="font-mono text-muted-foreground tabular-nums">
+          {doneCount}/{items.length} tautan tersimpan
+        </span>
+      </div>
+      <ul className="space-y-2 text-sm">
+        {items.map((item) => (
+          <li key={item.id} className="flex items-center gap-2">
+            {item.ok ? (
+              <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <Circle aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className={item.ok ? undefined : "text-muted-foreground"}>{item.label}</span>
+            <span className="sr-only">{item.ok ? "sudah tersimpan" : "belum tersimpan"}</span>
+          </li>
+        ))}
+        <li className="flex items-start gap-2 border-border border-t border-dashed pt-2 text-muted-foreground text-xs">
+          <BookText aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span>README yang jelas dan lengkap tidak dicek otomatis. Pastikan sudah siap di repositori.</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
 function GuardiansCards() {
   return (
     <section aria-labelledby="guardians-heading" className="space-y-3">
@@ -103,17 +180,20 @@ function GuardiansCards() {
           Bangun pengalaman yang membantu pengguna mengenali, memahami, dan bertindak.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {guardiansSteps.map(({ description, icon: Icon, title }) => (
-          <Card key={title} className="bg-muted/20">
-            <CardContent className="space-y-2 p-4">
-              <Icon aria-hidden="true" className="size-5 text-primary" />
-              <h3 className="font-semibold">{title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
-            </CardContent>
-          </Card>
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {guardiansSteps.map(({ description, icon: Icon, title }, index) => (
+          <li key={title} className="rounded-2xl border-2 border-ink bg-card p-4 shadow-brutal-sm">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-display font-extrabold text-4xl text-guardian-accent tabular-nums leading-none">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <Icon aria-hidden="true" className="size-5 text-ink" />
+            </div>
+            <h3 className="mt-3 font-bold font-display text-lg">{title}</h3>
+            <p className="mt-1 text-muted-foreground text-sm leading-relaxed">{description}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }
@@ -133,20 +213,7 @@ function TeamRail({
             <CardTitle className="text-base">Daftar isi</CardTitle>
           </CardHeader>
           <CardContent>
-            <nav aria-label="Daftar isi studi kasus">
-              <ul className="space-y-2 text-sm">
-                {tableOfContents.map((item) => (
-                  <li key={item.id} className={item.level === 3 ? "pl-3" : undefined}>
-                    <a
-                      className="text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      href={`#${item.id}`}
-                    >
-                      {item.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+            <CaseStudyToc items={tableOfContents} articleId={ARTICLE_ID} />
           </CardContent>
         </Card>
       )}
@@ -251,6 +318,7 @@ export function CaseStudyView({
   juknisUrl,
   releaseAt,
   serverNowIso,
+  submission,
   userRole,
 }: CaseStudyViewProps) {
   if (!caseStudy) {
@@ -304,7 +372,7 @@ export function CaseStudyView({
       <Separator />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <main className="min-w-0 space-y-6">
-          <Card>
+          <Card id={ARTICLE_ID}>
             <CardContent className="space-y-8 p-6 sm:p-8">
               <GuardiansCards />
               <MarkdownContent content={caseStudy.contentMd} />
@@ -313,15 +381,16 @@ export function CaseStudyView({
           {isTeam && <JuknisSummary />}
           {isTeam && (
             <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="flex flex-col items-center gap-4 p-6 text-center sm:items-start sm:text-left">
+              <CardContent className="flex flex-col items-start gap-4 p-6">
                 <div>
                   <h2 className="font-semibold text-lg">Siap mengirim karya?</h2>
                   <p className="text-muted-foreground text-sm">
                     Pastikan semua tautan dan dokumentasi telah siap sebelum batas waktu.
                   </p>
                 </div>
+                <ReadyChecklist submission={submission ?? null} />
                 {serverNowIso && <CaseStudyCountdown deadlineIso={deadlineIso ?? null} serverNowIso={serverNowIso} />}
-                <Button asChild>
+                <Button asChild className="press">
                   <Link href="/team">Buka portal pengiriman</Link>
                 </Button>
               </CardContent>
@@ -338,17 +407,7 @@ export function CaseStudyView({
                   <CardTitle className="text-base">Daftar isi</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <nav aria-label="Daftar isi studi kasus">
-                    <ul className="space-y-2 text-sm">
-                      {tableOfContents.map((item) => (
-                        <li key={item.id}>
-                          <a className="text-muted-foreground hover:text-primary" href={`#${item.id}`}>
-                            {item.title}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
+                  <CaseStudyToc items={tableOfContents} articleId={ARTICLE_ID} />
                 </CardContent>
               </Card>
             </aside>

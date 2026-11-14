@@ -4,15 +4,16 @@ import { useMemo, useRef, useState, useTransition } from "react";
 
 import Link from "next/link";
 
-import { ImageIcon, LoaderCircle, LockKeyhole, Save } from "lucide-react";
+import { cn } from "cn";
+import { ImageIcon, ImageUp, LoaderCircle, LockKeyhole, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { ShowcaseCard, type ShowcaseCardData } from "@/components/showcase-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
@@ -85,6 +86,7 @@ export function KaryaClient({
   const [imagePath, setImagePath] = useState(team.showcase_image_path);
   const [imageUrl, setImageUrl] = useState(getPublicImageUrl(supabaseUrl, team.showcase_image_path));
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const isSubmitted = submission?.status === "submitted";
@@ -178,15 +180,27 @@ export function KaryaClient({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <div className="flex items-start gap-2.5">
-                    <Checkbox
+                  <div
+                    className={cn(
+                      "flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors",
+                      consent ? "border-primary/40 bg-primary/5" : "bg-muted/30",
+                    )}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <Label htmlFor="showcase-consent-page" className="font-semibold text-base">
+                        {consent ? "Tampil di galeri" : "Tidak tampil di galeri"}
+                      </Label>
+                      <p id="showcase-consent-desc" className="text-muted-foreground text-xs leading-relaxed">
+                        Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri.
+                      </p>
+                    </div>
+                    <Switch
                       id="showcase-consent-page"
                       checked={consent}
-                      onCheckedChange={(checked) => setConsent(checked === true)}
+                      onCheckedChange={setConsent}
+                      aria-describedby="showcase-consent-desc"
+                      className="scale-125"
                     />
-                    <Label htmlFor="showcase-consent-page">
-                      Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri.
-                    </Label>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="showcase-title">Judul karya</Label>
@@ -212,20 +226,80 @@ export function KaryaClient({
                     <p className="text-muted-foreground text-xs">{description.length}/300 karakter</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="showcase-image">Gambar pratinjau</Label>
-                    <Input
-                      ref={fileInputRef}
-                      id="showcase-image"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      disabled={isUploading || isPending}
-                      onChange={(event) => handleImage(event.target.files?.[0])}
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      Gambar otomatis dipotong ke rasio 16:10. PNG, JPEG, atau WebP. Maksimal 2 MB.
+                    <p id="showcase-image-label" className="font-medium text-sm">
+                      Gambar pratinjau
+                    </p>
+                    <label
+                      htmlFor="showcase-image"
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (!isUploading && !isPending) setIsDragging(true);
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setIsDragging(false);
+                        if (!isUploading && !isPending) handleImage(event.dataTransfer.files?.[0]);
+                      }}
+                      className={cn(
+                        "relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed p-4 text-center transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
+                        isDragging
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50 hover:bg-muted/40",
+                        (isUploading || isPending) && "cursor-not-allowed opacity-70",
+                      )}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        id="showcase-image"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="sr-only"
+                        aria-labelledby="showcase-image-label"
+                        aria-describedby="showcase-image-hint"
+                        disabled={isUploading || isPending}
+                        onChange={(event) => {
+                          handleImage(event.target.files?.[0]);
+                          // Allow picking the same file again later.
+                          event.target.value = "";
+                        }}
+                      />
+                      {imageUrl ? (
+                        <div className="w-full space-y-2">
+                          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg border bg-muted">
+                            {/* biome-ignore lint/performance/noImgElement: public storage images */}
+                            <img src={imageUrl} alt="Pratinjau gambar karya" className="size-full object-cover" />
+                            <span className="absolute top-2 left-2 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                              Potongan 16:10
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-xs">Klik atau seret gambar baru untuk mengganti.</p>
+                        </div>
+                      ) : (
+                        <div className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2">
+                          <ImageUp className="size-8 text-muted-foreground" aria-hidden="true" />
+                          <p className="font-medium text-sm">
+                            Seret gambar ke sini atau <span className="text-primary underline">pilih file</span>
+                          </p>
+                        </div>
+                      )}
+                      {isUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background/80 font-medium text-sm">
+                          <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                          Memproses gambar...
+                        </div>
+                      )}
+                    </label>
+                    <p id="showcase-image-hint" className="text-muted-foreground text-xs">
+                      Dipotong otomatis dari tengah ke rasio 16:10. PNG, JPEG, atau WebP. Maksimal 2 MB.
                     </p>
                   </div>
-                  <Button type="button" disabled={isUploading || isPending} onClick={handleSave} className="gap-2">
+                  <Button
+                    type="button"
+                    disabled={isUploading || isPending}
+                    onClick={handleSave}
+                    className="press gap-2"
+                  >
                     {isPending ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
                     Simpan tampilan
                   </Button>

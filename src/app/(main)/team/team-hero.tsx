@@ -9,11 +9,9 @@ import {
   AlertOctagon,
   ArrowRight,
   BookText,
-  Check,
   CheckCircle2,
   Circle,
   Clock,
-  Copy,
   Mic,
   ScanSearch,
   Sparkles,
@@ -31,7 +29,6 @@ type SubmissionState = "none" | "draft" | "submitted";
 
 export type TeamHeroProps = {
   phase: TeamPhase;
-  teamCode: string;
   submissionState: SubmissionState;
   deadlineIso: string | null;
   serverNowIso: string;
@@ -55,29 +52,6 @@ function formatTimestampWita(iso: string | null | undefined): string {
     dateStyle: "long",
     timeStyle: "short",
   }).format(date)} WITA`;
-}
-
-function CopyCodeButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <button
-      type="button"
-      className="press inline-flex size-7 items-center justify-center rounded-full text-ink hover:bg-ink/10 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-      aria-label={copied ? "Kode tim tersalin" : "Salin kode tim"}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1500);
-        } catch {
-          setCopied(false);
-        }
-      }}
-    >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-    </button>
-  );
 }
 
 function CountdownTimer({
@@ -178,19 +152,12 @@ function CountdownTimer({
   );
 }
 
-function Eyebrow({ children, teamCode }: { children: ReactNode; teamCode: string }) {
+function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-card px-3 py-1 font-bold font-mono text-[11px] text-ink uppercase tracking-wider shadow-brutal-sm">
-        <span className="size-2 rounded-full bg-mint" aria-hidden="true" />
-        {children}
-      </span>
-      <span className="inline-flex items-center gap-1 rounded-full border-2 border-ink bg-card py-0.5 pr-1 pl-3 text-ink shadow-brutal-sm">
-        <span className="font-mono text-[10px] uppercase tracking-wider opacity-75">Kode Tim</span>
-        <span className="ml-1 font-bold font-mono text-sm">{teamCode}</span>
-        <CopyCodeButton value={teamCode} />
-      </span>
-    </div>
+    <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-card px-3 py-1 font-bold font-mono text-[11px] text-ink uppercase tracking-wider shadow-brutal-sm">
+      <span className="size-2 rounded-full bg-mint" aria-hidden="true" />
+      {children}
+    </span>
   );
 }
 
@@ -300,7 +267,7 @@ function OpenHero(props: TeamHeroProps) {
 
   return (
     <LoudShell>
-      <Eyebrow teamCode={props.teamCode}>Fase · Pengumpulan karya</Eyebrow>
+      <Eyebrow>Fase · Pengumpulan karya</Eyebrow>
       <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_minmax(0,22rem)] lg:items-start">
         <div className="min-w-0 space-y-3">
           <h1 className="team-hero-title">{copy.title}</h1>
@@ -325,12 +292,12 @@ function OpenHero(props: TeamHeroProps) {
   );
 }
 
-function ClosedHero(props: TeamHeroProps) {
+function ClosedHero() {
   const review = getScheduleStep("review");
 
   return (
     <LoudShell>
-      <Eyebrow teamCode={props.teamCode}>Fase · Pengiriman ditutup</Eyebrow>
+      <Eyebrow>Fase · Pengiriman ditutup</Eyebrow>
       <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-3">
           <h1 className="team-hero-title team-hero-title-outline">Terkunci.</h1>
@@ -355,7 +322,7 @@ function ReviewHero(props: TeamHeroProps) {
 
   return (
     <LoudShell>
-      <Eyebrow teamCode={props.teamCode}>Fase · {review.title}</Eyebrow>
+      <Eyebrow>Fase · {review.title}</Eyebrow>
       <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex items-center gap-3">
@@ -404,7 +371,7 @@ function FinalDetails() {
 function FinalistHero(props: TeamHeroProps) {
   return (
     <LoudShell>
-      <Eyebrow teamCode={props.teamCode}>Hasil Babak Awal</Eyebrow>
+      <Eyebrow>Hasil Babak Awal</Eyebrow>
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,22rem)] lg:items-start">
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -437,7 +404,7 @@ function FinalistHero(props: TeamHeroProps) {
 function FinalHero(props: TeamHeroProps) {
   return (
     <LoudShell>
-      <Eyebrow teamCode={props.teamCode}>Fase · Babak Final</Eyebrow>
+      <Eyebrow>Fase · Babak Final</Eyebrow>
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,22rem)] lg:items-start">
         <div className="min-w-0 space-y-4">
           <h1 className="team-hero-title">Babak Final</h1>
@@ -452,10 +419,10 @@ function FinalHero(props: TeamHeroProps) {
   );
 }
 
-function ResultsHero(props: TeamHeroProps) {
+function ResultsHero() {
   return (
     <LoudShell>
-      <Eyebrow teamCode={props.teamCode}>Fase · Pengumuman juara</Eyebrow>
+      <Eyebrow>Fase · Pengumuman juara</Eyebrow>
       <div className="mt-6 space-y-4">
         <h1 className="team-hero-title">Hasil final</h1>
         <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
@@ -522,7 +489,7 @@ export function TeamHero(props: TeamHeroProps) {
     case "open":
       return <OpenHero {...props} />;
     case "closed":
-      return <ClosedHero {...props} />;
+      return <ClosedHero />;
     case "review":
       return <ReviewHero {...props} />;
     case "finalist":
@@ -530,7 +497,7 @@ export function TeamHero(props: TeamHeroProps) {
     case "final":
       return <FinalHero {...props} />;
     case "results":
-      return <ResultsHero {...props} />;
+      return <ResultsHero />;
     case "not-finalist":
       return <NotFinalistHero {...props} />;
     case "missed":

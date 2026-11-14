@@ -46,6 +46,7 @@ import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
 import { checkMyLinks, saveSubmission } from "./actions";
+import { GuardianIdCard } from "./guardian-id-card";
 import { JourneyTrack } from "./journey-track";
 import { SubmissionChecklist } from "./submission-checklist";
 import { SubmissionReceipt } from "./submission-receipt";
@@ -251,7 +252,6 @@ export function SubmissionClient({
   const isSubmitted = submission?.status === "submitted";
   const hasSubmissionRow = Boolean(submission);
   const [isFormExpanded, setIsFormExpanded] = useState(!isSubmitted);
-  const [isTeamInfoOpen, setIsTeamInfoOpen] = useState(false);
 
   const phase = resolveTeamPhase({
     serverNowIso,
@@ -740,51 +740,14 @@ export function SubmissionClient({
     />
   );
 
-  const teamInfoCard = (
-    <Card className="gap-0 py-0">
-      <CardHeader className="p-4">
-        <CardTitle className="flex items-center justify-between gap-3 text-base">
-          <span>Informasi Tim</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsTeamInfoOpen((prev) => !prev)}
-            className="h-7 gap-1 px-2 text-muted-foreground text-xs"
-            aria-expanded={isTeamInfoOpen}
-          >
-            {isTeamInfoOpen ? "Tutup" : "Lihat"}
-            {isTeamInfoOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-          </Button>
-        </CardTitle>
-        <p className="text-muted-foreground text-xs">
-          {team.team_name} · {team.institution}
-        </p>
-      </CardHeader>
-      {isTeamInfoOpen && (
-        <CardContent className="space-y-2.5 p-4 pt-0 text-xs">
-          <div>
-            <span className="text-muted-foreground">Nama Tim:</span>
-            <p className="font-semibold text-foreground text-sm">{team.team_name}</p>
-          </div>
-
-          <div>
-            <span className="text-muted-foreground">Institusi:</span>
-            <p className="text-foreground">{team.institution}</p>
-          </div>
-
-          <div>
-            <span className="text-muted-foreground">Ketua Tim:</span>
-            <p className="font-medium text-foreground">{team.leader_name}</p>
-          </div>
-
-          <div>
-            <span className="text-muted-foreground">Anggota:</span>
-            <p className="text-foreground">{team.members.join(", ")}</p>
-          </div>
-        </CardContent>
-      )}
-    </Card>
+  const idCard = (
+    <GuardianIdCard
+      teamCode={team.team_code}
+      teamName={team.team_name}
+      institution={team.institution}
+      leaderName={team.leader_name}
+      members={team.members}
+    />
   );
 
   const helpCard = (
@@ -818,19 +781,21 @@ export function SubmissionClient({
 
   return (
     <div className="space-y-6">
-      {/* 1. Phase-aware hero (replaces the finalist banner, status hero and closed/disqualified alerts) */}
-      <TeamHero
-        phase={phase}
-        teamCode={team.team_code}
-        submissionState={submissionState}
-        deadlineIso={deadlineIso}
-        serverNowIso={serverNowIso}
-        onExpire={handleCountdownExpire}
-        finalistNotice={finalistNotice}
-        resultsReleased={resultsReleased}
-        liveLinks={{ github: githubUrl, liveDemo: liveDemoUrl, video: videoUrl }}
-        hasUnsavedChanges={hasUnsavedChanges}
-      />
+      {/* 1. Hero; once closed the Guardian ID sits beside it */}
+      <div className={phase === "open" ? undefined : "grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]"}>
+        <TeamHero
+          phase={phase}
+          submissionState={submissionState}
+          deadlineIso={deadlineIso}
+          serverNowIso={serverNowIso}
+          onExpire={handleCountdownExpire}
+          finalistNotice={finalistNotice}
+          resultsReleased={resultsReleased}
+          liveLinks={{ github: githubUrl, liveDemo: liveDemoUrl, video: videoUrl }}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
+        {phase !== "open" && idCard}
+      </div>
 
       {/* 2. Deadline reached while the page was open */}
       {!isClosed && !isDisqualified && isCountdownZero && (
@@ -886,9 +851,9 @@ export function SubmissionClient({
 
             <div className="space-y-6">
               {/* Studi kasus, juknis and gallery live in the sidebar */}
+              {idCard}
               {!isSubmitted && <SubmissionChecklist />}
               {showcaseCard}
-              {teamInfoCard}
               {helpCard}
             </div>
           </div>
@@ -904,10 +869,7 @@ export function SubmissionClient({
               {receipt ?? (hasSubmissionRow ? formCard : <NoReceiptCard />)}
             </div>
             <div className="lg:col-span-3">{showcaseCard}</div>
-            <div className="space-y-6 lg:col-span-3">
-              {teamInfoCard}
-              {helpCard}
-            </div>
+            <div className="lg:col-span-3">{helpCard}</div>
           </div>
         </>
       )}
