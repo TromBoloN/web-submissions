@@ -2,11 +2,22 @@
 
 import { useState } from "react";
 
-import { Check, Copy, ExternalLink, Printer, ShieldCheck } from "lucide-react";
+import { cn } from "cn";
+import {
+  Check,
+  Clapperboard,
+  Copy,
+  ExternalLink,
+  FolderGit2,
+  Globe,
+  type LucideIcon,
+  Printer,
+  Stamp,
+  Ticket,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Database } from "@/types/database";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
@@ -78,14 +89,41 @@ function parseShortUrlLabel(url: string | null | undefined): string {
   }
 }
 
-function ReceiptLinkRow({ label, url }: { label: string; url: string | null | undefined }) {
+/** Copy icon that morphs into a check mark. */
+function MorphCopyIcon({ copied }: { copied: boolean }) {
+  return (
+    <span className="relative inline-block size-3.5" aria-hidden="true">
+      <Copy
+        className={cn(
+          "absolute inset-0 size-3.5 transition-all duration-200 motion-reduce:transition-none",
+          copied ? "scale-0 opacity-0" : "scale-100 opacity-100",
+        )}
+      />
+      <Check
+        className={cn(
+          "absolute inset-0 size-3.5 text-emerald-600 transition-all duration-200 motion-reduce:transition-none dark:text-emerald-400",
+          copied ? "scale-100 opacity-100" : "scale-0 opacity-0",
+        )}
+        strokeWidth={3}
+      />
+    </span>
+  );
+}
+
+function ReceiptLinkRow({
+  label,
+  url,
+  icon: Icon,
+}: {
+  label: string;
+  url: string | null | undefined;
+  icon: LucideIcon;
+}) {
   const [copiedRow, setCopiedRow] = useState(false);
   const isValid = isSafeUrl(url);
   const shortLabel = parseShortUrlLabel(url);
 
-  const handleCopyRow = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleCopyRow = async () => {
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
@@ -98,40 +136,42 @@ function ReceiptLinkRow({ label, url }: { label: string; url: string | null | un
   };
 
   return (
-    <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
-      <span className="font-sans text-muted-foreground">{label}:</span>
-      <div className="min-w-0 truncate">
+    <li className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background/60 p-2.5 print:border-0 print:bg-transparent print:p-0">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg border-2 border-ink bg-card text-ink print:hidden">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
         {isValid && url ? (
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
             title={url}
-            className="inline-flex max-w-full items-center gap-1 font-sans text-primary underline underline-offset-2 hover:opacity-80"
+            className="inline-flex max-w-full items-center gap-1 font-medium text-foreground text-sm underline-offset-2 hover:underline"
           >
-            <span className="truncate font-medium">{shortLabel}</span>
-            <ExternalLink className="size-3 shrink-0" />
+            <span className="truncate">{shortLabel}</span>
+            <ExternalLink className="size-3 shrink-0 text-muted-foreground print:hidden" aria-hidden="true" />
           </a>
         ) : (
-          <span className="truncate font-sans text-muted-foreground">{url ?? "-"}</span>
+          <p className="truncate text-muted-foreground text-sm">{url ? url : "-"}</p>
         )}
+        {/* Full URL only on paper, where links can't be clicked. */}
+        {isValid && url && <p className="hidden break-all text-xs print:block">{url}</p>}
       </div>
-      {isValid && url ? (
+      {isValid && url && (
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={handleCopyRow}
-          title={`Salin URL ${label}`}
-          className="size-7 shrink-0 text-muted-foreground hover:text-foreground focus-visible:ring-2"
+          className="press size-8 shrink-0 text-muted-foreground hover:text-foreground print:hidden"
+          aria-label={copiedRow ? `Tautan ${label} tersalin` : `Salin tautan ${label}`}
         >
-          {copiedRow ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-          <span className="sr-only">Salin {label}</span>
+          <MorphCopyIcon copied={copiedRow} />
         </Button>
-      ) : (
-        <span />
       )}
-    </div>
+    </li>
   );
 }
 
@@ -187,73 +227,88 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <Card className="gap-0 border-emerald-600/30 bg-emerald-50/40 py-0 dark:bg-emerald-950/10 print:border-none print:shadow-none">
-      <CardHeader className="p-4 sm:p-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="size-4" />
-            </div>
-            <div>
-              <CardTitle className="text-base text-foreground">Bukti Pengiriman Berkas</CardTitle>
-              <CardDescription className="text-xs">
-                No. Bukti: <span className="font-medium font-mono text-foreground">{receiptNumber}</span>
-              </CardDescription>
-            </div>
+    <section
+      aria-labelledby="receipt-title"
+      className="receipt-print surface-loud overflow-hidden print:rounded-none print:border print:border-black print:bg-white print:text-black print:shadow-none"
+    >
+      {/* Ticket body */}
+      <div className="space-y-4 p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <p className="flex items-center gap-1.5 font-bold font-mono text-[11px] text-ink uppercase tracking-wider print:text-black">
+              <Ticket className="size-3.5 print:hidden" aria-hidden="true" />
+              Bukti pengiriman · MIT-WEEK 2026
+            </p>
+            <h2 id="receipt-title" className="break-all font-bold font-mono text-foreground text-lg sm:text-xl">
+              <span className="sr-only">Nomor bukti </span>
+              {receiptNumber}
+            </h2>
+            <p className="text-muted-foreground text-xs">
+              {team.team_name} · {team.institution}
+            </p>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 p-5 text-xs sm:text-sm">
-        <div className="grid gap-3 p-0">
-          <ReceiptLinkRow label="GitHub" url={submission.github_url} />
-          <ReceiptLinkRow label="Live demo" url={submission.live_demo_url} />
-          <ReceiptLinkRow label="Video" url={submission.video_url} />
-
-          {/* Timeline points */}
-          <div className="space-y-2 border-t pt-3 font-sans sm:col-span-2">
-            <span className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-              Kronologi Pengiriman
-            </span>
-            <div className="grid grid-cols-1 gap-2 text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span>Pertama dikirim:</span>
-                <span className="font-medium text-foreground tabular-nums">{firstSubmittedFormatted} WITA</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span>Terakhir diperbarui:</span>
-                <span className="font-medium text-foreground tabular-nums">{updatedAtFormatted} WITA</span>
-              </div>
-            </div>
-          </div>
+          <span className="team-stamp shrink-0 text-xs sm:text-sm print:animate-none">
+            <Stamp className="size-4" aria-hidden="true" />
+            Terkirim
+          </span>
         </div>
 
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <p className="font-sans text-muted-foreground text-xs">
-            Simpan atau cetak bukti ini sebagai tanda terima pengiriman submission MIT-WEEK 2026.
-          </p>
-          <div className="flex items-center gap-2">
+        <ul className="space-y-2">
+          <ReceiptLinkRow label="Repositori" url={submission.github_url} icon={FolderGit2} />
+          <ReceiptLinkRow label="Live demo" url={submission.live_demo_url} icon={Globe} />
+          <ReceiptLinkRow label="Video demo" url={submission.video_url} icon={Clapperboard} />
+        </ul>
+      </div>
+
+      {/* Perforation: dashed tear line with punched notches */}
+      <div className="relative h-0" aria-hidden="true">
+        <span className="absolute top-0 -left-3.5 size-7 -translate-y-1/2 rounded-full border-2 border-ink bg-background print:hidden" />
+        <span className="absolute top-0 -right-3.5 size-7 -translate-y-1/2 rounded-full border-2 border-ink bg-background print:hidden" />
+        <div className="mx-6 border-ink/40 border-t-2 border-dashed print:mx-0 print:border-black/40" />
+      </div>
+
+      {/* Ticket stub */}
+      <div className="space-y-4 p-5 sm:p-6">
+        <dl className="grid gap-3 text-xs sm:grid-cols-2">
+          <div>
+            <dt className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Pertama dikirim</dt>
+            <dd className="mt-0.5 font-medium text-foreground tabular-nums">{firstSubmittedFormatted} WITA</dd>
+          </div>
+          <div>
+            <dt className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+              Terakhir diperbarui
+            </dt>
+            <dd className="mt-0.5 font-medium text-foreground tabular-nums">{updatedAtFormatted} WITA</dd>
+          </div>
+        </dl>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+          <p className="text-muted-foreground text-xs">Simpan atau cetak bukti ini sebagai tanda terima.</p>
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handlePrint}
-              className="gap-1.5 font-sans focus-visible:ring-2"
+              onClick={() => window.print()}
+              className="press btn-loud gap-1.5 rounded-full bg-card"
             >
-              <Printer className="size-3.5" />
-              <span>Cetak / PDF</span>
+              <Printer className="size-3.5" aria-hidden="true" />
+              Cetak / PDF
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 font-sans">
-              {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-              <span>{copied ? "Tersalin" : "Salin bukti"}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopy}
+              className="press btn-loud gap-1.5 rounded-full bg-card"
+            >
+              <MorphCopyIcon copied={copied} />
+              {copied ? "Tersalin" : "Salin bukti"}
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

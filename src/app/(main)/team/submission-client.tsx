@@ -1,14 +1,12 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { cn } from "cn";
 import {
   AlertTriangle,
-  Calendar,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -16,6 +14,7 @@ import {
   Clock,
   Code2,
   ExternalLink,
+  FileX,
   Globe,
   HelpCircle,
   MessageCircle,
@@ -47,11 +46,11 @@ import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
 import { checkMyLinks, saveSubmission } from "./actions";
+import { JourneyTrack } from "./journey-track";
 import { SubmissionChecklist } from "./submission-checklist";
 import { SubmissionReceipt } from "./submission-receipt";
 import { TeamHero } from "./team-hero";
 import { type FinalistNoticeData, resolveTeamPhase } from "./team-phase";
-import { TEAM_SCHEDULE, toWitaDateKey } from "./team-schedule";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -81,67 +80,16 @@ function formatTimestampWita(iso: string | null | undefined): string {
   }).format(date)} WITA`;
 }
 
-function NextStepsCard({ serverNowIso }: { serverNowIso: string }) {
-  const steps = TEAM_SCHEDULE;
-  const serverDate = new Date(serverNowIso);
-  const today = toWitaDateKey(serverNowIso);
-  const todayLabel = new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Makassar",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(serverDate);
-  const firstFutureIndex = steps.findIndex((step) => step.start > today);
-  const markerIndex = firstFutureIndex === -1 ? steps.length : firstFutureIndex;
-
+/** Closed-layout slot when the team never saved anything, so there is no receipt to show. */
+function NoReceiptCard() {
   return (
-    <Card className="gap-0 py-0">
-      <CardHeader className="p-4 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Calendar className="size-4 text-primary" />
-          Langkah Berikutnya
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Linimasa penting kompetisi setelah tahap pengumpulan karya.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="relative space-y-4 p-4 pl-8">
-        <div className="absolute top-0 bottom-0 left-3 w-px bg-border" />
-        {steps.map((st, index) => {
-          const isPast = st.end < today;
-          const isActive = !isPast && st.start <= today && today <= st.end;
-
-          return (
-            <Fragment key={st.title}>
-              {index === markerIndex && (
-                <div className="flex items-center gap-2 font-medium text-[10px] text-muted-foreground">
-                  <span className="size-2.5 rounded-full border-2 border-background bg-primary" />
-                  <span>Hari ini · {todayLabel}</span>
-                </div>
-              )}
-              <div className={cn("relative flex items-start gap-3 text-xs", isPast && "text-muted-foreground")}>
-                <span className="absolute top-1.5 -left-[1.4rem] size-2.5 rounded-full border-2 border-background bg-primary" />
-                <div className="min-w-0">
-                  <p className={cn("font-medium", !isPast && "text-foreground")}>
-                    <span className="mr-2 font-sans text-[11px] text-muted-foreground tabular-nums">{st.dates}</span>
-                    {isPast && <CheckCircle2 className="mr-1 inline size-3.5 text-emerald-600 dark:text-emerald-400" />}
-                    {st.title}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground leading-normal">{st.desc}</p>
-                  {isActive && <p className="mt-0.5 font-medium text-[11px] text-primary">Sedang berlangsung</p>}
-                </div>
-              </div>
-            </Fragment>
-          );
-        })}
-        {markerIndex === steps.length && (
-          <div className="flex items-center gap-2 font-medium text-[10px] text-muted-foreground">
-            <span className="size-2.5 rounded-full border-2 border-background bg-primary" />
-            <span>Hari ini · {todayLabel}</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="surface-calm flex flex-col items-center gap-2 p-8 text-center">
+      <FileX className="size-8 text-muted-foreground" aria-hidden="true" />
+      <p className="font-semibold text-sm">Tidak ada bukti pengiriman</p>
+      <p className="max-w-sm text-muted-foreground text-xs">
+        Tim Anda tidak mengirim atau menyimpan karya sebelum batas waktu berakhir.
+      </p>
+    </div>
   );
 }
 
@@ -451,6 +399,423 @@ export function SubmissionClient({
     setIsConfirmOpen(true);
   };
 
+  const receipt = isSubmitted && submission ? <SubmissionReceipt team={team} submission={submission} /> : null;
+
+  const formCard = (
+    <Card className="gap-0 py-0">
+      <CardHeader className="p-4">
+        <CardTitle className="text-lg">Formulir Pengiriman Berkas</CardTitle>
+        <CardDescription>
+          Masukkan tautan repositori GitHub, URL live demo aplikasi, dan video presentasi proyek tim Anda.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 p-4">
+        {/* GitHub URL */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="github_url" className="flex items-center gap-1.5 font-medium">
+              <Code2 className="size-4 text-muted-foreground" />
+              Repositori GitHub
+              <span className="text-destructive">*</span>
+            </Label>
+            {!isReadOnly && (
+              <div className="flex items-center gap-1">
+                {githubUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => setGithubUrl("")}
+                    className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
+                  >
+                    <Trash2 className="size-3" />
+                    <span>Hapus</span>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              id="github_url"
+              name="github_url"
+              type="url"
+              inputMode="url"
+              value={githubUrl}
+              aria-describedby={
+                fieldErrors.github_url ? "github_url_error github_url_status" : "github_url_help github_url_status"
+              }
+              disabled={isReadOnly || isPending}
+              onChange={(e) => {
+                setGithubUrl(e.target.value);
+                if (fieldErrors.github_url) {
+                  setFieldErrors((prev) => ({ ...prev, github_url: undefined }));
+                }
+              }}
+              onBlur={(e) => setGithubUrl(e.target.value.trim())}
+              placeholder="https://github.com/organisasi/nama-proyek"
+              className={fieldErrors.github_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"}
+            />
+            {!isReadOnly && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Tempel URL GitHub"
+                disabled={isPending}
+                onClick={() => handlePaste(setGithubUrl)}
+                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <ClipboardPaste className="size-4" />
+              </Button>
+            )}
+          </div>
+          {fieldErrors.github_url ? (
+            <p id="github_url_error" className="text-[13px] text-destructive">
+              {fieldErrors.github_url}
+            </p>
+          ) : (
+            <p id="github_url_help" className="text-[13px] text-muted-foreground">
+              Tautan repositori publik GitHub yang berisi kode sumber proyek. Wajib diawali{" "}
+              <code>https://github.com/</code>.
+            </p>
+          )}
+          <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} statusId="github_url_status" />
+        </div>
+
+        {/* Live Demo URL */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="live_demo_url" className="flex items-center gap-1.5 font-medium">
+              <Globe className="size-4 text-muted-foreground" />
+              URL Live Demo
+              <span className="text-destructive">*</span>
+            </Label>
+            {!isReadOnly && (
+              <div className="flex items-center gap-1">
+                {liveDemoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => setLiveDemoUrl("")}
+                    className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
+                  >
+                    <Trash2 className="size-3" />
+                    <span>Hapus</span>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              id="live_demo_url"
+              name="live_demo_url"
+              type="url"
+              inputMode="url"
+              value={liveDemoUrl}
+              aria-describedby={
+                fieldErrors.live_demo_url
+                  ? "live_demo_url_error live_demo_url_status"
+                  : "live_demo_url_help live_demo_url_status"
+              }
+              disabled={isReadOnly || isPending}
+              onChange={(e) => {
+                setLiveDemoUrl(e.target.value);
+                if (fieldErrors.live_demo_url) {
+                  setFieldErrors((prev) => ({ ...prev, live_demo_url: undefined }));
+                }
+              }}
+              onBlur={(e) => setLiveDemoUrl(e.target.value.trim())}
+              placeholder="https://proyek-mitweek.vercel.app"
+              className={
+                fieldErrors.live_demo_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"
+              }
+            />
+            {!isReadOnly && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Tempel URL live demo"
+                disabled={isPending}
+                onClick={() => handlePaste(setLiveDemoUrl)}
+                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <ClipboardPaste className="size-4" />
+              </Button>
+            )}
+          </div>
+          {fieldErrors.live_demo_url ? (
+            <p id="live_demo_url_error" className="text-[13px] text-destructive">
+              {fieldErrors.live_demo_url}
+            </p>
+          ) : (
+            <p id="live_demo_url_help" className="text-[13px] text-muted-foreground">
+              Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel, Netlify,
+              dsb).
+            </p>
+          )}
+          <LinkCheckBadge item={linkCheck?.liveDemo} isChecking={isCheckingLinks} statusId="live_demo_url_status" />
+        </div>
+
+        {/* Video Demo URL */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="video_url" className="flex items-center gap-1.5 font-medium">
+              <Video className="size-4 text-muted-foreground" />
+              URL Video Demo
+              <span className="text-destructive">*</span>
+            </Label>
+            {!isReadOnly && (
+              <div className="flex items-center gap-1">
+                {videoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => setVideoUrl("")}
+                    className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
+                  >
+                    <Trash2 className="size-3" />
+                    <span>Hapus</span>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              id="video_url"
+              name="video_url"
+              type="url"
+              inputMode="url"
+              value={videoUrl}
+              aria-describedby={
+                fieldErrors.video_url ? "video_url_error video_url_status" : "video_url_help video_url_status"
+              }
+              disabled={isReadOnly || isPending}
+              onChange={(e) => {
+                setVideoUrl(e.target.value);
+                if (fieldErrors.video_url) {
+                  setFieldErrors((prev) => ({ ...prev, video_url: undefined }));
+                }
+              }}
+              onBlur={(e) => setVideoUrl(e.target.value.trim())}
+              placeholder="https://youtube.com/watch?v=... atau https://youtu.be/..."
+              className={fieldErrors.video_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"}
+            />
+            {!isReadOnly && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Tempel URL video"
+                disabled={isPending}
+                onClick={() => handlePaste(setVideoUrl)}
+                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <ClipboardPaste className="size-4" />
+              </Button>
+            )}
+          </div>
+          {fieldErrors.video_url ? (
+            <p id="video_url_error" className="text-[13px] text-destructive">
+              {fieldErrors.video_url}
+            </p>
+          ) : (
+            <p id="video_url_help" className="text-[13px] text-muted-foreground">
+              Tautan video demonstrasi proyek berdurasi <strong>maksimal 5 menit</strong> (Juknis C.8). YouTube atau
+              Google Drive dengan izin akses publik.
+            </p>
+          )}
+          {(videoUrl.includes("list=") || videoUrl.includes("start_radio")) && (
+            <p className="font-medium text-amber-600 text-xs">
+              Tips: Tautan video terdeteksi memuat parameter playlist (&list=...). Disarankan menggunakan tautan
+              langsung video tunggal agar juri dapat langsung membuka.
+            </p>
+          )}
+          <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} statusId="video_url_status" />
+        </div>
+
+        <p className="text-muted-foreground text-xs italic">
+          * Pemeriksaan tautan hanya peringatan dan tidak menghalangi pengiriman.
+        </p>
+
+        {/* Notes for judges */}
+        <div className="space-y-2 border-t pt-5">
+          <Label htmlFor="notes_for_judges" className="flex items-center gap-1.5 font-medium">
+            <StickyNote className="size-4 text-muted-foreground" />
+            Catatan untuk Juri
+            <span className="font-normal text-muted-foreground text-xs">(opsional)</span>
+          </Label>
+          <Textarea
+            id="notes_for_judges"
+            name="notes_for_judges"
+            rows={4}
+            maxLength={1000}
+            value={notesForJudges}
+            disabled={isReadOnly || isPending}
+            onChange={(e) => setNotesForJudges(e.target.value)}
+            placeholder="Contoh: akun demo yang dapat dipakai juri, langkah pengujian utama, atau batasan yang perlu diketahui."
+            className="min-h-24 resize-y"
+          />
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-muted-foreground text-xs">
+              Ditampilkan kepada dewan juri dan panitia. Gunakan akun demo khusus, jangan bagikan kata sandi pribadi.
+            </p>
+            <span className="shrink-0 text-muted-foreground text-xs tabular-nums">{notesForJudges.length}/1000</span>
+          </div>
+        </div>
+
+        {serverError && <p className="text-destructive text-sm">{serverError}</p>}
+      </CardContent>
+
+      {!isReadOnly && (
+        <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!hasSubmissionRow || isCheckingLinks || isPending}
+              onClick={() => runLinkCheck(true)}
+              className="gap-1.5"
+              title={hasSubmissionRow ? undefined : "Simpan draf terlebih dahulu untuk memeriksa tautan."}
+            >
+              <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
+              {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
+            </Button>
+            {!hasSubmissionRow && (
+              <span className="text-muted-foreground text-xs">Simpan draf dulu untuk memeriksa tautan.</span>
+            )}
+            {hasSubmissionRow && linkCheckedAt && (
+              <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
+            )}
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
+            {!isSubmitted && (
+              <Button type="button" variant="outline" disabled={isPending} onClick={handleSaveDraftClick}>
+                Simpan draf
+              </Button>
+            )}
+            <Button type="button" disabled={isPending} onClick={handleSubmitClick}>
+              {isSubmitted ? "Perbarui submission" : "Kirim submission"}
+            </Button>
+          </div>
+        </CardFooter>
+      )}
+
+      {isReadOnly && hasSubmissionRow && (
+        <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isCheckingLinks}
+            onClick={() => runLinkCheck(true)}
+            className="gap-1.5"
+          >
+            <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
+            {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
+          </Button>
+          {linkCheckedAt && (
+            <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
+          )}
+        </CardFooter>
+      )}
+    </Card>
+  );
+
+  const showcaseCard = (
+    <ShowcaseConsentCard
+      isSubmitted={isSubmitted}
+      consent={team.showcase_consent}
+      showcasePublishedAt={showcasePublishedAt}
+    />
+  );
+
+  const teamInfoCard = (
+    <Card className="gap-0 py-0">
+      <CardHeader className="p-4">
+        <CardTitle className="flex items-center justify-between gap-3 text-base">
+          <span>Informasi Tim</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsTeamInfoOpen((prev) => !prev)}
+            className="h-7 gap-1 px-2 text-muted-foreground text-xs"
+            aria-expanded={isTeamInfoOpen}
+          >
+            {isTeamInfoOpen ? "Tutup" : "Lihat"}
+            {isTeamInfoOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+          </Button>
+        </CardTitle>
+        <p className="text-muted-foreground text-xs">
+          {team.team_name} · {team.institution}
+        </p>
+      </CardHeader>
+      {isTeamInfoOpen && (
+        <CardContent className="space-y-2.5 p-4 pt-0 text-xs">
+          <div>
+            <span className="text-muted-foreground">Nama Tim:</span>
+            <p className="font-semibold text-foreground text-sm">{team.team_name}</p>
+          </div>
+
+          <div>
+            <span className="text-muted-foreground">Institusi:</span>
+            <p className="text-foreground">{team.institution}</p>
+          </div>
+
+          <div>
+            <span className="text-muted-foreground">Ketua Tim:</span>
+            <p className="font-medium text-foreground">{team.leader_name}</p>
+          </div>
+
+          <div>
+            <span className="text-muted-foreground">Anggota:</span>
+            <p className="text-foreground">{team.members.join(", ")}</p>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+
+  const helpCard = (
+    <Card className="gap-0 py-0">
+      <CardHeader className="p-4 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MessageCircle className="size-4 text-primary" />
+          Butuh bantuan?
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 p-4 pt-0 text-sm">
+        <p className="text-muted-foreground text-xs">
+          Mengalami kendala saat mengirim karya? Hubungi panitia melalui WhatsApp.
+        </p>
+        {contactWhatsapp ? (
+          <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
+            <a href={toWhatsAppUrl(contactWhatsapp)} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="size-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate text-left text-xs">
+                Chat panitia {formatWhatsAppNumber(contactWhatsapp) ?? contactWhatsapp}
+              </span>
+              <ExternalLink className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+            </a>
+          </Button>
+        ) : (
+          <p className="text-muted-foreground text-xs">Nomor bantuan belum diatur oleh panitia.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       {/* 1. Phase-aware hero (replaces the finalist banner, status hero and closed/disqualified alerts) */}
@@ -492,466 +857,60 @@ export function SubmissionClient({
         </Alert>
       )}
 
-      {/* 3. Main Two-Column Layout */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Left Column (col-span-2) */}
-        <div className="space-y-6 md:col-span-2">
-          {/* If already submitted, receipt is shown prominently */}
-          {isSubmitted && submission && <SubmissionReceipt team={team} submission={submission} />}
+      {/* 3. Open: the form is the centrepiece. Closed: bento of receipt, showcase and team/help. */}
+      {phase === "open" ? (
+        <>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-6 md:col-span-2">
+              {receipt}
 
-          {/* If already submitted, collapse the form behind an expander */}
-          {isSubmitted && !isReadOnly && (
-            <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3.5">
-              <p className="font-semibold text-foreground text-sm">Perbarui Tautan Karya</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsFormExpanded((prev) => !prev)}
-                className="shrink-0 gap-1.5"
-              >
-                <span>{isFormExpanded ? "Tutup formulir" : "Perbarui karya"}</span>
-                {isFormExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-              </Button>
-            </div>
-          )}
-
-          {/* Form Card */}
-          {(!isSubmitted || isFormExpanded) && (
-            <Card className="gap-0 py-0">
-              <CardHeader className="p-4">
-                <CardTitle className="text-lg">Formulir Pengiriman Berkas</CardTitle>
-                <CardDescription>
-                  Masukkan tautan repositori GitHub, URL live demo aplikasi, dan video presentasi proyek tim Anda.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5 p-4">
-                {/* GitHub URL */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="github_url" className="flex items-center gap-1.5 font-medium">
-                      <Code2 className="size-4 text-muted-foreground" />
-                      Repositori GitHub
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    {!isReadOnly && (
-                      <div className="flex items-center gap-1">
-                        {githubUrl && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={isPending}
-                            onClick={() => setGithubUrl("")}
-                            className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
-                          >
-                            <Trash2 className="size-3" />
-                            <span>Hapus</span>
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="github_url"
-                      name="github_url"
-                      type="url"
-                      inputMode="url"
-                      value={githubUrl}
-                      aria-describedby={
-                        fieldErrors.github_url
-                          ? "github_url_error github_url_status"
-                          : "github_url_help github_url_status"
-                      }
-                      disabled={isReadOnly || isPending}
-                      onChange={(e) => {
-                        setGithubUrl(e.target.value);
-                        if (fieldErrors.github_url) {
-                          setFieldErrors((prev) => ({ ...prev, github_url: undefined }));
-                        }
-                      }}
-                      onBlur={(e) => setGithubUrl(e.target.value.trim())}
-                      placeholder="https://github.com/organisasi/nama-proyek"
-                      className={
-                        fieldErrors.github_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"
-                      }
-                    />
-                    {!isReadOnly && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Tempel URL GitHub"
-                        disabled={isPending}
-                        onClick={() => handlePaste(setGithubUrl)}
-                        className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <ClipboardPaste className="size-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {fieldErrors.github_url ? (
-                    <p id="github_url_error" className="text-[13px] text-destructive">
-                      {fieldErrors.github_url}
-                    </p>
-                  ) : (
-                    <p id="github_url_help" className="text-[13px] text-muted-foreground">
-                      Tautan repositori publik GitHub yang berisi kode sumber proyek. Wajib diawali{" "}
-                      <code>https://github.com/</code>.
-                    </p>
-                  )}
-                  <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} statusId="github_url_status" />
-                </div>
-
-                {/* Live Demo URL */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="live_demo_url" className="flex items-center gap-1.5 font-medium">
-                      <Globe className="size-4 text-muted-foreground" />
-                      URL Live Demo
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    {!isReadOnly && (
-                      <div className="flex items-center gap-1">
-                        {liveDemoUrl && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={isPending}
-                            onClick={() => setLiveDemoUrl("")}
-                            className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
-                          >
-                            <Trash2 className="size-3" />
-                            <span>Hapus</span>
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="live_demo_url"
-                      name="live_demo_url"
-                      type="url"
-                      inputMode="url"
-                      value={liveDemoUrl}
-                      aria-describedby={
-                        fieldErrors.live_demo_url
-                          ? "live_demo_url_error live_demo_url_status"
-                          : "live_demo_url_help live_demo_url_status"
-                      }
-                      disabled={isReadOnly || isPending}
-                      onChange={(e) => {
-                        setLiveDemoUrl(e.target.value);
-                        if (fieldErrors.live_demo_url) {
-                          setFieldErrors((prev) => ({ ...prev, live_demo_url: undefined }));
-                        }
-                      }}
-                      onBlur={(e) => setLiveDemoUrl(e.target.value.trim())}
-                      placeholder="https://proyek-mitweek.vercel.app"
-                      className={
-                        fieldErrors.live_demo_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"
-                      }
-                    />
-                    {!isReadOnly && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Tempel URL live demo"
-                        disabled={isPending}
-                        onClick={() => handlePaste(setLiveDemoUrl)}
-                        className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <ClipboardPaste className="size-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {fieldErrors.live_demo_url ? (
-                    <p id="live_demo_url_error" className="text-[13px] text-destructive">
-                      {fieldErrors.live_demo_url}
-                    </p>
-                  ) : (
-                    <p id="live_demo_url_help" className="text-[13px] text-muted-foreground">
-                      Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel,
-                      Netlify, dsb).
-                    </p>
-                  )}
-                  <LinkCheckBadge
-                    item={linkCheck?.liveDemo}
-                    isChecking={isCheckingLinks}
-                    statusId="live_demo_url_status"
-                  />
-                </div>
-
-                {/* Video Demo URL */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="video_url" className="flex items-center gap-1.5 font-medium">
-                      <Video className="size-4 text-muted-foreground" />
-                      URL Video Demo
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    {!isReadOnly && (
-                      <div className="flex items-center gap-1">
-                        {videoUrl && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={isPending}
-                            onClick={() => setVideoUrl("")}
-                            className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
-                          >
-                            <Trash2 className="size-3" />
-                            <span>Hapus</span>
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="video_url"
-                      name="video_url"
-                      type="url"
-                      inputMode="url"
-                      value={videoUrl}
-                      aria-describedby={
-                        fieldErrors.video_url ? "video_url_error video_url_status" : "video_url_help video_url_status"
-                      }
-                      disabled={isReadOnly || isPending}
-                      onChange={(e) => {
-                        setVideoUrl(e.target.value);
-                        if (fieldErrors.video_url) {
-                          setFieldErrors((prev) => ({ ...prev, video_url: undefined }));
-                        }
-                      }}
-                      onBlur={(e) => setVideoUrl(e.target.value.trim())}
-                      placeholder="https://youtube.com/watch?v=... atau https://youtu.be/..."
-                      className={
-                        fieldErrors.video_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"
-                      }
-                    />
-                    {!isReadOnly && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Tempel URL video"
-                        disabled={isPending}
-                        onClick={() => handlePaste(setVideoUrl)}
-                        className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <ClipboardPaste className="size-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {fieldErrors.video_url ? (
-                    <p id="video_url_error" className="text-[13px] text-destructive">
-                      {fieldErrors.video_url}
-                    </p>
-                  ) : (
-                    <p id="video_url_help" className="text-[13px] text-muted-foreground">
-                      Tautan video demonstrasi proyek berdurasi <strong>maksimal 5 menit</strong> (Juknis C.8). YouTube
-                      atau Google Drive dengan izin akses publik.
-                    </p>
-                  )}
-                  {(videoUrl.includes("list=") || videoUrl.includes("start_radio")) && (
-                    <p className="font-medium text-amber-600 text-xs">
-                      Tips: Tautan video terdeteksi memuat parameter playlist (&list=...). Disarankan menggunakan tautan
-                      langsung video tunggal agar juri dapat langsung membuka.
-                    </p>
-                  )}
-                  <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} statusId="video_url_status" />
-                </div>
-
-                <p className="text-muted-foreground text-xs italic">
-                  * Pemeriksaan tautan hanya peringatan dan tidak menghalangi pengiriman.
-                </p>
-
-                {/* Notes for judges */}
-                <div className="space-y-2 border-t pt-5">
-                  <Label htmlFor="notes_for_judges" className="flex items-center gap-1.5 font-medium">
-                    <StickyNote className="size-4 text-muted-foreground" />
-                    Catatan untuk Juri
-                    <span className="font-normal text-muted-foreground text-xs">(opsional)</span>
-                  </Label>
-                  <Textarea
-                    id="notes_for_judges"
-                    name="notes_for_judges"
-                    rows={4}
-                    maxLength={1000}
-                    value={notesForJudges}
-                    disabled={isReadOnly || isPending}
-                    onChange={(e) => setNotesForJudges(e.target.value)}
-                    placeholder="Contoh: akun demo yang dapat dipakai juri, langkah pengujian utama, atau batasan yang perlu diketahui."
-                    className="min-h-24 resize-y"
-                  />
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-muted-foreground text-xs">
-                      Ditampilkan kepada dewan juri dan panitia. Gunakan akun demo khusus, jangan bagikan kata sandi
-                      pribadi.
-                    </p>
-                    <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
-                      {notesForJudges.length}/1000
-                    </span>
-                  </div>
-                </div>
-
-                {serverError && <p className="text-destructive text-sm">{serverError}</p>}
-              </CardContent>
-
-              {!isReadOnly && (
-                <CardFooter className="flex flex-col-reverse justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!hasSubmissionRow || isCheckingLinks || isPending}
-                      onClick={() => runLinkCheck(true)}
-                      className="gap-1.5"
-                      title={hasSubmissionRow ? undefined : "Simpan draf terlebih dahulu untuk memeriksa tautan."}
-                    >
-                      <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
-                      {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
-                    </Button>
-                    {!hasSubmissionRow && (
-                      <span className="text-muted-foreground text-xs">Simpan draf dulu untuk memeriksa tautan.</span>
-                    )}
-                    {hasSubmissionRow && linkCheckedAt && (
-                      <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col-reverse gap-3 sm:flex-row">
-                    {!isSubmitted && (
-                      <Button type="button" variant="outline" disabled={isPending} onClick={handleSaveDraftClick}>
-                        Simpan draf
-                      </Button>
-                    )}
-                    <Button type="button" disabled={isPending} onClick={handleSubmitClick}>
-                      {isSubmitted ? "Perbarui submission" : "Kirim submission"}
-                    </Button>
-                  </div>
-                </CardFooter>
-              )}
-
-              {isReadOnly && hasSubmissionRow && (
-                <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+              {/* Once submitted, the form collapses behind an expander */}
+              {isSubmitted && !isReadOnly && (
+                <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3.5">
+                  <p className="font-semibold text-foreground text-sm">Perbarui Tautan Karya</p>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={isCheckingLinks}
-                    onClick={() => runLinkCheck(true)}
-                    className="gap-1.5"
+                    onClick={() => setIsFormExpanded((prev) => !prev)}
+                    className="shrink-0 gap-1.5"
                   >
-                    <RotateCw className={`size-3.5 ${isCheckingLinks ? "animate-spin" : ""}`} />
-                    {isCheckingLinks ? "Memeriksa tautan..." : "Periksa tautan"}
+                    <span>{isFormExpanded ? "Tutup formulir" : "Perbarui karya"}</span>
+                    {isFormExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
                   </Button>
-                  {linkCheckedAt && (
-                    <span className="text-muted-foreground text-xs">Dicek: {formatTimestampWita(linkCheckedAt)}</span>
-                  )}
-                </CardFooter>
+                </div>
               )}
-            </Card>
-          )}
-        </div>
 
-        {/* Right Rail (col-span-1, quiet rail) */}
-        <div className="space-y-6">
-          {/* 1. Submission checklist (studi kasus, juknis and gallery live in the sidebar) */}
-          {!isSubmitted && <SubmissionChecklist />}
+              {(!isSubmitted || isFormExpanded) && formCard}
+            </div>
 
-          {/* 3. Showcase consent */}
-          <ShowcaseConsentCard
-            isSubmitted={isSubmitted}
-            consent={team.showcase_consent}
-            showcasePublishedAt={showcasePublishedAt}
-          />
+            <div className="space-y-6">
+              {/* Studi kasus, juknis and gallery live in the sidebar */}
+              {!isSubmitted && <SubmissionChecklist />}
+              {showcaseCard}
+              {teamInfoCard}
+              {helpCard}
+            </div>
+          </div>
 
-          {/* 4. Next Steps Timeline */}
-          <NextStepsCard serverNowIso={serverNowIso} />
+          <JourneyTrack serverNowIso={serverNowIso} />
+        </>
+      ) : (
+        <>
+          <JourneyTrack serverNowIso={serverNowIso} />
 
-          {/* 5. Compact Team Info (No duplicate team code!) */}
-          <Card className="gap-0 py-0">
-            <CardHeader className="p-4">
-              <CardTitle className="flex items-center justify-between gap-3 text-base">
-                <span>Informasi Tim</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsTeamInfoOpen((prev) => !prev)}
-                  className="h-7 gap-1 px-2 text-muted-foreground text-xs"
-                  aria-expanded={isTeamInfoOpen}
-                >
-                  {isTeamInfoOpen ? "Tutup" : "Lihat"}
-                  {isTeamInfoOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-                </Button>
-              </CardTitle>
-              <p className="text-muted-foreground text-xs">
-                {team.team_name} · {team.institution}
-              </p>
-            </CardHeader>
-            {isTeamInfoOpen && (
-              <CardContent className="space-y-2.5 p-4 pt-0 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Nama Tim:</span>
-                  <p className="font-semibold text-foreground text-sm">{team.team_name}</p>
-                </div>
-
-                <div>
-                  <span className="text-muted-foreground">Institusi:</span>
-                  <p className="text-foreground">{team.institution}</p>
-                </div>
-
-                <div>
-                  <span className="text-muted-foreground">Ketua Tim:</span>
-                  <p className="font-medium text-foreground">{team.leader_name}</p>
-                </div>
-
-                <div>
-                  <span className="text-muted-foreground">Anggota:</span>
-                  <p className="text-foreground">{team.members.join(", ")}</p>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* 6. Quiet Help Card */}
-          <Card className="gap-0 py-0">
-            <CardHeader className="p-4 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageCircle className="size-4 text-primary" />
-                Butuh bantuan?
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4 pt-0 text-sm">
-              <p className="text-muted-foreground text-xs">
-                Mengalami kendala saat mengirim karya? Hubungi panitia melalui WhatsApp.
-              </p>
-              {contactWhatsapp ? (
-                <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
-                  <a href={toWhatsAppUrl(contactWhatsapp)} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="size-4 shrink-0 text-primary" />
-                    <span className="min-w-0 flex-1 truncate text-left text-xs">
-                      Chat panitia {formatWhatsAppNumber(contactWhatsapp) ?? contactWhatsapp}
-                    </span>
-                    <ExternalLink className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
-                  </a>
-                </Button>
-              ) : (
-                <p className="text-muted-foreground text-xs">Nomor bantuan belum diatur oleh panitia.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+          <div className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-12">
+            <div className="md:col-span-2 lg:col-span-6">
+              {receipt ?? (hasSubmissionRow ? formCard : <NoReceiptCard />)}
+            </div>
+            <div className="lg:col-span-3">{showcaseCard}</div>
+            <div className="space-y-6 lg:col-span-3">
+              {teamInfoCard}
+              {helpCard}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Confirmation Dialog */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>

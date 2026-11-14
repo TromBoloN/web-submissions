@@ -2066,3 +2066,49 @@ html {
     transform: none;
   }
 }
+
+/* Journey track hex nodes. */
+.hex {
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+}
+
+.hex-pulse {
+  animation: hex-pulse 1.8s ease-out infinite;
+}
+
+@keyframes hex-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hex-pulse {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Printing from a page that shows the receipt prints only the plain receipt. */
+@media print {
+  body:has(.receipt-print) * {
+    visibility: hidden;
+  }
+
+  body:has(.receipt-print) .receipt-print,
+  body:has(.receipt-print) .receipt-print * {
+    visibility: visible;
+  }
+
+  body:has(.receipt-print) .receipt-print {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
