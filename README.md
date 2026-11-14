@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-1d1a5c?style=for-the-badge&logo=typescript&logoColor=00e676)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-1d1a5c?style=for-the-badge&logo=tailwindcss&logoColor=00e676)](https://tailwindcss.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres_+_RLS-1d1a5c?style=for-the-badge&logo=supabase&logoColor=00e676)](https://supabase.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-00e676?style=for-the-badge&labelColor=1d1a5c)](LICENSE)
+
 
 **The official submission, judging and showcase platform for the Web Development Competition at MIT-WEEK 2026.**
 
