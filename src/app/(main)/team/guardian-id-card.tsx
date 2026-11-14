@@ -2,7 +2,11 @@
 
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 
-import { Check, Copy, ShieldCheck } from "lucide-react";
+import Image from "next/image";
+
+import { Check, Copy } from "lucide-react";
+
+import mitWeekLogo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 type GuardianIdCardProps = {
   teamCode: string;
@@ -81,12 +85,14 @@ export function GuardianIdCard({ teamCode, teamName, institution, leaderName, me
 
       <div className="flex flex-1 flex-col gap-5 p-5">
         <div className="flex items-center gap-4">
-          <span className="relative grid size-16 shrink-0 place-items-center" aria-hidden="true">
-            <span className="hex absolute inset-0 bg-ink" />
-            <span className="hex absolute inset-[3px] grid place-items-center bg-guardian-accent">
-              <ShieldCheck className="size-7 text-white" strokeWidth={2.5} />
-            </span>
-          </span>
+          {/* Official MIT-WEEK hex logo; transparent padding, so scale it to fill the badge slot. */}
+          <Image
+            src={mitWeekLogo}
+            alt=""
+            width={128}
+            height={128}
+            className="size-16 shrink-0 scale-[1.3] object-contain drop-shadow-[3px_3px_0_var(--ink)]"
+          />
           <div className="min-w-0">
             <p className="font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Kode tim</p>
             <div className="flex items-center gap-1">

@@ -73,7 +73,8 @@ Every animation is disabled under `prefers-reduced-motion: reduce` in `globals.c
 | Pattern | Where | Notes |
 | --- | --- | --- |
 | Eyebrow pill | `team-hero.tsx` `Eyebrow` | Mono label with a mint dot, `border-2 border-ink`, `shadow-brutal-sm` |
-| Hex badge / avatar | `guardian-id-card.tsx`, `nav-user.tsx`, `app-sidebar.tsx`, `journey-track.tsx` | Outer `bg-ink` hex + inner fill hex |
+| Hex avatar / node | `nav-user.tsx`, `journey-track.tsx` | Outer `bg-ink` hex + inner fill hex |
+| Official logo | `app-sidebar.tsx`, `guardian-id-card.tsx`, `login`, `/karya` hero, README banner | `src/styles/flag-icons/MIT-WEEK, WEB LOGO.png`. It is already a hex with transparent padding (artwork about 65% of the canvas): never wrap it in a CSS hex frame; scale it about 1.3x to fill its box. |
 | Icon tile | sidebar rows, receipt link rows, settings overview | `size-7`–`size-9`, `rounded-md/lg`, `border-2 border-ink` (inactive `border-ink/30`) |
 | Ticket | `submission-receipt.tsx` | Dashed tear line + two `bg-background` notch circles clipped by `overflow-hidden` |
 | Milestone tile | `team-hero.tsx` `MilestoneTile` | "N hari lagi" countdown in days between WITA dates |

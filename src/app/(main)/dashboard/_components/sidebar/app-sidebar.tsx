@@ -55,17 +55,15 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link prefetch={false} href="/" className="h-auto! gap-3 py-2">
-                <span className="relative grid size-10 shrink-0 place-items-center group-data-[collapsible=icon]:size-5">
-                  <span className="hex absolute inset-0 bg-ink" aria-hidden="true" />
-                  <span className="hex absolute inset-[2px] grid place-items-center bg-card">
-                    <Image
-                      src={logo}
-                      alt=""
-                      className="size-6 object-contain group-data-[collapsible=icon]:size-3"
-                      priority
-                    />
-                  </span>
-                </span>
+                {/* The logo is already a hex with transparent padding; scale it up to fill its box. */}
+                <Image
+                  src={logo}
+                  alt=""
+                  width={96}
+                  height={96}
+                  className="size-10 shrink-0 scale-[1.3] object-contain group-data-[collapsible=icon]:size-5"
+                  priority
+                />
                 <span className="grid min-w-0 leading-tight">
                   <span className="truncate font-display font-extrabold text-base">{APP_CONFIG.name}</span>
                   <span className="truncate font-bold font-mono text-[11px] text-sidebar-foreground/70 uppercase tracking-wider">
