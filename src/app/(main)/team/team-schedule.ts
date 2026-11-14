@@ -76,3 +76,12 @@ export function toWitaDateKey(iso: string): string {
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
+
+/** Whole calendar days from one WITA date key to another (negative if `to` is earlier). */
+export function daysBetweenDateKeys(from: string, to: string): number {
+  const toUtcMs = (key: string) => {
+    const [y, m, d] = key.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtcMs(to) - toUtcMs(from)) / 86_400_000);
+}

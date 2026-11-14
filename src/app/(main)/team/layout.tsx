@@ -8,17 +8,20 @@ export default async function TeamLayout({ children }: Readonly<{ children: Reac
   const profile = await requireRole("team");
   const supabase = await createClient();
 
-  const { data: settings, error: settingsError } = await supabase
-    .from("competition_settings")
-    .select("preliminary_results_released, final_results_released")
-    .eq("id", true)
-    .maybeSingle();
+  const [{ data: settings, error: settingsError }, { data: team }] = await Promise.all([
+    supabase
+      .from("competition_settings")
+      .select("preliminary_results_released, final_results_released")
+      .eq("id", true)
+      .maybeSingle(),
+    supabase.from("teams").select("team_code").eq("profile_id", profile.id).maybeSingle(),
+  ]);
 
   const resultsReleased =
     !settingsError && Boolean(settings?.preliminary_results_released || settings?.final_results_released);
 
   return (
-    <DashboardShell user={profile} resultsReleased={resultsReleased}>
+    <DashboardShell user={profile} resultsReleased={resultsReleased} teamCode={team?.team_code ?? null}>
       {children}
     </DashboardShell>
   );

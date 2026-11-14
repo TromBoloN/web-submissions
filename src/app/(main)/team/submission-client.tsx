@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { cn } from "cn";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -17,6 +18,7 @@ import {
   FileX,
   Globe,
   HelpCircle,
+  LockKeyhole,
   MessageCircle,
   RotateCw,
   StickyNote,
@@ -103,40 +105,68 @@ function ShowcaseConsentCard({
   consent: boolean;
   showcasePublishedAt: string | null;
 }) {
-  let showcaseStatus = "Belum ikut dipamerkan.";
-  if (showcasePublishedAt) {
-    showcaseStatus = "Tampilan karya telah dikunci karena galeri sudah diterbitkan.";
+  const isLocked = Boolean(showcasePublishedAt);
+
+  let line = "Atur judul, deskripsi, dan gambar yang tampil bersama karya tim di galeri.";
+  let chip = { label: "Tidak tampil", tone: "muted" as "muted" | "mint" };
+  if (!isSubmitted) {
+    line = "Kirim submission dulu untuk memilih apakah karya ikut dipamerkan.";
+    chip = { label: "Belum tersedia", tone: "muted" };
+  } else if (isLocked) {
+    line = "Galeri sudah terbit, jadi tampilan karya dikunci.";
+    chip = { label: consent ? "Tampil · terkunci" : "Terkunci", tone: consent ? "mint" : "muted" };
   } else if (consent) {
-    showcaseStatus = "Karya akan dipamerkan.";
+    chip = { label: "Akan tampil", tone: "mint" };
   }
 
   return (
-    <Card className="gap-0 py-0">
-      <CardHeader className="p-4 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Globe className="size-4 text-primary" />
-          Pamerkan karya kamu
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Galeri tidak menampilkan nilai atau peringkat. Pemenang diumumkan terpisah. Setelah galeri diterbitkan,
-          permintaan penghapusan dapat diajukan kepada panitia dan diproses secara manual.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-0">
-        {!isSubmitted ? (
-          <p className="text-muted-foreground text-xs">
-            Kirim submission terlebih dahulu untuk memilih apakah karya akan dipamerkan.
-          </p>
-        ) : (
-          <>
-            <p className="text-muted-foreground text-xs">{showcaseStatus}</p>
-            <Button asChild size="sm" variant="outline" className="w-full">
-              <Link href="/team/karya">{showcasePublishedAt ? "Lihat tampilan karya" : "Atur tampilan karya"}</Link>
-            </Button>
-          </>
+    <section
+      aria-labelledby="showcase-card-title"
+      className="flex h-full flex-col gap-4 rounded-2xl border-2 border-ink bg-hero p-5 text-white shadow-brutal-sm"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-bold font-mono text-white/75 text-xs uppercase tracking-wider">Galeri karya</p>
+          <h2 id="showcase-card-title" className="mt-0.5 font-display font-extrabold text-xl">
+            Pamerkan karya kamu
+          </h2>
+        </div>
+        <span
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1 rounded-full border-2 px-2 py-0.5 font-bold font-mono text-xs uppercase",
+            chip.tone === "mint"
+              ? "border-mint bg-mint text-ink dark:text-ink-foreground"
+              : "border-white/40 text-white/90",
+          )}
+        >
+          {isLocked && <LockKeyhole className="size-3" aria-hidden="true" />}
+          {chip.label}
+        </span>
+      </div>
+
+      <p className="text-sm text-white/85">{line}</p>
+
+      <div className="mt-auto space-y-3">
+        {isSubmitted && (
+          <Button asChild className="press w-full sm:w-fit">
+            <Link href="/team/karya">{isLocked ? "Lihat tampilan karya" : "Atur tampilan karya"}</Link>
+          </Button>
         )}
-      </CardContent>
-    </Card>
+        <details className="group text-white/80 text-xs">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded font-medium text-white/90 hover:text-white focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+            Tentang galeri & penghapusan
+            <ChevronDown
+              className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
+          </summary>
+          <p className="mt-2 leading-relaxed">
+            Galeri tidak menampilkan nilai atau peringkat. Pemenang diumumkan terpisah. Setelah galeri diterbitkan,
+            permintaan penghapusan dapat diajukan kepada panitia dan diproses secara manual.
+          </p>
+        </details>
+      </div>
+    </section>
   );
 }
 
@@ -751,32 +781,30 @@ export function SubmissionClient({
   );
 
   const helpCard = (
-    <Card className="gap-0 py-0">
-      <CardHeader className="p-4 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageCircle className="size-4 text-primary" />
-          Butuh bantuan?
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-0 text-sm">
-        <p className="text-muted-foreground text-xs">
-          Mengalami kendala saat mengirim karya? Hubungi panitia melalui WhatsApp.
-        </p>
-        {contactWhatsapp ? (
-          <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
-            <a href={toWhatsAppUrl(contactWhatsapp)} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="size-4 shrink-0 text-primary" />
-              <span className="min-w-0 flex-1 truncate text-left text-xs">
-                Chat panitia {formatWhatsAppNumber(contactWhatsapp) ?? contactWhatsapp}
-              </span>
-              <ExternalLink className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
-            </a>
-          </Button>
-        ) : (
-          <p className="text-muted-foreground text-xs">Nomor bantuan belum diatur oleh panitia.</p>
-        )}
-      </CardContent>
-    </Card>
+    <div className="surface-calm flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <p className="flex min-w-0 items-center gap-2 text-sm">
+        <MessageCircle className="size-4 shrink-0 text-ink" aria-hidden="true" />
+        <span>
+          <span className="font-semibold">Butuh bantuan?</span>{" "}
+          <span className="text-foreground/75">Hubungi panitia.</span>
+        </span>
+      </p>
+      {contactWhatsapp ? (
+        <a
+          href={toWhatsAppUrl(contactWhatsapp)}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`WhatsApp ${formatWhatsAppNumber(contactWhatsapp) ?? contactWhatsapp}`}
+          className="press btn-loud inline-flex shrink-0 items-center gap-1.5 rounded-full bg-mint px-4 py-1.5 font-semibold text-ink text-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 dark:text-ink-foreground"
+        >
+          Chat panitia
+          <ExternalLink className="size-3.5" aria-hidden="true" />
+          <span className="sr-only">(WhatsApp, membuka tab baru)</span>
+        </a>
+      ) : (
+        <span className="text-foreground/75 text-xs">Nomor bantuan belum diatur panitia.</span>
+      )}
+    </div>
   );
 
   return (
@@ -822,7 +850,7 @@ export function SubmissionClient({
         </Alert>
       )}
 
-      {/* 3. Open: the form is the centrepiece. Closed: bento of receipt, showcase and team/help. */}
+      {/* 3. Open: the form is the centrepiece. Closed: bento of receipt, showcase and help. */}
       {phase === "open" ? (
         <>
           <div className="grid gap-6 md:grid-cols-3">
@@ -864,12 +892,15 @@ export function SubmissionClient({
         <>
           <JourneyTrack serverNowIso={serverNowIso} />
 
-          <div className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-12">
-            <div className="md:col-span-2 lg:col-span-6">
+          {/* Receipt left; showcase + help share one column that matches the receipt's height */}
+          <div className="grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7 [&>*]:h-full">
               {receipt ?? (hasSubmissionRow ? formCard : <NoReceiptCard />)}
             </div>
-            <div className="lg:col-span-3">{showcaseCard}</div>
-            <div className="lg:col-span-3">{helpCard}</div>
+            <div className="flex flex-col gap-6 lg:col-span-5">
+              <div className="flex-1">{showcaseCard}</div>
+              {helpCard}
+            </div>
           </div>
         </>
       )}

@@ -3,11 +3,11 @@ import {
   Award,
   BookOpen,
   ClipboardList,
+  Compass,
   FileText,
   History,
-  Images,
   LayoutDashboard,
-  LayoutGrid,
+  Palette,
   Settings,
   Trophy,
   Users,
@@ -17,12 +17,22 @@ import type { CurrentUser } from "@/lib/user-display";
 
 export type NavBadge = "locked" | "new" | "soon";
 
+/**
+ * Public gallery state for the sidebar badge, decided on the server:
+ * locked until `showcase_published_at`, "new" for a few days after, then plain.
+ */
+export type GalleryNavState = "locked" | "new" | "open";
+
+/** Planned gallery opening, shown on the locked badge. TODO: move to admin settings. */
+export const GALLERY_OPENING_LABEL = "18 Nov";
+
 export interface NavSubItem {
   id: string;
   title: string;
   url: string;
   icon?: LucideIcon;
   badge?: NavBadge;
+  badgeLabel?: string;
   disabled?: boolean;
   newTab?: boolean;
 }
@@ -32,6 +42,8 @@ interface NavItemBase {
   title: string;
   icon?: LucideIcon;
   badge?: NavBadge;
+  /** Overrides the default badge text (e.g. a date on a locked item). */
+  badgeLabel?: string;
   disabled?: boolean;
   newTab?: boolean;
 }
@@ -53,16 +65,24 @@ export interface NavGroup {
   items: NavMainItem[];
 }
 
+function galleryItem(state: GalleryNavState): NavMainLinkItem {
+  const item: NavMainLinkItem = { id: "karya", title: "Galeri", url: "/karya", icon: Compass };
+  if (state === "locked") return { ...item, badge: "locked", badgeLabel: GALLERY_OPENING_LABEL };
+  if (state === "new") return { ...item, badge: "new" };
+  return item;
+}
+
 export function getSidebarItems(
   role: CurrentUser["role"],
   juknisUrl?: string | null,
   resultsReleased?: boolean,
+  galleryState: GalleryNavState = "open",
 ): NavGroup[] {
   if (role === "admin") {
     return [
       {
         id: 1,
-        label: "Ringkasan",
+        label: "Admin",
         items: [{ id: "dashboard", title: "Dasbor", url: "/admin", icon: LayoutDashboard }],
       },
       {
@@ -74,7 +94,7 @@ export function getSidebarItems(
           { id: "submissions", title: "Submission", url: "/admin/submission", icon: FileText },
           { id: "ranking", title: "Peringkat", url: "/admin/peringkat", icon: Award },
           { id: "finalists", title: "Finalis", url: "/admin/finalis", icon: Trophy },
-          { id: "karya", title: "Karya", url: "/karya", icon: Images },
+          galleryItem(galleryState),
         ],
       },
       {
@@ -91,60 +111,29 @@ export function getSidebarItems(
   const isJudge = role === "judge";
   const basePath = isJudge ? "/judge" : "/team";
 
-  const items: NavMainItem[] = [
-    {
-      id: "home",
-      title: "Dasbor",
-      url: basePath,
-      icon: LayoutDashboard,
-    },
-  ];
-
-  if (isJudge) {
-    // Judges only visit the public gallery; they do not have a showcase editor.
-    items.push({ id: "karya", title: "Karya", url: "/karya", icon: Images });
-  } else {
-    items.push({
-      id: "showcase",
-      title: "Tampilan Karya",
-      url: "/team/karya",
-      icon: Images,
-    });
-    // Public gallery, previously reached via a button on the team dashboard.
-    items.push({ id: "karya", title: "Galeri Karya", url: "/karya", icon: LayoutGrid });
-  }
-
+  const roleItems: NavMainItem[] = [{ id: "home", title: "Dasbor", url: basePath, icon: LayoutDashboard }];
   if (role === "team" && resultsReleased === true) {
-    items.push({
-      id: "results",
-      title: "Hasil Penilaian",
-      url: "/team/hasil",
-      icon: Award,
-    });
+    roleItems.push({ id: "results", title: "Hasil Penilaian", url: "/team/hasil", icon: Award });
   }
 
-  items.push({
-    id: "case-study",
-    title: "Studi Kasus",
-    url: `${basePath}/studi-kasus`,
-    icon: BookOpen,
-  });
-
-  if (juknisUrl?.startsWith("https://")) {
-    items.push({
-      id: "juknis",
-      title: "Juknis",
-      url: juknisUrl,
-      icon: FileText,
-      newTab: true,
-    });
-  }
-
-  return [
-    {
-      id: 1,
-      label: isJudge ? "Juri" : "Peserta",
-      items,
-    },
+  const exploreItems: NavMainItem[] = [
+    galleryItem(galleryState),
+    { id: "case-study", title: "Studi Kasus", url: `${basePath}/studi-kasus`, icon: BookOpen },
   ];
+  if (juknisUrl?.startsWith("https://")) {
+    exploreItems.push({ id: "juknis", title: "Juknis", url: juknisUrl, icon: FileText, newTab: true });
+  }
+
+  const groups: NavGroup[] = [{ id: 1, label: isJudge ? "Juri" : "Peserta", items: roleItems }];
+  if (!isJudge) {
+    // Teams edit their own showcase; judges only browse the gallery.
+    groups.push({
+      id: 2,
+      label: "Karya Saya",
+      items: [{ id: "showcase", title: "Atur Tampilan", url: "/team/karya", icon: Palette }],
+    });
+  }
+  groups.push({ id: 3, label: "Jelajah", items: exploreItems });
+
+  return groups;
 }

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
 import type { CurrentUser } from "@/lib/user-display";
-import { getSidebarItems } from "@/navigation/sidebar/sidebar-items";
+import { type GalleryNavState, getSidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
@@ -27,11 +27,15 @@ export function AppSidebar({
   user,
   juknisUrl,
   resultsReleased,
+  galleryState,
+  teamCode,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: CurrentUser;
   juknisUrl?: string | null;
   resultsReleased?: boolean;
+  galleryState?: GalleryNavState;
+  teamCode?: string | null;
 }) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
@@ -50,19 +54,34 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link prefetch={false} href="/">
-                <Image src={logo} alt="" className="size-6 object-contain" priority />
-                <span className="font-semibold text-base">{APP_CONFIG.name}</span>
+              <Link prefetch={false} href="/" className="h-auto! gap-3 py-2">
+                <span className="relative grid size-10 shrink-0 place-items-center group-data-[collapsible=icon]:size-5">
+                  <span className="hex absolute inset-0 bg-ink" aria-hidden="true" />
+                  <span className="hex absolute inset-[2px] grid place-items-center bg-card">
+                    <Image
+                      src={logo}
+                      alt=""
+                      className="size-6 object-contain group-data-[collapsible=icon]:size-3"
+                      priority
+                    />
+                  </span>
+                </span>
+                <span className="grid min-w-0 leading-tight">
+                  <span className="truncate font-display font-extrabold text-base">{APP_CONFIG.name}</span>
+                  <span className="truncate font-bold font-mono text-[11px] text-sidebar-foreground/70 uppercase tracking-wider">
+                    Web Development
+                  </span>
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={getSidebarItems(user.role, juknisUrl, resultsReleased)} />
+        <NavMain items={getSidebarItems(user.role, juknisUrl, resultsReleased, galleryState)} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser user={user} teamCode={teamCode} />
       </SidebarFooter>
     </Sidebar>
   );

@@ -76,7 +76,7 @@ export function GuardianIdCard({ teamCode, teamName, institution, leaderName, me
     >
       <div className="flex items-center justify-between gap-2 bg-ink px-5 py-2.5 text-ink-foreground">
         <span className="font-bold font-mono text-[11px] uppercase tracking-[0.2em]">Guardian ID</span>
-        <span className="font-mono text-[10px] uppercase tracking-wider opacity-80">Akses peserta</span>
+        <span className="font-mono text-[11px] uppercase tracking-wider opacity-90">Akses peserta</span>
       </div>
 
       <div className="flex flex-1 flex-col gap-5 p-5">
@@ -88,7 +88,7 @@ export function GuardianIdCard({ teamCode, teamName, institution, leaderName, me
             </span>
           </span>
           <div className="min-w-0">
-            <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Kode tim</p>
+            <p className="font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Kode tim</p>
             <div className="flex items-center gap-1">
               <p className="break-all font-bold font-mono text-2xl text-ink leading-tight sm:text-3xl">{teamCode}</p>
               <button
@@ -111,13 +111,13 @@ export function GuardianIdCard({ teamCode, teamName, institution, leaderName, me
         </div>
 
         <div className="border-ink/40 border-t-2 border-dashed pt-4">
-          <p className="mb-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Anggota</p>
+          <p className="mb-2 font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Anggota</p>
           <ul className="space-y-1.5 text-sm">
             <li className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate font-medium" title={leaderName}>
                 {leaderName}
               </span>
-              <span className="shrink-0 rounded-full border-2 border-ink px-2 py-px font-bold font-mono text-[10px] text-ink uppercase">
+              <span className="shrink-0 rounded-full border-2 border-ink px-2 py-px font-bold font-mono text-[11px] text-ink uppercase">
                 Ketua
               </span>
             </li>
@@ -129,7 +129,7 @@ export function GuardianIdCard({ teamCode, teamName, institution, leaderName, me
           </ul>
         </div>
 
-        <p className="mt-auto font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+        <p className="mt-auto font-mono text-[11px] text-foreground/75 uppercase tracking-wider">
           MIT-WEEK 2026 · Web Development
         </p>
       </div>

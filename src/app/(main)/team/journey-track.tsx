@@ -45,7 +45,7 @@ function HexNode({ state, index, size = "md" }: { state: StepState; index: numbe
 
 function TodayChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-card px-2 py-0.5 font-bold font-mono text-[10px] text-ink uppercase tracking-wider shadow-brutal-sm">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-card px-2 py-0.5 font-bold font-mono text-[11px] text-ink uppercase tracking-wider shadow-brutal-sm">
       <span className="size-1.5 rounded-full bg-guardian-accent" aria-hidden="true" />
       {label}
     </span>
@@ -93,19 +93,23 @@ export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
               {!isLast && (
                 <span
                   className={cn(
-                    "absolute top-6 left-[calc(50%+1.75rem)] right-[calc(-50%+1.75rem)] border-ink border-t-2",
+                    "absolute top-15 left-[calc(50%+1.75rem)] right-[calc(-50%+1.75rem)] border-ink border-t-2",
                     nextReached ? "border-solid" : "border-dashed opacity-60",
                   )}
                   aria-hidden="true"
                 />
               )}
               {gapAfter === index && (
-                <span className="absolute top-6 left-full z-10 -translate-x-1/2 -translate-y-1/2">
+                <span className="absolute top-15 left-full z-10 -translate-x-1/2 -translate-y-1/2">
                   <TodayChip label={todayLabel} />
                 </span>
               )}
+              {/* Fixed slot keeps every node on the same line; the current step's chip sits in it. */}
+              <span className="mb-2 flex h-7 items-end">
+                {step.state === "current" && <TodayChip label="Hari ini" />}
+              </span>
               <HexNode state={step.state} index={index} />
-              <span className="mt-3 font-mono text-[11px] text-muted-foreground tabular-nums">{step.dates}</span>
+              <span className="mt-3 font-mono text-foreground/75 text-xs tabular-nums">{step.dates}</span>
               <span
                 className={cn(
                   "mt-0.5 font-semibold text-sm leading-tight",
@@ -115,11 +119,6 @@ export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
                 {step.title}
               </span>
               <span className="sr-only">, {STATE_LABEL[step.state]}</span>
-              {step.state === "current" && (
-                <span className="mt-2">
-                  <TodayChip label="Hari ini" />
-                </span>
-              )}
             </li>
           );
         })}
@@ -148,7 +147,12 @@ export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
                 )}
                 <HexNode state={step.state} index={index} size="sm" />
                 <div className="min-w-0 pt-1">
-                  <p className="font-mono text-[11px] text-muted-foreground tabular-nums">{step.dates}</p>
+                  {step.state === "current" && (
+                    <span className="mb-1.5 inline-block">
+                      <TodayChip label="Hari ini" />
+                    </span>
+                  )}
+                  <p className="font-mono text-foreground/75 text-xs tabular-nums">{step.dates}</p>
                   <p
                     className={cn(
                       "font-semibold text-sm",
@@ -159,11 +163,6 @@ export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
                     <span className="sr-only">, {STATE_LABEL[step.state]}</span>
                   </p>
                   {step.state !== "past" && <p className="mt-0.5 text-muted-foreground text-xs">{step.desc}</p>}
-                  {step.state === "current" && (
-                    <span className="mt-2 inline-block">
-                      <TodayChip label="Hari ini" />
-                    </span>
-                  )}
                 </div>
               </li>
               {gapAfter === index && (

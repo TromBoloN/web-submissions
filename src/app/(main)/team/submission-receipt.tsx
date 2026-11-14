@@ -141,7 +141,7 @@ function ReceiptLinkRow({
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+        <p className="font-mono text-[11px] text-foreground/75 uppercase tracking-wider">{label}</p>
         {isValid && url ? (
           <a
             href={url}
@@ -272,13 +272,11 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
       <div className="space-y-4 p-5 sm:p-6">
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
-            <dt className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Pertama dikirim</dt>
+            <dt className="font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Pertama dikirim</dt>
             <dd className="mt-0.5 font-medium text-foreground tabular-nums">{firstSubmittedFormatted} WITA</dd>
           </div>
           <div>
-            <dt className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-              Terakhir diperbarui
-            </dt>
+            <dt className="font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Terakhir diperbarui</dt>
             <dd className="mt-0.5 font-medium text-foreground tabular-nums">{updatedAtFormatted} WITA</dd>
           </div>
         </dl>

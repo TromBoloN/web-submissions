@@ -105,7 +105,7 @@ export function NavMain({ items }: NavMainProps) {
       {items.map((group) => (
         <SidebarGroup key={group.id}>
           {group.label && (
-            <SidebarGroupLabel className="group-data-[collapsible=icon]:pointer-events-none">
+            <SidebarGroupLabel className="font-bold font-mono text-[11px] text-sidebar-foreground/70 uppercase tracking-[0.18em] group-data-[collapsible=icon]:pointer-events-none">
               {group.label}
             </SidebarGroupLabel>
           )}
@@ -150,13 +150,24 @@ function NavItem({ item, isItemActive, isSubItemActive, isSubmenuOpen }: NavItem
   );
 }
 
+/**
+ * Guardian nav row: outlined icon tile; the active row gets an ink border, hard shadow and mint hex marker.
+ * Lifts on hover and sinks on press. In icon-collapsed mode the chrome falls away.
+ */
+const NAV_ROW_CLASS = cn(
+  "h-10 gap-2.5 rounded-lg border-2 border-transparent transition-all duration-150 focus:outline-none focus-visible:outline-none focus-visible:ring-2",
+  "hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none motion-reduce:hover:translate-y-0 motion-reduce:active:translate-x-0 motion-reduce:active:translate-y-0",
+  "data-active:border-ink data-active:bg-card data-active:font-semibold data-active:shadow-brutal-sm data-active:hover:shadow-brutal",
+  "group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:shadow-none",
+);
+
 function NavLinkItem({ item, isActive, showIconFallback }: NavLinkItemProps) {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         asChild
         aria-disabled={item.disabled}
-        className="focus:outline-none focus-visible:outline-none focus-visible:ring-2"
+        className={NAV_ROW_CLASS}
         tooltip={item.title}
         isActive={isActive}
       >
@@ -165,21 +176,38 @@ function NavLinkItem({ item, isActive, showIconFallback }: NavLinkItemProps) {
           href={item.url}
           target={item.newTab ? "_blank" : undefined}
           rel={item.newTab ? "noreferrer" : undefined}
+          aria-current={isActive ? "page" : undefined}
         >
-          <NavLinkIcon item={item} showFallback={showIconFallback} />
-          <span>{item.title}</span>
+          <NavLinkIcon item={item} showFallback={showIconFallback} isActive={isActive} />
+          <span className="truncate">{item.title}</span>
+          {isActive && !item.badge && (
+            <span
+              className="hex ml-auto size-2.5 shrink-0 bg-mint group-data-[collapsible=icon]:hidden"
+              aria-hidden="true"
+            />
+          )}
         </Link>
       </SidebarMenuButton>
-      <NavItemBadge badge={item.badge} />
+      <NavItemBadge badge={item.badge} label={item.badgeLabel} />
     </SidebarMenuItem>
   );
 }
 
-function NavLinkIcon({ item, showFallback }: NavLinkIconProps) {
+function NavLinkIcon({ item, showFallback, isActive }: NavLinkIconProps & { isActive: boolean }) {
   const Icon = item.icon;
 
   if (Icon) {
-    return <Icon />;
+    return (
+      <span
+        className={cn(
+          "grid size-7 shrink-0 place-items-center rounded-md border-2 bg-card text-ink",
+          isActive ? "border-ink" : "border-ink/30",
+          "group-data-[collapsible=icon]:size-4 group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent",
+        )}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+    );
   }
 
   if (showFallback) {
@@ -253,7 +281,7 @@ function NavCollapsibleItem({ item, isActive, defaultOpen, isSubItemActive }: Na
             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
-        <NavItemBadge badge={item.badge} />
+        <NavItemBadge badge={item.badge} label={item.badgeLabel} />
 
         <CollapsibleContent>
           <SidebarMenuSub>
@@ -287,7 +315,7 @@ function NavCollapsibleItem({ item, isActive, defaultOpen, isSubItemActive }: Na
   );
 }
 
-function NavItemBadge({ badge }: { badge?: NavBadge }) {
+function NavItemBadge({ badge, label }: { badge?: NavBadge; label?: string }) {
   if (!badge) {
     return null;
   }
@@ -301,15 +329,15 @@ function NavItemBadge({ badge }: { badge?: NavBadge }) {
   return (
     <SidebarMenuBadge
       className={cn(
-        "rounded-sm border capitalize",
-        badge === "locked" && "border-muted-foreground/40 text-muted-foreground",
-        badge === "new" &&
-          "border-green-600 text-green-600 peer-hover/menu-button:text-green-600 peer-data-active/menu-button:text-green-600",
-        badge === "soon" && "border-muted-foreground text-muted-foreground",
+        "top-1/2! -translate-y-1/2 gap-1 rounded-full border-2 px-1.5 font-bold font-mono text-[11px] uppercase tracking-wide",
+        badge === "locked" && "border-ink/40 text-sidebar-foreground/80",
+        badge === "new" && "border-ink bg-mint text-ink dark:text-ink-foreground",
+        badge === "soon" && "border-ink/40 text-sidebar-foreground/80",
       )}
     >
-      {badge === "locked" && <LockKeyhole aria-hidden="true" className="mr-1 inline size-3" />}
-      {badgeLabels[badge] ?? badge}
+      {badge === "locked" && <LockKeyhole aria-hidden="true" className="size-3" />}
+      {badge === "locked" && <span className="sr-only">Terkunci, dibuka </span>}
+      {label ?? badgeLabels[badge] ?? badge}
     </SidebarMenuBadge>
   );
 }

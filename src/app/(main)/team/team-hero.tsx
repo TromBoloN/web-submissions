@@ -15,7 +15,6 @@ import {
   Mic,
   ScanSearch,
   Sparkles,
-  Stamp,
   Trophy,
 } from "lucide-react";
 
@@ -23,7 +22,13 @@ import { Button } from "@/components/ui/button";
 import { formatDeadlineMultiZone, formatDeadlineWita } from "@/lib/deadline";
 
 import type { FinalistNoticeData, TeamPhase } from "./team-phase";
-import { FINAL_PRESENTATION, getScheduleStep, toWitaDateKey } from "./team-schedule";
+import {
+  daysBetweenDateKeys,
+  FINAL_PRESENTATION,
+  getScheduleStep,
+  type ScheduleStepId,
+  toWitaDateKey,
+} from "./team-schedule";
 
 type SubmissionState = "none" | "draft" | "submitted";
 
@@ -144,7 +149,7 @@ function CountdownTimer({
             <span className="font-display font-extrabold text-2xl tabular-nums leading-none sm:text-3xl">
               {String(seg.value).padStart(2, "0")}
             </span>
-            <span className="mt-1 font-mono text-[9px] uppercase tracking-wider opacity-80">{seg.label}</span>
+            <span className="mt-1 font-mono text-[11px] uppercase tracking-wider opacity-90">{seg.label}</span>
           </div>
         ))}
       </div>
@@ -225,7 +230,7 @@ function LiveChecklist({
     <div className="rounded-2xl border-2 border-ink bg-card p-4 text-card-foreground shadow-brutal-sm">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="font-bold font-mono text-[11px] text-ink uppercase tracking-wider">Kelengkapan</p>
-        <span className="font-mono text-muted-foreground text-xs tabular-nums">
+        <span className="font-mono text-foreground/75 text-xs tabular-nums">
           {doneCount}/{items.length} tautan
         </span>
       </div>
@@ -292,23 +297,69 @@ function OpenHero(props: TeamHeroProps) {
   );
 }
 
-function ClosedHero() {
+/** Big "N hari lagi" tile that fills the hero's right side until the next milestone. */
+function MilestoneTile({
+  label,
+  stepId,
+  serverNowIso,
+  pendingText,
+}: {
+  label: string;
+  stepId: ScheduleStepId;
+  serverNowIso: string;
+  /** Shown instead of a count once the date has passed but the milestone has not happened yet. */
+  pendingText: string;
+}) {
+  const step = getScheduleStep(stepId);
+  const days = daysBetweenDateKeys(toWitaDateKey(serverNowIso), step.start);
+
+  let value = String(days);
+  let unit = "hari lagi";
+  let sentence = `${label} dalam ${days} hari, pada ${step.dates}.`;
+  if (days === 0) {
+    value = "Hari ini";
+    unit = "";
+    sentence = `${label} hari ini.`;
+  } else if (days < 0) {
+    value = "Segera";
+    unit = "";
+    sentence = `${label}: ${pendingText}`;
+  }
+
+  return (
+    <div className="w-full shrink-0 rounded-2xl border-2 border-ink bg-card p-4 text-card-foreground shadow-brutal-sm sm:w-56">
+      <p className="sr-only">{sentence}</p>
+      <div aria-hidden="true">
+        <p className="font-bold font-mono text-foreground/75 text-xs uppercase tracking-wider">{label}</p>
+        <p className="mt-2 flex items-baseline gap-2">
+          <span className="font-display font-extrabold text-5xl text-ink tabular-nums leading-none">{value}</span>
+          {unit && <span className="font-semibold text-foreground/80 text-sm">{unit}</span>}
+        </p>
+        <p className="mt-2 font-mono text-foreground/75 text-xs">{days < 0 ? pendingText : step.dates}</p>
+      </div>
+    </div>
+  );
+}
+
+function ClosedHero(props: TeamHeroProps) {
   const review = getScheduleStep("review");
 
   return (
     <LoudShell>
       <Eyebrow>Fase · Pengiriman ditutup</Eyebrow>
-      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-3">
           <h1 className="team-hero-title team-hero-title-outline">Terkunci.</h1>
           <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
             Karya tim Anda sudah tercatat dan siap dinilai dewan juri. Penilaian dimulai {review.dates}.
           </p>
         </div>
-        <span className="team-stamp self-start text-lg sm:self-center sm:text-2xl">
-          <Stamp className="size-5" aria-hidden="true" />
-          Tercatat
-        </span>
+        <MilestoneTile
+          label="Penilaian dimulai"
+          stepId="review"
+          serverNowIso={props.serverNowIso}
+          pendingText="Dewan juri mulai menilai."
+        />
       </div>
     </LoudShell>
   );
@@ -317,13 +368,11 @@ function ClosedHero() {
 function ReviewHero(props: TeamHeroProps) {
   const review = getScheduleStep("review");
   const top5 = getScheduleStep("top5");
-  const today = toWitaDateKey(props.serverNowIso);
-  const waitingForNotice = today >= top5.start;
 
   return (
     <LoudShell>
       <Eyebrow>Fase · {review.title}</Eyebrow>
-      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex items-center gap-3">
             <ScanSearch className="size-7 shrink-0 text-ink" aria-hidden="true" />
@@ -333,37 +382,45 @@ function ReviewHero(props: TeamHeroProps) {
           </div>
           <div className="team-scan max-w-md" aria-hidden="true" />
           <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
-            Tidak ada yang perlu dilakukan sekarang. Karya Anda aman tercatat.{" "}
-            {waitingForNotice
-              ? "Pengumuman Top 5 segera diterbitkan panitia."
-              : `Penilaian berlangsung ${review.dates}, pengumuman Top 5 pada ${top5.dates}.`}
+            Tidak ada yang perlu dilakukan sekarang. Karya Anda aman tercatat. Penilaian berlangsung {review.dates},
+            pengumuman Top 5 pada {top5.dates}.
           </p>
         </div>
-        <span className="team-stamp self-start text-sm sm:self-center">
-          <Stamp className="size-4" aria-hidden="true" />
-          Tercatat
-        </span>
+        <MilestoneTile
+          label="Top 5 diumumkan"
+          stepId="top5"
+          serverNowIso={props.serverNowIso}
+          pendingText="Menunggu pengumuman panitia."
+        />
       </div>
     </LoudShell>
   );
 }
 
-function FinalDetails() {
+function FinalDetails({ serverNowIso }: { serverNowIso: string }) {
+  const days = daysBetweenDateKeys(toWitaDateKey(serverNowIso), getScheduleStep("final").start);
+
   return (
     <div className="rounded-2xl border-2 border-ink bg-card p-4 text-card-foreground shadow-brutal-sm">
-      <p className="flex items-center gap-2 font-bold font-mono text-[11px] text-ink uppercase tracking-wider">
+      <p className="flex items-center gap-2 font-bold font-mono text-ink text-xs uppercase tracking-wider">
         <Mic className="size-3.5" aria-hidden="true" />
         Babak Final · {FINAL_PRESENTATION.dateLabel}
       </p>
+      {days > 0 && (
+        <p className="mt-2 flex items-baseline gap-2">
+          <span className="font-display font-extrabold text-4xl text-ink tabular-nums leading-none">{days}</span>
+          <span className="font-semibold text-foreground/80 text-sm">hari lagi</span>
+        </p>
+      )}
       <dl className="mt-3 grid grid-cols-2 gap-3">
         {FINAL_PRESENTATION.details.map((item) => (
           <div key={item.label}>
-            <dt className="text-muted-foreground text-xs">{item.label}</dt>
+            <dt className="text-foreground/75 text-xs">{item.label}</dt>
             <dd className="font-display font-extrabold text-xl">{item.value}</dd>
           </div>
         ))}
       </dl>
-      <p className="mt-3 text-muted-foreground text-xs">{FINAL_PRESENTATION.note}</p>
+      <p className="mt-3 text-foreground/75 text-xs">{FINAL_PRESENTATION.note}</p>
     </div>
   );
 }
@@ -395,7 +452,7 @@ function FinalistHero(props: TeamHeroProps) {
           <NoticeMessage notice={props.finalistNotice} />
           {props.resultsReleased && <ResultsLink label="Lihat masukan juri" />}
         </div>
-        <FinalDetails />
+        <FinalDetails serverNowIso={props.serverNowIso} />
       </div>
     </LoudShell>
   );
@@ -413,7 +470,7 @@ function FinalHero(props: TeamHeroProps) {
           </p>
           <NoticeMessage notice={props.finalistNotice} />
         </div>
-        <FinalDetails />
+        <FinalDetails serverNowIso={props.serverNowIso} />
       </div>
     </LoudShell>
   );
@@ -489,7 +546,7 @@ export function TeamHero(props: TeamHeroProps) {
     case "open":
       return <OpenHero {...props} />;
     case "closed":
-      return <ClosedHero />;
+      return <ClosedHero {...props} />;
     case "review":
       return <ReviewHero {...props} />;
     case "finalist":

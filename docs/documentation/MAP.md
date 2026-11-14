@@ -36,7 +36,7 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 
 Admin dashboard parts: `dashboard-client.tsx` (metric cards, progress ring, phase timeline, chase/judging/ranking panels, release controls, exports, health, activity) and `dashboard-countdown.tsx` (server-synced WITA countdown). Team portal parts: `submission-client.tsx` (form), `team-hero.tsx` (phase-aware hero: countdown, live checklist, finalist/final/results states), `team-phase.ts` (`resolveTeamPhase`), `team-schedule.ts` (hardcoded schedule and final presentation details, WITA date key), `journey-track.tsx` (hex-node timeline, horizontal on md+, vertical on mobile), `guardian-id-card.tsx` (team code access pass with members; hover tilt off under reduced motion), `submission-checklist.tsx`, `submission-receipt.tsx` (ticket-style receipt; printing a page that shows it prints only the receipt). Layout: while open the form is the centrepiece; once closed, a bento of journey track, receipt, showcase and team/help. Loud/calm surfaces and Guardian tokens (`border-ink`, `bg-mint`, `shadow-brutal`, `.surface-loud`, `.surface-calm`, `.press`, `.btn-loud`) live in `src/app/globals.css`. Case study view (shared by team and judge): `team/studi-kasus/case-study-view.tsx` plus `case-study-toc.tsx` (TOC with reading progress); the team page also reads its own submission to tick the deliverables checklist. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
 
-Public gallery access: `/login` shows a secondary "Lihat Karya Peserta" button; admin and judges get a **Karya** sidebar item (`/karya`); teams get a **Galeri Karya** sidebar item (`/karya`) next to their **Tampilan Karya** editor (`/team/karya`), and the showcase editor also links to the gallery.
+Public gallery access: `/login` shows a secondary "Lihat Karya Peserta" button; every role gets a **Galeri** sidebar item (`/karya`, under JELAJAH for teams and judges) with a lock + date badge until `showcase_published_at`, then "Baru" for 7 days. Teams edit their showcase via **Atur Tampilan** (`/team/karya`, under KARYA SAYA), which also links to the gallery. Sidebar parts: `dashboard/_components/sidebar/` (`app-sidebar.tsx` hex logo header, `nav-main.tsx` Guardian rows, `nav-user.tsx` Guardian user chip); gallery state is computed in `dashboard-shell.tsx`.
 
 ## Shared code
 
@@ -61,6 +61,7 @@ src/app/(main)/dashboard/_components      shell: dashboard-shell, header, sideba
 src/app/(main)/admin/akun                  account types, filters, clipboard control, and account utilities
 src/components/                      shared UI (change-password-form, markdown-content, logout-button, rubric-bars); ui/ is shadcn, do not edit
 src/components/showcase-card.tsx      shared public/team showcase card
+src/components/theme-toggle.tsx       shared light/dark toggle (dashboard header, floating on /karya)
 src/components/showcase-gallery.tsx   public showcase gallery, vault, and timeline
 src/types/database.ts                generated Supabase types
 src/scripts/seed.mjs                 npm run seed / seed:clear

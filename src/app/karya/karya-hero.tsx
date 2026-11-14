@@ -4,11 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import { GraduationCap, Layers, Moon, Shield, ShieldCheck, Sun, Users, Zap } from "lucide-react";
-import { createPortal } from "react-dom";
+import { GraduationCap, Layers, Shield, ShieldCheck, Users, Zap } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import mitWeekLogo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 import { KARYA_DATES } from "./karya-constants";
@@ -52,27 +50,9 @@ function CountUp({ target }: { target: number }) {
   return <>{count}</>;
 }
 
+/** Floating light/dark toggle for /karya; same component as the dashboard header. */
 export function KaryaThemeToggle() {
-  const resolvedThemeMode = usePreferencesStore((state) => state.resolvedThemeMode);
-  const setPreference = usePreferencesStore((state) => state.setPreference);
-  const [mounted, setMounted] = useState(false);
-  const isDark = resolvedThemeMode === "dark";
-
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
-
-  return createPortal(
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => setPreference("theme_mode", isDark ? "light" : "dark")}
-      aria-label={isDark ? "Gunakan mode terang" : "Gunakan mode gelap"}
-      className="guardian-btn-secondary fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 size-11 rounded-full p-0 shadow-[3px_3px_0_#1d1a5c]"
-    >
-      {isDark ? <Sun className="size-5 text-[#00e676]" /> : <Moon className="size-5 text-[#1d1a5c]" />}
-    </Button>,
-    document.body,
-  );
+  return <ThemeToggle floating />;
 }
 
 /**

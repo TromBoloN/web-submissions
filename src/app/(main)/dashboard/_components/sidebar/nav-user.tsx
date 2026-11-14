@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { EllipsisVertical, KeyRound, LogOut } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +17,29 @@ import { signOut } from "@/lib/auth-actions";
 import { type CurrentUser, getRoleLabel, getUserDisplayEmail } from "@/lib/user-display";
 import { getInitials } from "@/lib/utils";
 
-export function NavUser({ user }: { readonly user: CurrentUser }) {
+/** Hex avatar with initials, matching the Guardian ID badge. */
+function HexAvatar({ name }: { name: string }) {
+  return (
+    <span className="relative grid size-9 shrink-0 place-items-center" aria-hidden="true">
+      <span className="hex absolute inset-0 bg-ink" />
+      <span className="hex absolute inset-[2px] grid place-items-center bg-guardian-accent font-bold font-mono text-[11px] text-white">
+        {getInitials(name)}
+      </span>
+    </span>
+  );
+}
+
+export function NavUser({ user, teamCode }: { readonly user: CurrentUser; readonly teamCode?: string | null }) {
   const { isMobile } = useSidebar();
+  // Teams see their code; admin and judges get a role chip instead.
+  const subLabel =
+    user.role === "team" ? (
+      <span className="truncate font-bold font-mono text-[11px] text-ink">{teamCode ?? getRoleLabel(user.role)}</span>
+    ) : (
+      <span className="w-fit rounded-full border-2 border-ink px-1.5 font-bold font-mono text-[11px] text-ink uppercase leading-4">
+        {getRoleLabel(user.role)}
+      </span>
+    );
 
   return (
     <SidebarMenu>
@@ -28,14 +48,12 @@ export function NavUser({ user }: { readonly user: CurrentUser }) {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="press rounded-xl border-2 border-ink bg-card shadow-brutal-sm data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:shadow-none"
             >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarFallback className="rounded-lg">{getInitials(user.full_name)}</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.full_name}</span>
-                <span className="truncate text-muted-foreground text-xs">{getUserDisplayEmail(user.email)}</span>
+              <HexAvatar name={user.full_name} />
+              <div className="grid min-w-0 flex-1 gap-0.5 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">{user.full_name}</span>
+                {subLabel}
               </div>
               <EllipsisVertical className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -48,9 +66,7 @@ export function NavUser({ user }: { readonly user: CurrentUser }) {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">{getInitials(user.full_name)}</AvatarFallback>
-                </Avatar>
+                <HexAvatar name={user.full_name} />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.full_name}</span>
                   <span className="truncate text-muted-foreground text-xs">{getUserDisplayEmail(user.email)}</span>
