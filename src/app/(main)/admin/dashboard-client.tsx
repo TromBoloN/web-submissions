@@ -717,7 +717,7 @@ function ReleaseControls({
         <CardDescription>Kontrol cepat tanpa membuka Pengaturan.</CardDescription>
         <CardAction>
           <Button asChild size="sm" variant="ghost">
-            <Link href="/admin/pengaturan">
+            <Link href="/admin/pengaturan/hasil">
               Pengaturan
               <ArrowRight aria-hidden="true" className="size-3.5" />
             </Link>

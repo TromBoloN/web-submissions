@@ -60,7 +60,7 @@ export async function updateCompetitionDeadline(formData: FormData): Promise<Act
   }
 
   revalidatePath("/admin");
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   return { success: true };
 }
 
@@ -117,7 +117,7 @@ export async function updateJuknisUrl(formData: FormData): Promise<ActionResult>
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
   }
 
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team", "layout");
   revalidatePath("/judge", "layout");
   return { success: true };
@@ -185,7 +185,7 @@ export async function updateContactWhatsapp(formData: FormData): Promise<ActionR
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
   }
 
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team");
   revalidatePath("/login");
   return { success: true };
@@ -258,7 +258,7 @@ export async function updateCaseStudy(formData: FormData): Promise<ActionResult>
     return { success: false, error: "Data studi kasus tidak ditemukan untuk diperbarui." };
   }
 
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team/studi-kasus");
   revalidatePath("/judge/studi-kasus");
 
@@ -323,7 +323,7 @@ export async function updateResultsRelease(stage: "preliminary" | "final", relea
   });
 
   revalidatePath("/admin");
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team");
   revalidatePath("/team", "layout");
   return { success: true };
@@ -382,7 +382,7 @@ export async function publishShowcasePhase(phase: "initial" | "finalists" | "gal
     metadata: { phase },
   });
 
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/admin");
   revalidatePath("/team");
   revalidatePath("/team/karya");
@@ -438,7 +438,7 @@ export async function unpublishShowcasePhase(
       metadata: { phase },
     });
 
-    revalidatePath("/admin/pengaturan");
+    revalidatePath("/admin/pengaturan", "layout");
     revalidatePath("/admin");
     revalidatePath("/team");
     revalidatePath("/team/karya");
@@ -511,7 +511,7 @@ export async function unpublishShowcasePhase(
     metadata: { phase },
   });
 
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/admin");
   revalidatePath("/team");
   revalidatePath("/team/karya");
@@ -542,7 +542,7 @@ export async function publishShowcaseWinners(): Promise<ActionResult> {
     metadata: { phase: "winners" },
   });
 
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/admin");
   revalidatePath("/karya");
   return { success: true };

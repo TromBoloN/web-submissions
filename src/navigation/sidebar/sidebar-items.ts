@@ -46,6 +46,8 @@ interface NavItemBase {
   badgeLabel?: string;
   disabled?: boolean;
   newTab?: boolean;
+  /** Also active on sub-pages (url + "/..."). Off by default so "/admin" doesn't match everything. */
+  matchPrefix?: boolean;
 }
 
 export interface NavMainLinkItem extends NavItemBase {
@@ -102,7 +104,7 @@ export function getSidebarItems(
         label: "Sistem",
         items: [
           { id: "audit", title: "Audit", url: "/admin/audit", icon: History },
-          { id: "settings", title: "Pengaturan", url: "/admin/pengaturan", icon: Settings },
+          { id: "settings", title: "Pengaturan", url: "/admin/pengaturan", icon: Settings, matchPrefix: true },
         ],
       },
     ];

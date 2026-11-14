@@ -531,7 +531,7 @@ function handleRecusalError(error: { code?: string; message?: string } | null, d
 function revalidateRecusalPaths(tahap: "preliminary" | "final", teamId: string) {
   revalidatePath("/judge");
   revalidatePath("/admin/peringkat");
-  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/pengaturan/hasil");
   revalidatePath(`/judge/nilai/${tahap}/${teamId}`);
 }
 

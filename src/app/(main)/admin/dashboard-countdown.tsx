@@ -82,7 +82,7 @@ export function LiveCountdown({ deadlineIso, deadlineLabel, serverNowIso }: Live
             </p>
           </div>
           <Button asChild size="sm" variant="outline">
-            <Link href="/admin/pengaturan">Buka Pengaturan</Link>
+            <Link href="/admin/pengaturan/pengumpulan">Buka Pengaturan</Link>
           </Button>
         </div>
       </div>
