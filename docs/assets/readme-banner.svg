@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">GUARDIANS of the Digital Space · MIT-WEEK 2026 Web Development Competition</title>
+  <desc id="desc">Navy banner with a giant outlined GUARDIANS headline, a mint hex shield badge and a scrolling marquee of competition stages.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13172e"/>
+      <stop offset="0.55" stop-color="#1d1a5c"/>
+      <stop offset="1" stop-color="#253358"/>
+    </linearGradient>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#ffffff" opacity="0.10"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.82" cy="0.35" r="0.45">
+      <stop offset="0" stop-color="#5b3fd6" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#5b3fd6" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="card">
+      <rect x="0" y="0" width="1200" height="380" rx="28"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#card)">
+    <!-- Surface -->
+    <rect width="1200" height="380" fill="url(#bg)"/>
+    <rect width="1200" height="380" fill="url(#dots)"/>
+    <rect width="1200" height="380" fill="url(#glow)"/>
+
+    <!-- Eyebrow pill -->
+    <g transform="translate(64 58)">
+      <rect x="4" y="4" width="560" height="38" rx="19" fill="#000000" opacity="0.55"/>
+      <rect width="560" height="38" rx="19" fill="#ffffff" stroke="#00e676" stroke-width="2"/>
+      <circle cx="24" cy="19" r="6" fill="#00e676">
+        <animate attributeName="opacity" values="1;0.25;1" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
+      <text x="42" y="25" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="2.5" fill="#1d1a5c" textLength="500" lengthAdjust="spacingAndGlyphs">WEB DEVELOPMENT COMPETITION · MIT-WEEK 2026</text>
+    </g>
+
+    <!-- Giant headline: violet offset shadow + outlined white type -->
+    <g font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-size="118" font-weight="900" letter-spacing="-3">
+      <text x="70" y="208" fill="#5b3fd6">GUARDIANS</text>
+      <text x="64" y="202" fill="#ffffff" stroke="#0a0d17" stroke-width="3" paint-order="stroke">GUARDIANS</text>
+    </g>
+
+    <text x="68" y="252" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="700" fill="#cadbf7">of the Digital Space — official competition portal</text>
+
+    <!-- Hex shield badge -->
+    <g transform="translate(965 168)">
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 -8; 0 0" dur="4.5s" repeatCount="indefinite"/>
+        <polygon points="-92,0 -46,-80 46,-80 92,0 46,80 -46,80" transform="translate(8 8)" fill="#000000" opacity="0.6"/>
+        <polygon points="-92,0 -46,-80 46,-80 92,0 46,80 -46,80" fill="#8ba9ec"/>
+        <polygon points="-84,0 -42,-73 42,-73 84,0 42,73 -42,73" fill="#00e676"/>
+        <!-- Shield with check -->
+        <path d="M0,-44 L34,-30 L34,2 C34,26 18,40 0,48 C-18,40 -34,26 -34,2 L-34,-30 Z" fill="#1d1a5c"/>
+        <path d="M-15,2 L-4,13 L17,-9" fill="none" stroke="#00e676" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <!-- Orbiting hex markers -->
+      <g>
+        <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="18s" repeatCount="indefinite"/>
+        <polygon points="-9,0 -4.5,-8 4.5,-8 9,0 4.5,8 -4.5,8" transform="translate(0 -126)" fill="#00e676"/>
+        <polygon points="-7,0 -3.5,-6 3.5,-6 7,0 3.5,6 -3.5,6" transform="translate(118 46)" fill="#ffffff" opacity="0.8"/>
+        <polygon points="-6,0 -3,-5 3,-5 6,0 3,5 -3,5" transform="translate(-110 60)" fill="#7d72eb"/>
+      </g>
+    </g>
+
+    <!-- Marquee band -->
+    <g transform="translate(0 300)">
+      <rect width="1200" height="80" fill="#00e676"/>
+      <rect width="1200" height="3" fill="#0a0d17"/>
+      <g font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-size="26" font-weight="900" letter-spacing="3" fill="#1d1a5c">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="-1200 0" dur="22s" repeatCount="indefinite"/>
+        <!-- Two identical 1170px runs spaced 1200px apart, shifted by 1200px per loop: seamless. -->
+        <text x="15" y="51" textLength="1170" lengthAdjust="spacing">SUBMIT ◆ REVIEW ◆ TOP 5 ◆ FINAL ◆ WINNERS ◆ GUARDIANS ◆</text>
+        <text x="1215" y="51" textLength="1170" lengthAdjust="spacing">SUBMIT ◆ REVIEW ◆ TOP 5 ◆ FINAL ◆ WINNERS ◆ GUARDIANS ◆</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Ink outline -->
+  <rect x="1.5" y="1.5" width="1197" height="377" rx="27" fill="none" stroke="#8ba9ec" stroke-width="3"/>
+</svg>

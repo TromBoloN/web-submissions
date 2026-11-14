@@ -1,287 +1,302 @@
-# MIT-WEEK 2026 — Web Development Competition Portal
+<div align="center">
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.4-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61dafb?style=flat&logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ecf8e?style=flat&logo=supabase)](https://supabase.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<img src="docs/assets/readme-banner.svg" alt="GUARDIANS of the Digital Space · MIT-WEEK 2026 Web Development Competition portal" width="100%" />
 
-An all-in-one competition management and submission platform developed specifically for the **Web Development Competition** track at **MIT-WEEK 2026**.
+<br />
+<br />
 
----
+[![Next.js](https://img.shields.io/badge/Next.js-16-1d1a5c?style=for-the-badge&logo=nextdotjs&logoColor=00e676)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-1d1a5c?style=for-the-badge&logo=react&logoColor=00e676)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-1d1a5c?style=for-the-badge&logo=typescript&logoColor=00e676)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-1d1a5c?style=for-the-badge&logo=tailwindcss&logoColor=00e676)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres_+_RLS-1d1a5c?style=for-the-badge&logo=supabase&logoColor=00e676)](https://supabase.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-00e676?style=for-the-badge&labelColor=1d1a5c)](LICENSE)
 
-## 📌 Context: About MIT-WEEK 2026
+**The official submission, judging and showcase platform for the Web Development Competition at MIT-WEEK 2026.**
 
-**MIT-WEEK (Mulawarman Informatics Technology Week) 2026** is an annual flagship technological event that brings together students, developers, and tech enthusiasts for national seminars, hands-on workshops, and competitive challenges across multiple IT disciplines run by the Association of Informatics, Faculty of Engineering, Mulawarman University.
+[🛡️ Features](#%EF%B8%8F-three-portals-one-competition) · [🗺️ Journey](#%EF%B8%8F-the-competition-journey) · [🔒 Security](#-security-by-design) · [🎨 Design](#-the-guardian-design-system) · [🚀 Quick start](#-quick-start) · [📚 Docs](#-documentation)
 
-This web application serves as the **official competition platform for the Web Development Competition** branch of MIT-WEEK 2026. It manages the full lifecycle of the contest:
-
-- **Participant Onboarding & Submissions:** Contestants submit deliverables, study competition briefs, and inspect official rubrics and scores.
-- **Multi-Stage Adjudication:** Preliminary and final rounds scored independently by an expert panel of judges with real-time weighted rubrics and blind scoring.
-- **Committee Operations:** Organizers oversee teams, manage schedules, configure case studies, monitor judging progress, release results, and export rankings.
+</div>
 
 ---
 
-## 🚀 Key Modules & Capabilities
+## ⚡ About MIT-WEEK 2026
 
-### 👨‍💻 1. Contestant Portal (`/team`)
+**MIT-WEEK (Mulawarman Informatics Technology Week) 2026** is the annual flagship tech event of the Association of Informatics, Faculty of Engineering, Mulawarman University: national seminars, hands-on workshops, and competitions across IT disciplines.
 
-Designed to give teams an intuitive and distraction-free submission experience:
+This repository is the **Web Development Competition** platform, themed **"Guardians of the Digital Space"**. It runs the contest end to end:
 
-- **Team Dashboard (`/team`):**
-  - Displays verified team code (`MIT-XXX`), registered team name, educational institution, team leader, and member roster.
-  - One-click copy for the unique team code, used for official communications and fallback backup forms.
-  - Real-time deadline countdown calculating clock offsets between client and server time to prevent local clock tampering.
-- **Deliverable Submission System:**
-  - Repositories: GitHub URL (`https://github.com/...`).
-  - Deployments: Live Demo URL (`http://` or `https://`).
-  - Demonstrations: Video Walkthrough URL (`http://` or `https://`).
-  - Team notes dedicated for the judges.
-- **Draft & Submit Workflow:**
-  - _Simpan Draf:_ Save partial deliverables anytime before the deadline.
-  - _Kirim Submission:_ Validates all required links and transitions status to `Terkirim` (Submitted).
-  - _Perbarui Submission:_ Allows post-submission updates without reverting status to draft.
-- **Case Study Viewer (`/team/studi-kasus`):**
-  - Direct in-app access to the official case study and problem statement rendered from Markdown.
-- **Team Results & Feedback (`/team/hasil`):**
-  - Conditionally enabled in navigation once the committee officially releases results.
-  - Prominent total weighted score with panel count indicator (_"Dinilai oleh N juri"_).
-  - Rubric criterion breakdown table showing Juknis indicators, average judge scores, rubric weights, and final contributions.
-  - Anonymized judicial feedback list with zero identifiable judge metadata.
-  - Dynamic Finalist tab exclusively unlocked for Top 5 Finalist teams.
-  - Graceful edge-case handling for unsubmitted entries, disqualifications, and unreleased stages.
-- **Account Security (`/team/kata-sandi`):**
-  - Self-service password updates with current password verification.
+> 🧑‍💻 **Teams** submit their work, track their phase and receive anonymized feedback.<br />
+> ⚖️ **Judges** score blind against a weighted rubric, round by round.<br />
+> 🛡️ **The committee** controls deadlines, results, finalists and the public gallery.<br />
+> 🌐 **Everyone** can browse the public gallery of works at `/karya`.
 
 ---
 
-### ⚖️ 2. Judicial Evaluation Panel (`/judge`)
+## 🗺️ The competition journey
 
-Built for fair, confidential, and structured evaluation:
-
-- **Judging Queue (`/judge`):**
-  - Filterable by stage (_Babak Awal_ / _Babak Final_) and scoring progress (_Belum dinilai_, _Draf_, _Terkunci_).
-  - High-level progress counter showing completed evaluations versus assigned queue.
-  - Strict blind judging: Judges evaluate submissions independently; scorecards from peer judges remain completely invisible.
-  - Eligible feed: Displays only active, non-disqualified teams with submitted deliverables.
-- **Scoring Interface (`/judge/nilai/[tahap]/[teamId]`):**
-  - Project showcase card with safe external openers for GitHub repository, live demo, and demo video, alongside contestant notes.
-  - Formal rubric entry inputs:
-    - **Preliminary Stage:** Functionality (35%), Case Study Fit (25%), UI/UX (20%), Code Quality (10%), Documentation (10%).
-    - **Final Stage:** Functionality (25%), Case Study Fit (20%), UI/UX (15%), Code Quality (10%), Presentation & Q&A (20%), Documentation (10%).
-  - Live client-side weighted preview calculation with strict two-decimal precision.
-  - _Simpan Nilai_ (draft) vs. _Simpan & Kunci_ (lock) with confirmation dialog.
-- **Release-Driven Read-Only Enforcement:**
-  - When stage results are released by the committee, the scoring form automatically locks into a read-only view with alert banners.
-  - Backed by database triggers preventing `INSERT`, `UPDATE`, or `DELETE` writes once released.
-- **Case Study Viewer (`/judge/studi-kasus`):**
-  - In-portal reference for the competition brief and rubrics.
-- **Account Security (`/judge/kata-sandi`):**
-  - Self-service password updates.
-
----
-
-### 🛡️ 3. Administrative Control Center (`/admin`)
-
-Full-spectrum operational management for the organizing committee:
-
-- **Dashboard Overview (`/admin`):**
-  - KPI metric cards: Total Teams, Finalists, Active Judges, and Submissions count.
-  - Active competition deadline status with last-accepted-minute boundary precision.
-  - Quick action links to all administrative workflows.
-- **Account Management (`/admin/akun`):**
-  - Provision accounts for Admins, Judges (with stage assignments: `preliminary`, `final`, or `both`), and Teams.
-  - Instant status toggle: Immediate activation and deactivation with server-side revocation.
-  - Administrative password resets and multi-attribute search/filtering.
-- **Team Management (`/admin/tim`):**
-  - Team directory with member rosters, institutions, and WhatsApp contact links.
-  - Disqualification toggle with immediate contestant access revocation.
-- **Finalist Selection (`/admin/finalis`):**
-  - Dedicated finalist management interface for locking in the Top 5 Finalist teams.
-  - Counter guards and confirmation dialogs preventing over-assignment.
-- **Submission Monitoring & Admin Overrides (`/admin/submission`):**
-  - Real-time TanStack Table displaying all registered teams.
-  - Status badges: `Terkirim` (green), `Draf` (amber), and `Belum dikirim` (neutral).
-  - Safe link openers with `rel="noopener noreferrer"` and visual URL truncation.
-  - _Admin Override Modal:_ Enables committee members to manually update or input team links (e.g., synchronizing emergency fallback submissions) unrestricted by deadlines.
-  - _CSV Data Export (`/admin/submission/export`):_ Instant UTF-8 BOM spreadsheet export with sanitization against formula injection.
-- **Leaderboard & Rankings (`/admin/peringkat`):**
-  - Real-time aggregate rankings powered by PostgreSQL views (`preliminary_ranking`, `final_ranking`).
-  - Stage tabs for Preliminary and Final rounds with rank badges, judge count, criteria averages, and total scores.
-  - _Rankings CSV Export (`/admin/peringkat/export`):_ Downloadable rankings spreadsheet for jury review and archival.
-- **Competition Settings (`/admin/pengaturan`):**
-  - Dynamic deadline configuration interface in WITA (UTC+8) with strict "+1 minute" boundary rule.
-  - Guidebook (_Juknis_) URL configuration.
-  - Case study Markdown editor.
-  - **Results Release Toggles ("Rilis Hasil"):**
-    - Independent switches for Preliminary and Final stage results.
-    - Live judging progress indicators with warning alerts if judges have unfinished scorecards.
-    - Confirmation modals outlining participant visibility before release.
-
----
-
-## 🔒 Security & Data Integrity
-
-- **Database-Level Row Level Security (RLS):** All tables (`profiles`, `teams`, `submissions`, `competition_settings`, `preliminary_scores`, `final_scores`) enforce RLS policies directly in PostgreSQL. Client UI checks are treated solely as UX enhancements.
-- **Server-Side Session Validation:** Every Server Action strictly invokes `getCurrentProfile()`, verifying the user's role and `is_active` status before performing any operation.
-- **IDOR Immunity:** Team and judge actions resolve IDs purely from the authenticated server session (`auth.uid()`), never accepting user-supplied IDs from client payloads.
-- **Secure Results Exposure (RPC):** Team score summaries and comments are delivered exclusively through `SECURITY DEFINER` function `public.get_my_results()` with an empty `search_path`. Direct `SELECT` policies on score tables are prohibited for contestants. Comments are randomly sorted (`md5(feedback)`) with judge identities, timestamps, and raw peer scores stripped.
-- **Database Trigger Locks:**
-  - Timestamp immutability triggers on submissions.
-  - Pre-release score locks: Triggers `trg_preliminary_scores_release_lock` and `trg_final_scores_release_lock` block `INSERT`, `UPDATE`, and `DELETE` on score tables whenever a stage is released.
-- **Spreadsheet Formula Injection Defense:** CSV export cells starting with formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) are automatically neutralized to prevent Dynamic Data Exchange (DDE) exploits.
-- **Tab-Nabbing Protection:** All external links render with `rel="noopener noreferrer"` and `target="_blank"`.
-
----
-
-## 📂 Project Architecture
-
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#1d1a5c','primaryTextColor':'#ffffff','primaryBorderColor':'#00e676','lineColor':'#5b3fd6','fontFamily':'monospace'}}}%%
+flowchart LR
+    S["📤 SUBMIT<br/>deadline set by admin"] --> R["🔍 REVIEW<br/>11–17 Nov"]
+    R --> T["🏆 TOP 5 + GALLERY<br/>18 Nov"]
+    T --> F["🎤 FINAL<br/>21 Nov"]
+    F --> W["👑 WINNERS<br/>25 Nov"]
+    classDef done fill:#1d1a5c,stroke:#8ba9ec,color:#ffffff,stroke-width:2px
+    classDef live fill:#00e676,stroke:#1d1a5c,color:#1d1a5c,stroke-width:3px
+    class S,R,F,W done
+    class T live
 ```
+
+The team dashboard follows this timeline automatically. A pure phase resolver (`open → closed → review → finalist / not-finalist → final → results`) picks the hero, the layout and the next milestone, using **server time in WITA**, never the device clock. See [Competition phases](docs/documentation/COMPETITION-PHASES.md).
+
+---
+
+## 🛡️ Three portals, one competition
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🧑‍💻 Teams · `/team`
+
+- **Phase-aware hero**: live countdown and link checklist while open; "TERKUNCI.", "Juri sedang menilai" with days-to-Top-5, and finalist / final / results states afterwards
+- **Guardian ID card**: hex-badge access pass with team code and roster
+- **Journey track**: hex nodes with "HARI INI" on the line
+- **Draft → submit → update** workflow with server-side link checks
+- **Ticket receipt**: stamped, copyable, prints as a plain receipt
+- **Showcase editor** (`/team/karya`): drag-and-drop 16:10 image, live gallery preview
+- **Case study** with reading progress and a deliverables checklist ticked from the real submission
+- **Results** (`/team/hasil`): weighted totals and anonymous feedback, once released
+
+</td>
+<td width="33%" valign="top">
+
+### ⚖️ Judges · `/judge`
+
+- **Queue** filtered by stage and status (Belum dinilai, Draf, Terkunci)
+- **Blind scoring**: peers' scorecards stay invisible
+- **Rubric forms** with a live weighted preview (two decimals)
+- **Draft or lock** each scorecard, with confirmation
+- **Recusals** for conflicts of interest
+- **Auto read-only** once results are released, enforced by database triggers
+- **Case study** reference in the portal
+
+</td>
+<td width="33%" valign="top">
+
+### 🛡️ Committee · `/admin`
+
+- **Dashboard**: KPIs, countdown, phase timeline, judging progress
+- **Accounts & teams**: provisioning, activation, disqualification
+- **Finalists**: Top 5 selection and finalist notices
+- **Submissions**: monitoring, overrides, CSV export
+- **Rankings**: live views and CSV export
+- **Pengaturan**, split into sections: deadline, results release, two-stage gallery publishing, case study, links & contact
+- **Audit log** of sensitive actions
+
+</td>
+</tr>
+</table>
+
+### 🌐 Public gallery · `/karya`
+
+A no-login showcase of every team that opted in, opened in two stages (gallery + finalists, then winners with a podium). It is served only through anon-callable `SECURITY DEFINER` functions, so the public never touches a table.
+
+---
+
+## 🔒 Security by design
+
+| Layer | Guarantee |
+| :-- | :-- |
+| 🧱 **Row Level Security** | Every table has RLS and explicit grants. `anon` gets **nothing** on tables, views or sequences. |
+| 🪪 **Roles** | Read only from `profiles` (active accounts only), never from JWT claims or client input. |
+| 🎯 **No IDOR** | Team and judge IDs come from the session (`auth.uid()`), never from request payloads. |
+| 🕶️ **Anonymous results** | Teams read scores only through `get_my_results()`: aggregates and shuffled comments, no judge identity, timestamps, rank or raw peer scores. |
+| 🔐 **Score locks** | Triggers block `INSERT`/`UPDATE`/`DELETE` on scores once a stage is released. |
+| 🧪 **Link checks** | Server-side URL validation with an SSRF guard (DNS resolution, private-IP blocking). |
+| 📊 **Safe exports** | Admin-only CSV with BOM, formula-injection neutralization (`= + - @ \t \r`) and `no-store`. |
+| 🔗 **Safe links** | Only `http`/`https` render as links, always `target="_blank" rel="noopener noreferrer"`. |
+| 🗝️ **Secrets** | The service-role key is server-only (`server-only` module), never in `NEXT_PUBLIC_*` or logs. |
+
+Full model: [Data model & security](docs/documentation/DATA-MODEL.md).
+
+---
+
+## 🎨 The Guardian design system
+
+![ink](https://img.shields.io/badge/ink-%231d1a5c-1d1a5c?style=for-the-badge)
+![mint](https://img.shields.io/badge/mint-%2300e676-00e676?style=for-the-badge&labelColor=1d1a5c)
+![violet](https://img.shields.io/badge/accent-%235b3fd6-5b3fd6?style=for-the-badge)
+![dark ink](https://img.shields.io/badge/dark_ink-%238ba9ec-8ba9ec?style=for-the-badge&labelColor=0a0d17)
+
+Navy ink outlines, neon-mint accents, hex shapes and hard offset shadows, with one rule to keep it from getting noisy:
+
+| 🔊 **Loud** | 🤫 **Calm** |
+| :-- | :-- |
+| Hero, Guardian ID, receipt ticket, journey track, active nav | Forms, settings, tables, help strip |
+| `border-2 border-ink` + `shadow-brutal` + big display type | thin border, soft shadow, regular type |
+
+Buttons **press** (they sink 2px into their shadow). Every animation respects `prefers-reduced-motion`. Light and dark mode both ship, with one shared light/dark toggle. Read the [Design system](docs/documentation/DESIGN-SYSTEM.md).
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#1d1a5c','primaryTextColor':'#ffffff','primaryBorderColor':'#8ba9ec','lineColor':'#00e676','fontFamily':'monospace'}}}%%
+flowchart LR
+    B[🌐 Browser] --> P[proxy.ts<br/>session + redirects]
+    P --> N[Next.js 16<br/>App Router]
+    N --> SA[Server Actions<br/>Zod + role checks]
+    N --> PG[Server pages]
+    SA --> DB[(Supabase Postgres<br/>RLS · RPC · triggers)]
+    PG --> DB
+    B -. public gallery .-> RPC[anon RPCs] --> DB
+```
+
+A single Next.js monolith: no separate backend, queue or cache. PostgreSQL RLS, `SECURITY DEFINER` functions with an empty `search_path`, and triggers are the security boundary; UI guards are convenience. See [Architecture](docs/documentation/ARCHITECTURE.md).
+
+<details>
+<summary><b>📂 Project structure</b></summary>
+
+```text
 web-submissions/
-├── docs/                            # Documentation library, source map, and phase plans
-│   ├── documentation/               # Setup, architecture, data, API, operations, and contribution guides
-│   │   └── README.md                # Documentation index
-│   └── development/                 # Step-by-step feature implementation specifications
+├── docs/
+│   ├── assets/                       # README banner
+│   ├── documentation/                # Setup, architecture, data, design system, phases, settings, ops
+│   └── development/                  # Phase-specific implementation specs
 ├── src/
-│   ├── proxy.ts                     # Session refresh & route redirect (Next.js 16)
+│   ├── proxy.ts                      # Session refresh & redirects (/login and /karya are public)
 │   ├── app/
-│   │   ├── (auth)/login/            # Authentication & sign-in screens
-│   │   ├── (main)/
-│   │   │   ├── admin/               # Administrator control center
-│   │   │   │   ├── akun/            # Account provisioning & management
-│   │   │   │   ├── finalis/         # Finalist selection & lock
-│   │   │   │   ├── pengaturan/      # Deadlines, case study & results release
-│   │   │   │   ├── peringkat/       # Aggregate leaderboard & CSV export
-│   │   │   │   ├── submission/      # Deliverable monitoring, admin edit & export
-│   │   │   │   └── tim/             # Team roster & disqualification management
-│   │   │   ├── dashboard/           # Shared dashboard shell & navigation
-│   │   │   ├── judge/               # Judging queue & rubric scoring interface
-│   │   │   │   ├── nilai/           # Stage-based scoring forms ([tahap]/[teamId])
-│   │   │   │   └── studi-kasus/     # Case study reference
-│   │   │   └── team/                # Contestant submission portal
-│   │   │       ├── hasil/           # Official released results & feedback
-│   │   │       └── studi-kasus/     # Contestant case study brief
-│   ├── components/
-│   │   ├── ui/                      # Reusable shadcn/ui components (radix-nova)
-│   │   └── change-password-form.tsx # Shared password update component
-│   ├── lib/
-│   │   ├── auth.ts                  # Server-side auth helpers (getCurrentProfile, requireRole)
-│   │   ├── rubric.ts                # Competition rubric weights & calculations
-│   │   ├── deadline.ts              # WITA timezone calculations & boundary rules
-│   │   ├── csv.ts                   # CSV serialization & formula injection guards
-│   │   └── supabase/                # Client, Server, and Admin Supabase instances
-│   ├── navigation/sidebar/          # Role-based dynamic sidebar item registry
-│   └── types/database.ts            # Supabase database TypeScript definitions
-├── supabase/
-│   └── migrations/                  # Schema, RLS, functions, views & triggers SQL
-├── package.json
-└── README.md
+│   │   ├── (auth)/login/             # Sign-in
+│   │   ├── karya/                    # Public gallery
+│   │   ├── globals.css               # Theme + Guardian tokens and utilities
+│   │   └── (main)/
+│   │       ├── admin/                # Dashboard, akun, audit, finalis, peringkat, submission, tim
+│   │       │   └── pengaturan/       # Settings: pengumpulan, hasil, galeri, studi-kasus, tautan
+│   │       ├── dashboard/_components # Shared shell, Guardian sidebar, user chip
+│   │       ├── judge/                # Queue, nilai/[tahap]/[teamId], studi-kasus
+│   │       └── team/                 # Phase hero, journey track, ID card, receipt, karya, hasil, studi-kasus
+│   ├── components/                   # Shared UI (theme-toggle, showcase-card, …); ui/ = shadcn (untouched)
+│   ├── lib/                          # auth, deadline (WITA), rubric, csv, link-check, audit, supabase clients
+│   ├── navigation/sidebar/           # Role-based sidebar registry
+│   └── types/database.ts             # Generated Supabase types
+├── supabase/migrations/              # Schema, RLS, RPCs, views, triggers (source of truth)
+├── scripts/                          # Backup, restore, onboarding, showcase seed, WhatsApp links
+└── tests/                            # Vitest unit tests (deadline, rubric)
 ```
 
----
+Every file's job is mapped in [MAP.md](docs/documentation/MAP.md).
 
-## 🛠️ Tech Stack & Dependencies
-
-| Layer                  | Technology                                                     |
-| :--------------------- | :------------------------------------------------------------- |
-| **Framework**          | Next.js 16.4 (App Router with Turbopack), React 19, TypeScript |
-| **Styling**            | Tailwind CSS v4, Lucide React Icons                            |
-| **Component Library**  | shadcn/ui (Radix UI primitives)                                |
-| **Backend & Database** | Supabase (PostgreSQL 15+, Auth, Row Level Security)            |
-| **Form Management**    | React Hook Form, Zod schema validation                         |
-| **Data Tables**        | TanStack Table v9                                              |
-| **Code Quality**       | Biome (linter & formatter)                                     |
+</details>
 
 ---
 
-## 🏁 Getting Started Locally
+## 🧰 Tech stack
 
-### Prerequisites
+| Layer | Technology |
+| :-- | :-- |
+| **Framework** | Next.js 16 (App Router, Turbopack), React 19, TypeScript 5.9 (strict) |
+| **Styling** | Tailwind CSS v4, shadcn/ui (radix-nova), Lucide icons |
+| **Backend** | Supabase: PostgreSQL, Auth, RLS, RPC functions, Storage |
+| **Forms & validation** | React Hook Form, Zod |
+| **Tables** | TanStack Table v9 |
+| **Quality** | Biome (lint + format), Vitest, Husky + lint-staged, GitHub Actions CI |
 
-- **Node.js** v20.x or higher
-- **npm** v10.x or higher
-- A Supabase project (local or cloud-hosted)
+---
 
-### 1. Clone the Repository
+## 🚀 Quick start
+
+**Prerequisites:** Node.js 20+, npm 10+, a Supabase project (local or cloud).
 
 ```bash
 git clone https://github.com/TromBoloN/web-submissions.git
 cd web-submissions
-```
-
-### 2. Install Dependencies
-
-```bash
 npm install
 ```
 
-### 3. Environment Variables
-
-Create a `.env.local` file in the root directory:
+Create **`.env.local`** (never commit it; the service-role key never goes in `.env`):
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # server-only
 ```
 
-> **Note:** The `SUPABASE_SERVICE_ROLE_KEY` is strictly server-side and will never be exposed to browser bundles.
-
-### 4. Database Setup
-
-Apply the schema migrations located in `supabase/migrations/` sequentially via the Supabase CLI or the Supabase SQL Editor:
-
-1. `20261020000000_init_schema.sql` — Initial schema, RLS, functions, and ranking views.
-2. `20261024000000_contestant_features.sql` - Basic schema for constestant tables
-3. `20261025000000_judging_and_contact.sql` - Basic schema for judging and contact tables
-4. `20261026000000_team_results.sql` — Results release flags and secure `get_my_results()` RPC function.
-5. `20261027000000_score_release_lock.sql` — Database triggers enforcing score freeze upon results release.
-6. `20261108000000_fix_first_submitted_at.sql` - First submit fix.
-7. `20261108010000_drafts_recusals_and_private_notes.sql` - Schema for draft and judge private notes.
-
-### 5. Run the Development Server
+Apply every file in `supabase/migrations/` **in filename order** (Supabase CLI or SQL editor), then start:
 
 ```bash
-npm run dev
+npm run dev   # http://localhost:3000
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to view the application.
+<details>
+<summary><b>🗄️ Migration list</b></summary>
 
-For the complete setup guide, environment-variable reference, migration workflow, and common fixes, see [`docs/documentation/SETUP.md`](docs/documentation/SETUP.md).
+| Migration | Adds |
+| :-- | :-- |
+| `20261020000000_init_schema` | Core schema, RLS, helper functions, ranking views |
+| `20261024000000_contestant_features` | Juknis link, case study, receipts & link checks, finalist notice |
+| `20261025000000_judging_and_contact` | Notes for judges, append-only submission history, score locking, public WhatsApp contact |
+| `20261026000000_team_results` | Release flags and the `get_my_results()` RPC |
+| `20261027000000_score_release_lock` | Score freeze triggers after release |
+| `20261108000000_fix_first_submitted_at` | First-submit timestamp fix |
+| `20261108010000_drafts_recusals_and_private_notes` | Score drafts, recusals, judge private notes |
+| `20261108020000_audit_logs` | Audit log table |
+| `20261109000000_showcase` | Showcase consent/details, gallery publishing, public gallery RPCs, `web-showcase` bucket |
+| `20261109010000_showcase_winners` | Winners publishing and public winners RPC |
+| `20261110000000_fix_showcase_phase_one` | Gallery publishing fix |
+| `20261114000000_competition_stages` 🆕 | Schedule as data (`competition_stages`) · **pending review** |
+| `20261114010000_event_identity_and_final_details` 🆕 | Event identity, finalist count, final presentation details · **pending review** |
+
+After applying any migration, regenerate `src/types/database.ts` as **UTF-8**.
+
+</details>
+
+Full guide with troubleshooting: [Setup](docs/documentation/SETUP.md).
 
 ---
 
-## 📜 Available Scripts
+## 📜 Scripts
 
-| Command           | Purpose                                                |
-| :---------------- | :----------------------------------------------------- |
-| `npm run dev`     | Starts local Next.js development server with Turbopack |
-| `npm run build`   | Compiles the production build and type-checks          |
-| `npm run lint`    | Runs Biome linter across the codebase                  |
-| `npm run format`  | Automatically formats files using Biome                |
-| `npm run check`   | Checks formatting and linting concurrently             |
-| `npm run backup`  | runs a backup database script and save it as json      |
-| `npm run restore` | runs a restore script from the json backup             |
-| `npm run onboard` | converts registratrants data into a csv for accounts   |
+| Command | Purpose |
+| :-- | :-- |
+| `npm run dev` | Development server (Turbopack) |
+| `npm run build` / `npm start` | Production build (with type-check) / serve it |
+| `npm run lint` · `npm run check` · `npm run check:fix` | Biome lint · lint + format check · auto-fix |
+| `npm run format` | Biome format |
+| `npm test` | Vitest unit tests |
+| `npm run backup` / `npm run restore` | JSON backup to `private-output/` / restore from it (see [Operations](docs/documentation/OPERATIONS.md)) |
+| `npm run seed` / `npm run seed:clear` | Seed or clear demo accounts (`@seed.mitweek.test`). ⚠️ **Never against production.** |
+| `npm run seed:showcase` | Demo showcase data: `-- seed`, `-- seed --publish`, `-- clear` |
+| `npm run onboard` | Import registered teams: dry run by default; `-- --commit` creates accounts and writes credentials to `private-output/` |
+| `npm run whatsapp` | Local helper page for sending team portal credentials via WhatsApp (newest `private-output/credentials-*.csv`) |
+
+---
 
 ## 📚 Documentation
 
-The documentation library is organized by task:
+| 🧭 I want to… | 📖 Read |
+| :-- | :-- |
+| Run it locally | [Setup](docs/documentation/SETUP.md) |
+| Find where something lives | [MAP.md](docs/documentation/MAP.md) |
+| Understand the system | [Architecture](docs/documentation/ARCHITECTURE.md) |
+| Understand tables, RPCs, RLS | [Data model & security](docs/documentation/DATA-MODEL.md) |
+| Understand team phases & dates | [Competition phases](docs/documentation/COMPETITION-PHASES.md) |
+| Work on admin settings | [Admin settings](docs/documentation/ADMIN-SETTINGS.md) |
+| Style a screen | [Design system](docs/documentation/DESIGN-SYSTEM.md) · [Frontend conventions](docs/documentation/FRONTEND.md) |
+| Find routes & server interfaces | [Application reference](docs/documentation/API.md) |
+| Deploy, back up, handle incidents | [Operations](docs/documentation/OPERATIONS.md) |
+| Contribute | [Contributing](docs/documentation/CONTRIBUTING.md) |
 
-- [Documentation index](docs/documentation/README.md)
-- [Setup and development](docs/documentation/SETUP.md)
-- [Architecture and data flow](docs/documentation/ARCHITECTURE.md)
-- [Data model and security](docs/documentation/DATA-MODEL.md)
-- [Application reference](docs/documentation/API.md)
-- [Operations and incident runbook](docs/documentation/OPERATIONS.md)
-- [Frontend conventions](docs/documentation/FRONTEND.md)
-- [Contributing](docs/documentation/CONTRIBUTING.md)
-
-The application currently exposes Next.js pages, Server Actions, two admin CSV routes, and one authenticated Supabase RPC; it does not have a separate REST/GraphQL API. The application reference documents those actual interfaces.
+🤖 **AI agents:** start with [AGENTS.md](AGENTS.md) (rules) and [AI.md](AI.md) (current state and open decisions: ask, never decide).
 
 ---
 
-## 📄 License
+<div align="center">
 
-This project is licensed under the [MIT License](LICENSE).
+**Built for MIT-WEEK 2026 · Web Development Competition**
+
+![Guardians](https://img.shields.io/badge/GUARDIANS-of_the_Digital_Space-00e676?style=for-the-badge&labelColor=1d1a5c)
+
+</div>
