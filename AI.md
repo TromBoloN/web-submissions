@@ -68,7 +68,7 @@ Secrets
 
 - All UI text is Indonesian, consistent with existing screens. Terms: Akun, Tim, Finalis, Pengaturan, Submission, Peringkat, Kata sandi, Studi kasus, Babak awal, Final, Nilai, Masukan, Draf, Terkirim.
 - Dates: `id-ID` locale, `Asia/Makassar`, shown as WITA. Servers run in UTC. Never rely on server local time or the device clock for deadlines.
-- Semantic theme tokens only (no hex, RGB, HSL, OKLCH). If a color is missing, use a named Tailwind default. Works in light and dark mode. Brand palette is not defined, do not invent one.
+- Colors come from tokens in `src/app/globals.css`: shadcn semantic tokens plus the Guardian brand tokens (`--ink`, `--hero-*`, `--guardian-*`, `--shadow-hard*`) shared by `/karya` and the team portal. No raw hex, RGB, HSL or OKLCH in components; add a token with light and dark values instead. If a color is missing, use a named Tailwind default. Works in light and dark mode. Extend the Guardian palette only, do not invent another.
 - Match nearby screens (density, spacing, radius). Mobile-friendly.
 - Handle loading, empty, error, disabled and overflow states. Semantic HTML, labels, keyboard support, visible focus.
 - Friendly generic errors. Never show raw errors, SQL, table names or stack traces.

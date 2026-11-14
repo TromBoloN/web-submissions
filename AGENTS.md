@@ -67,7 +67,8 @@ Rules for AI agents. Project context: `AI.md`. File locations: `docs/documentati
 
 - All text Indonesian. Terms: Akun, Tim, Finalis, Pengaturan, Submission, Peringkat, Kata sandi, Studi kasus, Babak awal, Final, Nilai, Masukan, Draf, Terkirim.
 - Dates: `id-ID`, `Asia/Makassar`, shown as WITA. Servers run UTC; never use server local time or device clock for deadlines.
-- Semantic theme tokens only (no hex/RGB/HSL/OKLCH); if missing, use a named Tailwind default. Light and dark mode. Don't invent a brand palette.
+- Colors come from tokens in `src/app/globals.css`: shadcn semantic tokens, plus the Guardian brand tokens (`--ink`, `--hero-*`, `--guardian-*`, `--shadow-hard*`) shared by `/karya` and the team portal. No raw hex/RGB/HSL/OKLCH in components; add a token (light and dark values) instead. If missing, use a named Tailwind default. Light and dark mode. Extend the Guardian palette only, don't invent another.
+- Loud/calm rule: thick borders, hard offset shadows and big type for hero-level surfaces (hero, ID card, receipt, journey track); thin borders and soft shadows for forms and settings.
 - Match nearby screens (density, spacing, radius). Mobile-friendly.
 - Handle loading, empty, error, disabled, overflow. Semantic HTML, labels, keyboard support, visible focus.
 - Generic friendly errors only: no raw errors, SQL, table names, stack traces.

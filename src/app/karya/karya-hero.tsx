@@ -53,10 +53,10 @@ function CountUp({ target }: { target: number }) {
 }
 
 export function KaryaThemeToggle() {
-  const themeMode = usePreferencesStore((state) => state.values.theme_mode);
+  const resolvedThemeMode = usePreferencesStore((state) => state.resolvedThemeMode);
   const setPreference = usePreferencesStore((state) => state.setPreference);
   const [mounted, setMounted] = useState(false);
-  const isDark = themeMode === "dark";
+  const isDark = resolvedThemeMode === "dark";
 
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
