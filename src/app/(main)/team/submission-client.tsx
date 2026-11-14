@@ -1,15 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useState, useTransition } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { cn } from "cn";
 import {
-  AlertOctagon,
   AlertTriangle,
-  BookOpen,
   Calendar,
   CheckCircle2,
   ChevronDown,
@@ -17,12 +15,9 @@ import {
   ClipboardPaste,
   Clock,
   Code2,
-  Copy,
   ExternalLink,
-  FileText,
   Globe,
   HelpCircle,
-  Images,
   MessageCircle,
   RotateCw,
   StickyNote,
@@ -42,21 +37,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
-import { formatDeadlineMultiZone, formatDeadlineWita } from "@/lib/deadline";
 import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
 import { checkMyLinks, saveSubmission } from "./actions";
-import { FinalistBanner, type FinalistNoticeData } from "./finalist-banner";
 import { SubmissionChecklist } from "./submission-checklist";
 import { SubmissionReceipt } from "./submission-receipt";
+import { TeamHero } from "./team-hero";
+import { type FinalistNoticeData, resolveTeamPhase } from "./team-phase";
+import { TEAM_SCHEDULE, toWitaDateKey } from "./team-schedule";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -67,10 +62,12 @@ type SubmissionClientProps = {
   deadlineIso: string | null;
   serverNowIso: string;
   initialClosed: boolean;
-  juknisUrl: string | null;
   contactWhatsapp: string | null;
   showcasePublishedAt: string | null;
   finalistNotice: FinalistNoticeData | null;
+  /** Preliminary or final results released (team can open /team/hasil). */
+  resultsReleased: boolean;
+  finalResultsReleased: boolean;
 };
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -84,171 +81,10 @@ function formatTimestampWita(iso: string | null | undefined): string {
   }).format(date)} WITA`;
 }
 
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="h-8 gap-1.5 border-primary/25 bg-primary/5 text-foreground hover:bg-primary/10 hover:text-foreground dark:border-white/30 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:text-white"
-      onClick={async () => {
-        await navigator.clipboard.writeText(value);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
-      }}
-    >
-      <Copy className="size-3.5" />
-      {copied ? "Tersalin" : "Salin"}
-    </Button>
-  );
-}
-
-function CountdownTimer({
-  deadlineIso,
-  serverNowIso,
-  onExpire,
-}: {
-  deadlineIso: string | null;
-  serverNowIso: string;
-  onExpire: () => void;
-}) {
-  // Compute offset between server clock at page load and browser clock at load
-  const [clockOffset] = useState(() => {
-    const serverTimeAtMount = new Date(serverNowIso).getTime();
-    const browserTimeAtMount = Date.now();
-    return serverTimeAtMount - browserTimeAtMount;
-  });
-
-  const [timeLeft, setTimeLeft] = useState<{
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-    totalMs: number;
-    isPast: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!deadlineIso) return;
-    const target = new Date(deadlineIso).getTime();
-
-    const calculate = () => {
-      const now = Date.now() + clockOffset;
-      const diff = target - now;
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0, isPast: true });
-        onExpire();
-        return;
-      }
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeLeft({ days, hours, minutes, seconds, totalMs: diff, isPast: false });
-    };
-
-    calculate();
-    const timer = setInterval(calculate, 1000);
-    return () => clearInterval(timer);
-  }, [deadlineIso, clockOffset, onExpire]);
-
-  if (!timeLeft) {
-    return <span className="text-muted-foreground text-xs">Menghitung sisa waktu...</span>;
-  }
-
-  if (timeLeft.isPast) {
-    return (
-      <div className="flex items-center gap-1.5 font-medium text-destructive text-xs">
-        <Clock className="size-3.5" />
-        <span>Batas waktu telah berakhir (Ditutup)</span>
-      </div>
-    );
-  }
-
-  const isCritical = timeLeft.totalMs <= 3600 * 1000; // <= 1 hour
-  const isUrgent = timeLeft.totalMs <= 24 * 3600 * 1000; // <= 24 hours
-
-  const segments = [
-    { label: "Hari", value: String(timeLeft.days).padStart(2, "0") },
-    { label: "Jam", value: String(timeLeft.hours).padStart(2, "0") },
-    { label: "Menit", value: String(timeLeft.minutes).padStart(2, "0") },
-    { label: "Detik", value: String(timeLeft.seconds).padStart(2, "0") },
-  ];
-
-  const getUrgencyClass = () => {
-    if (isCritical) {
-      return "border-destructive/40 bg-destructive/10 text-destructive motion-safe:animate-pulse";
-    }
-    if (isUrgent) {
-      return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-    }
-    return "border-primary/20 bg-primary/5 text-primary";
-  };
-
-  const urgencyClass = getUrgencyClass();
-
-  return (
-    <div className="space-y-1.5">
-      <div className="sr-only" aria-live="polite">
-        Sisa waktu pengiriman: {timeLeft.days} hari {timeLeft.hours} jam {timeLeft.minutes} menit.
-      </div>
-      <div className="grid grid-cols-4 gap-1.5" aria-live="off">
-        {segments.map((seg) => (
-          <div
-            key={seg.label}
-            className={`flex flex-col items-center justify-center rounded-md border p-1 text-center ${urgencyClass}`}
-          >
-            <span className="font-bold text-base tabular-nums tracking-tight sm:text-lg">{seg.value}</span>
-            <span className="text-[9px] uppercase tracking-wider opacity-75">{seg.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function NextStepsCard({ serverNowIso }: { serverNowIso: string }) {
-  const steps = [
-    { start: "2026-11-10", end: "2026-11-10", dates: "10 Nov", title: "Batas pengumpulan karya", desc: "23.59 WITA" },
-    {
-      start: "2026-11-11",
-      end: "2026-11-17",
-      dates: "11–17 Nov",
-      title: "Penilaian Babak Awal",
-      desc: "Dewan juri mengevaluasi seluruh karya terkirim.",
-    },
-    {
-      start: "2026-11-18",
-      end: "2026-11-18",
-      dates: "18 Nov",
-      title: "Pengumuman Top 5",
-      desc: "Daftar finalis resmi diumumkan di portal & media.",
-    },
-    {
-      start: "2026-11-21",
-      end: "2026-11-21",
-      dates: "21 Nov",
-      title: "Babak Final",
-      desc: "Sesi presentasi karya (10m presentasi + 10m Q&A).",
-    },
-    {
-      start: "2026-11-25",
-      end: "2026-11-25",
-      dates: "25 Nov",
-      title: "Pengumuman Juara",
-      desc: "Penetapan dan selebrasi pemenang MIT-WEEK 2026.",
-    },
-  ];
+  const steps = TEAM_SCHEDULE;
   const serverDate = new Date(serverNowIso);
-  const dateParts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Makassar",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(serverDate);
-  const today = `${dateParts.find((part) => part.type === "year")?.value}-${dateParts.find((part) => part.type === "month")?.value}-${dateParts.find((part) => part.type === "day")?.value}`;
+  const today = toWitaDateKey(serverNowIso);
   const todayLabel = new Intl.DateTimeFormat("id-ID", {
     timeZone: "Asia/Makassar",
     day: "numeric",
@@ -355,106 +191,6 @@ function ShowcaseConsentCard({
   );
 }
 
-function SubmissionStatusHero({
-  team,
-  submission,
-  isClosed,
-  isDisqualified,
-  deadlineIso,
-  serverNowIso,
-  onExpire,
-}: {
-  team: Team;
-  submission: Submission | null;
-  isClosed: boolean;
-  isDisqualified: boolean;
-  deadlineIso: string | null;
-  serverNowIso: string;
-  onExpire: () => void;
-}) {
-  const isSubmitted = submission?.status === "submitted";
-  const hasDraft = Boolean(submission && !isSubmitted);
-  const githubFilled = Boolean(submission?.github_url?.trim());
-  const liveDemoFilled = Boolean(submission?.live_demo_url?.trim());
-  const videoFilled = Boolean(submission?.video_url?.trim());
-
-  const missing: string[] = [];
-  if (!githubFilled) missing.push("GitHub");
-  if (!liveDemoFilled) missing.push("Live Demo");
-  if (!videoFilled) missing.push("Video Demo");
-
-  const heroTitle = (() => {
-    if (isDisqualified) return "Tim Didiskualifikasi";
-    if (isClosed && isSubmitted) return "Pengiriman Ditutup (Karya Tercatat)";
-    if (isClosed && !isSubmitted) return "Pengiriman Ditutup (Tidak Ada Berkas)";
-    if (isSubmitted) return "Karya Terkirim";
-    if (hasDraft) return "Draf Tersimpan Sementara";
-    return "Belum Ada Karya Tersimpan";
-  })();
-
-  const heroDescription = (() => {
-    if (isDisqualified) {
-      return "Akun tim Anda dinonaktifkan oleh panitia. Hubungi panitia untuk informasi lebih lanjut.";
-    }
-    if (isClosed && isSubmitted) {
-      return "Batas waktu telah berakhir. Karya tim Anda telah tercatat dan siap untuk dinilai oleh dewan juri.";
-    }
-    if (isClosed && !isSubmitted) {
-      return "Batas waktu pengiriman telah berakhir dan tim Anda belum mengumpulkan karya resmi.";
-    }
-    if (isSubmitted) {
-      return `Bisa diperbarui sampai ${formatDeadlineWita(deadlineIso)}`;
-    }
-    return "Isi tiga tautan, simpan draf, lalu kirim sebelum batas waktu.";
-  })();
-  const multiZoneDeadline = formatDeadlineMultiZone(deadlineIso);
-
-  return (
-    <div className="portal-hero rounded-2xl p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            {isSubmitted && <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />}
-            <span className="font-semibold text-lg sm:text-xl">{heroTitle}</span>
-            {hasDraft && !isClosed && (
-              <Badge
-                variant="secondary"
-                className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-              >
-                Draf
-              </Badge>
-            )}
-          </div>
-          <div className="flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-background/50 px-2.5 py-1 dark:border-white/20 dark:bg-white/10">
-            <span className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider">Kode Tim</span>
-            <span className="font-bold font-mono text-foreground text-sm">{team.team_code}</span>
-            <CopyButton value={team.team_code} />
-          </div>
-          <p className="text-muted-foreground text-xs sm:text-sm">{heroDescription}</p>
-          {!isClosed && !isDisqualified && (
-            <p className="font-sans text-foreground text-xs tabular-nums sm:whitespace-nowrap">
-              Batas: {multiZoneDeadline?.wita ?? formatDeadlineWita(deadlineIso)}
-              {multiZoneDeadline && ` · ${multiZoneDeadline.wib} · ${multiZoneDeadline.wit}`}
-            </p>
-          )}
-        </div>
-
-        {/* Copyable team code chip */}
-        <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
-          {!isClosed && !isDisqualified && (
-            <div className="rounded-lg border border-primary/20 bg-background/50 p-2 dark:border-white/20 dark:bg-white/10">
-              <p className="mb-1 font-medium text-[10px] text-muted-foreground uppercase tracking-wider dark:text-white/75">
-                Sisa waktu
-              </p>
-              <CountdownTimer deadlineIso={deadlineIso} serverNowIso={serverNowIso} onExpire={onExpire} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function LinkCheckBadge({
   item,
   isChecking,
@@ -522,10 +258,11 @@ export function SubmissionClient({
   deadlineIso,
   serverNowIso,
   initialClosed,
-  juknisUrl,
   contactWhatsapp,
   showcasePublishedAt,
   finalistNotice,
+  resultsReleased,
+  finalResultsReleased,
 }: SubmissionClientProps) {
   const router = useRouter();
   // Closed state is only applied when page is loaded after deadline
@@ -567,6 +304,24 @@ export function SubmissionClient({
   const hasSubmissionRow = Boolean(submission);
   const [isFormExpanded, setIsFormExpanded] = useState(!isSubmitted);
   const [isTeamInfoOpen, setIsTeamInfoOpen] = useState(false);
+
+  const phase = resolveTeamPhase({
+    serverNowIso,
+    isClosed,
+    isSubmitted,
+    isDisqualified,
+    finalistNotice,
+    finalResultsReleased,
+  });
+  let submissionState: "none" | "draft" | "submitted" = "none";
+  if (isSubmitted) submissionState = "submitted";
+  else if (hasSubmissionRow) submissionState = "draft";
+  const hasUnsavedChanges =
+    githubUrl.trim() !== (submission?.github_url ?? "").trim() ||
+    liveDemoUrl.trim() !== (submission?.live_demo_url ?? "").trim() ||
+    videoUrl.trim() !== (submission?.video_url ?? "").trim() ||
+    notesForJudges.trim() !== (submission?.notes_for_judges ?? "").trim();
+  const handleCountdownExpire = useCallback(() => setIsCountdownZero(true), []);
 
   const handlePaste = async (setter: (val: string) => void) => {
     try {
@@ -698,36 +453,21 @@ export function SubmissionClient({
 
   return (
     <div className="space-y-6">
-      <FinalistBanner notice={finalistNotice} />
-
-      {/* 1. State-Driven Hero with Stepper */}
-      <SubmissionStatusHero
-        team={team}
-        submission={submission}
-        isClosed={isClosed}
-        isDisqualified={isDisqualified}
+      {/* 1. Phase-aware hero (replaces the finalist banner, status hero and closed/disqualified alerts) */}
+      <TeamHero
+        phase={phase}
+        teamCode={team.team_code}
+        submissionState={submissionState}
         deadlineIso={deadlineIso}
         serverNowIso={serverNowIso}
-        onExpire={() => setIsCountdownZero(true)}
+        onExpire={handleCountdownExpire}
+        finalistNotice={finalistNotice}
+        resultsReleased={resultsReleased}
+        liveLinks={{ github: githubUrl, liveDemo: liveDemoUrl, video: videoUrl }}
+        hasUnsavedChanges={hasUnsavedChanges}
       />
 
-      {/* 2. Urgent State Alerts */}
-      {isDisqualified && (
-        <Alert variant="destructive">
-          <AlertOctagon className="size-4" />
-          <AlertTitle>Tim Didiskualifikasi</AlertTitle>
-          <AlertDescription>Tim Anda didiskualifikasi. Submission tidak dapat diubah.</AlertDescription>
-        </Alert>
-      )}
-
-      {isClosed && !isDisqualified && (
-        <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-200">
-          <Clock className="size-4 text-amber-600 dark:text-amber-400" />
-          <AlertTitle>Batas Waktu Berakhir</AlertTitle>
-          <AlertDescription>Batas waktu pengiriman telah berakhir. Submission tidak dapat diubah.</AlertDescription>
-        </Alert>
-      )}
-
+      {/* 2. Deadline reached while the page was open */}
       {!isClosed && !isDisqualified && isCountdownZero && (
         <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-200">
           <Clock className="size-4 text-amber-600 dark:text-amber-400" />
@@ -1124,31 +864,7 @@ export function SubmissionClient({
 
         {/* Right Rail (col-span-1, quiet rail) */}
         <div className="space-y-6">
-          {/* 1. Resource links */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button asChild variant="outline" size="sm" className="justify-start gap-2">
-              <Link href="/karya">
-                <Images className="size-4 text-primary" />
-                <span>Lihat Karya Peserta</span>
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="justify-start gap-2">
-              <Link href="/team/studi-kasus">
-                <BookOpen className="size-4 text-primary" />
-                <span>Lihat Studi Kasus</span>
-              </Link>
-            </Button>
-            {juknisUrl?.startsWith("https://") && (
-              <Button asChild variant="outline" size="sm" className="justify-start gap-2">
-                <a href={juknisUrl} target="_blank" rel="noopener noreferrer">
-                  <FileText className="size-4 text-primary" />
-                  <span>Buka Juknis</span>
-                </a>
-              </Button>
-            )}
-          </div>
-
-          {/* 2. Submission checklist */}
+          {/* 1. Submission checklist (studi kasus, juknis and gallery live in the sidebar) */}
           {!isSubmitted && <SubmissionChecklist />}
 
           {/* 3. Showcase consent */}

@@ -7,6 +7,7 @@ import {
   History,
   Images,
   LayoutDashboard,
+  LayoutGrid,
   Settings,
   Trophy,
   Users,
@@ -109,6 +110,8 @@ export function getSidebarItems(
       url: "/team/karya",
       icon: Images,
     });
+    // Public gallery, previously reached via a button on the team dashboard.
+    items.push({ id: "karya", title: "Galeri Karya", url: "/karya", icon: LayoutGrid });
   }
 
   if (role === "team" && resultsReleased === true) {

@@ -54,6 +54,17 @@
   --color-brand-sky: var(--brand-sky);
   --color-brand-navy: var(--brand-navy);
 
+  /* Guardian tokens shared by /karya and the team portal: border-ink, text-mint, shadow-brutal, ... */
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-mint: var(--safe);
+  --color-guardian-accent: var(--guardian-accent);
+  --color-hero-fg: var(--hero-fg);
+  --color-hero-fg-muted: var(--hero-fg-muted);
+  --shadow-brutal-sm: var(--shadow-hard-sm);
+  --shadow-brutal: var(--shadow-hard);
+  --shadow-brutal-lg: var(--shadow-hard-lg);
+
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
@@ -89,6 +100,7 @@
 
   /* Guardians Design System Tokens (Poster: Deep Navy, Cornflower/Periwinkle, Neon Green, Violet) */
   --ink: #1d1a5c;
+  --ink-foreground: #ffffff;
   --hero-from: #eef2ff;
   --hero-to: #cadbf7;
   --hero-fg: #1d1a5c;
@@ -175,6 +187,7 @@
 
   /* Guardians Dark Tokens */
   --ink: #8ba9ec;
+  --ink-foreground: #0a0d17;
   --hero-from: #13172e;
   --hero-to: #222d4a;
   --hero-fg: #f7f9ff;
@@ -1901,4 +1914,155 @@ html {
 }
 .karya-page dialog::backdrop {
   background: rgba(5, 8, 25, 0.65);
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * LOUD / CALM RULE (team portal, shared with /karya tokens)
+ * Loud: hero, ID card, receipt, journey track. Thick ink border,
+ *       hard offset shadow, big display type.
+ * Calm: forms and settings. Thin border, soft shadow.
+ * ───────────────────────────────────────────────────────────── */
+
+.surface-loud {
+  position: relative;
+  border: 2px solid var(--ink);
+  border-radius: calc(var(--radius) + 12px);
+  background-color: var(--card);
+  box-shadow: var(--shadow-hard);
+}
+
+.surface-calm {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+/* Press effect: the element sinks 2px into its shadow while held. */
+.press {
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.press:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Loud button: pair with .press. */
+.btn-loud {
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-hard-sm);
+}
+
+.btn-loud:hover:not(:disabled) {
+  box-shadow: var(--shadow-hard);
+}
+
+.team-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 7vw, 4rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  color: var(--hero-fg);
+  text-shadow: 3px 3px 0 var(--guardian-accent);
+}
+
+.team-hero-title-outline {
+  color: transparent;
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: none;
+}
+
+/* "TERCATAT" rubber stamp. */
+.team-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 3px solid var(--guardian-accent);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  color: var(--guardian-accent);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  animation: team-stamp-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) 0.2s both;
+}
+
+@keyframes team-stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-8deg) scale(2.2);
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(-8deg) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+
+/* Slow scanning shimmer for the review phase. */
+.team-scan {
+  position: relative;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--ink) 15%, transparent);
+}
+
+.team-scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--guardian-accent), transparent);
+  animation: team-scan 2.8s ease-in-out infinite;
+}
+
+@keyframes team-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* One-off celebratory pop for the finalist state. */
+.team-pop {
+  animation: team-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes team-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press,
+  .team-stamp,
+  .team-pop,
+  .team-scan::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .press:active:not(:disabled) {
+    transform: none;
+  }
 }

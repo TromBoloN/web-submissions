@@ -34,9 +34,9 @@ Documentation library: [documentation index](./README.md), [setup](./SETUP.md), 
 | Change password     | /<role>/kata-sandi                    | `(main)/<role>/kata-sandi`                            | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized        | /unauthorized                         | `(main)/unauthorized`                                 | none                                                |
 
-Admin dashboard parts: `dashboard-client.tsx` (metric cards, progress ring, phase timeline, chase/judging/ranking panels, release controls, exports, health, activity) and `dashboard-countdown.tsx` (server-synced WITA countdown). Team portal parts: `submission-client.tsx` (form), `submission-checklist.tsx`, `submission-receipt.tsx`, `finalist-banner.tsx`. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
+Admin dashboard parts: `dashboard-client.tsx` (metric cards, progress ring, phase timeline, chase/judging/ranking panels, release controls, exports, health, activity) and `dashboard-countdown.tsx` (server-synced WITA countdown). Team portal parts: `submission-client.tsx` (form), `team-hero.tsx` (phase-aware hero: countdown, live checklist, finalist/final/results states), `team-phase.ts` (`resolveTeamPhase`), `team-schedule.ts` (hardcoded schedule and final presentation details, WITA date key), `submission-checklist.tsx`, `submission-receipt.tsx`. Loud/calm surfaces and Guardian tokens (`border-ink`, `bg-mint`, `shadow-brutal`, `.surface-loud`, `.surface-calm`, `.press`, `.btn-loud`) live in `src/app/globals.css`. Team results page: `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`).
 
-Public gallery access: `/login` shows a secondary "Lihat Karya Peserta" button; admin and judges get a **Karya** sidebar item (`/karya`); teams keep their **Tampilan Karya** editor (`/team/karya`) and reach the gallery from the portal and showcase editor.
+Public gallery access: `/login` shows a secondary "Lihat Karya Peserta" button; admin and judges get a **Karya** sidebar item (`/karya`); teams get a **Galeri Karya** sidebar item (`/karya`) next to their **Tampilan Karya** editor (`/team/karya`), and the showcase editor also links to the gallery.
 
 ## Shared code
 
