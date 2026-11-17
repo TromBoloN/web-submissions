@@ -241,6 +241,23 @@
     @apply font-sans;
   }
 
+  /* Mobile overflow guards (no horizontal page scroll, nothing clipped off-screen).
+     1. Long unbroken strings (URLs, codes, names) wrap instead of widening their box.
+        This also lets flex/grid items shrink below their text width. Tables keep normal
+        wrapping so they scroll inside their own container instead of squashing letters. */
+  body {
+    overflow-wrap: anywhere;
+  }
+  table {
+    overflow-wrap: normal;
+  }
+  /* 2. A bare `grid` has one implicit `auto` column whose minimum is its widest child,
+        so nowrap tabs or a table inside it widened the whole page. Give it a shrinkable
+        column; any grid-cols-* / grid-flow-* utility still overrides this. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   /* Subtle, theme-aware scrollbars: no OS chrome, no arrows, translucent thumb. */
   * {
     scrollbar-color: var(--scrollbar-thumb) transparent;

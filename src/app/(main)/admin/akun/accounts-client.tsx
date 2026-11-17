@@ -887,7 +887,7 @@ export function AccountsClient({ rows, total, page, pageSize, nextTeamCode, curr
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="text-muted-foreground">
           Halaman {page} dari {totalPages} ({total} akun)
         </span>

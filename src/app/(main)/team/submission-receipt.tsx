@@ -283,7 +283,7 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <p className="text-muted-foreground text-xs">Simpan atau cetak bukti ini sebagai tanda terima.</p>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"

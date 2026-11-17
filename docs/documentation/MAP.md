@@ -23,7 +23,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Audit | /admin/audit | `(main)/admin/audit/page.tsx` | `audit_logs` + `profiles` |
 | Finalists | /admin/finalis | `(main)/admin/finalis` | `teams.is_finalist`, ranking views, `finalist_notice` |
 | Settings | /admin/pengaturan/… | `(main)/admin/pengaturan` (see [Admin settings](./ADMIN-SETTINGS.md)) | `competition_settings`, `case_study`, scores (progress) |
-| Ranking and CSV | /admin/peringkat | `(main)/admin/peringkat` (+ `export/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
+| Ranking, CSV and score.md | /admin/peringkat | `(main)/admin/peringkat` (+ `export/route.ts`, `export-md/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
 | Submissions and CSV | /admin/submission | `(main)/admin/submission` (+ `export/route.ts`) | `submissions` |
 | Teams | /admin/tim | `(main)/admin/tim` | `teams` |
 | Judge queue | /judge | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals` |
@@ -85,6 +85,7 @@ src/lib/deadline.ts                  WITA conversion, exclusive-bound handling, 
 src/lib/audit.ts                     server-only audit event writer (logAuditEvent)
 src/lib/rubric.ts                    rubric weights, calcWeightedTotal (must match DB)
 src/lib/csv.ts                       CSV building and escaping
+src/lib/score-markdown.ts            judge score recap as Markdown (score.md export)
 src/lib/link-check.ts                server-side URL validation, SSRF guard (DNS, private IP blocking)
 src/lib/identity.ts                  judge username <-> internal email (@juri.mitweek.invalid)
 src/lib/contact.ts                   WhatsApp number normalization and wa.me URLs

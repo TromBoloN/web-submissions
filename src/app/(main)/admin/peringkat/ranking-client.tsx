@@ -308,7 +308,7 @@ export function RankingClient({
             <div className="text-muted-foreground text-sm">
               Menampilkan rata-rata skor berbobot dari juri untuk babak penyisihan. 5 tim teratas ditandai.
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" asChild>
                 <Link href="/admin/tim">
                   <Users className="mr-2 size-4" />
@@ -428,7 +428,7 @@ export function RankingClient({
             <div className="text-muted-foreground text-sm">
               Menampilkan rata-rata skor berbobot juri untuk babak final (hanya tim finalis).
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" asChild>
                 <a href="/admin/peringkat/export?tahap=final" download>
                   <Download className="mr-2 size-4" />
@@ -515,13 +515,13 @@ export function RankingClient({
 
       {/* Per-team Breakdown Dialog */}
       <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Award className="size-5 text-primary" />
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden sm:max-w-2xl lg:max-w-4xl lg:p-6">
+          <DialogHeader className="pr-8">
+            <DialogTitle className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base sm:text-lg">
+              <Award className="size-5 shrink-0 text-primary" />
               <span>Detail Penilaian:</span>
               <span className="font-mono text-primary">{selectedTeam?.team_code}</span>
-              <span className="font-normal text-muted-foreground">- {selectedTeam?.team_name}</span>
+              <span className="min-w-0 font-normal text-muted-foreground">— {selectedTeam?.team_name}</span>
             </DialogTitle>
             <DialogDescription>
               Rincian nilai, draf, dan recusal dari seluruh juri untuk tahap{" "}
@@ -550,11 +550,11 @@ export function RankingClient({
                   const rubric = selectedTeam?.tahap === "final" ? FINAL_RUBRIC : PRELIMINARY_RUBRIC;
 
                   return (
-                    <Card key={score.judge_id || idx} className="border shadow-none">
-                      <CardHeader className="p-4 pb-2 bg-muted/30">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <div className="flex items-center gap-1.5">
+                    <Card key={score.judge_id || idx} className="min-w-0 border shadow-none">
+                      <CardHeader className="p-4 pb-3 bg-muted/30">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <p className="font-semibold text-sm">{score.judge_name}</p>
                               {score.status === "draft" && (
                                 <Badge variant="secondary" className="gap-1 text-[10px]">
@@ -581,19 +581,19 @@ export function RankingClient({
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Total Berbobot:</span>
-                            <Badge variant="default" className="font-mono text-sm">
+                          <div className="flex shrink-0 flex-wrap items-center gap-2 md:flex-col md:items-end md:gap-1">
+                            <span className="text-xs text-muted-foreground">Total Berbobot</span>
+                            <Badge variant="default" className="h-auto font-mono text-sm md:text-base">
                               {score.total_weighted_score !== null
                                 ? Number(score.total_weighted_score).toFixed(2)
-                                : "-"}{" "}
-                              / 100
+                                : "-"}
+                              <span className="opacity-70">/ 100</span>
                             </Badge>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:gap-3">
                           {rubric.map((crit) => {
                             let val: number | null | undefined;
                             if (crit.column === "functionality_score") val = score.functionality_score;
@@ -604,11 +604,14 @@ export function RankingClient({
                             else if (crit.column === "presentation_qa_score") val = score.presentation_qa_score;
 
                             return (
-                              <div key={crit.column} className="rounded border p-2 bg-background">
-                                <p className="text-muted-foreground text-[11px] truncate" title={crit.label}>
-                                  {crit.label} ({crit.weight}%)
+                              <div
+                                key={crit.column}
+                                className="flex min-w-0 flex-col justify-between gap-1 rounded border bg-background p-2 lg:p-3"
+                              >
+                                <p className="text-[11px] text-muted-foreground leading-snug lg:text-xs">
+                                  {crit.label} <span className="whitespace-nowrap">({crit.weight}%)</span>
                                 </p>
-                                <p className="font-mono font-bold text-sm mt-0.5">
+                                <p className="font-mono font-bold text-sm lg:text-lg">
                                   {val !== undefined && val !== null ? Number(val).toFixed(2) : "-"}
                                 </p>
                               </div>
@@ -618,7 +621,7 @@ export function RankingClient({
 
                         <div className="space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">Masukan Juri:</p>
-                          <div className="rounded-md border bg-muted/40 p-2.5 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                          <div className="rounded-md border bg-muted/40 p-2.5 text-xs text-foreground whitespace-pre-wrap leading-relaxed lg:p-3 lg:text-sm">
                             {score.feedback && score.feedback.trim() ? (
                               score.feedback
                             ) : (

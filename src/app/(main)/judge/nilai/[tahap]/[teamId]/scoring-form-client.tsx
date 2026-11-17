@@ -473,7 +473,7 @@ export function ScoringFormClient({
     <div className="space-y-6 max-w-4xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <Button variant="ghost" size="icon" asChild className="size-8 -ml-2">
               <Link href="/judge" onClick={handleBackClick}>
                 <ArrowLeft className="size-4" />

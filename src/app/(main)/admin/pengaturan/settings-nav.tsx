@@ -12,7 +12,7 @@ export function SettingsNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Bagian pengaturan" className="lg:sticky lg:top-6 lg:self-start">
+    <nav aria-label="Bagian pengaturan" className="min-w-0 lg:sticky lg:top-6 lg:self-start">
       <ul className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden">
         {SETTINGS_SECTIONS.map(({ href, title, icon: Icon }) => {
           const isActive = pathname === href;

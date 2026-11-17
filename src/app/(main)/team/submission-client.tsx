@@ -859,7 +859,7 @@ export function SubmissionClient({
 
               {/* Once submitted, the form collapses behind an expander */}
               {isSubmitted && !isReadOnly && (
-                <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3.5">
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3.5">
                   <p className="font-semibold text-foreground text-sm">Perbarui Tautan Karya</p>
                   <Button
                     type="button"
