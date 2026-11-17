@@ -7,6 +7,7 @@ const actionLabels: Record<string, string> = {
   account_password_reset: "Mereset kata sandi",
   account_updated: "Memperbarui akun",
   finalist_selected: "Memilih finalis",
+  finalist_showcase_updated: "Mengubah kartu galeri finalis",
   finalist_unselected: "Membatalkan finalis",
   results_released: "Merilis hasil",
   results_unreleased: "Menarik rilis hasil",

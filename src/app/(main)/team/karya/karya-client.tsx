@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { getPublicImageUrl, resizeImage } from "@/lib/showcase-image";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 
@@ -26,56 +27,20 @@ type Submission = Pick<
   "status" | "github_url" | "live_demo_url" | "video_url"
 >;
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const MAX_IMAGE_SIDE = 1600;
-const SHOWCASE_ASPECT = 16 / 10;
-
-function getPublicImageUrl(supabaseUrl: string, path: string | null): string | null {
-  if (!path || !supabaseUrl) return null;
-  return `${supabaseUrl}/storage/v1/object/public/web-showcase/${path}`;
-}
-
-async function resizeImage(file: File): Promise<{ blob: Blob; extension: string }> {
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-    throw new Error("Format gambar harus PNG, JPEG, atau WebP.");
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error("Ukuran gambar maksimal 2 MB.");
-  }
-
-  const bitmap = await createImageBitmap(file);
-  const sourceAspect = bitmap.width / bitmap.height;
-  const cropWidth = sourceAspect > SHOWCASE_ASPECT ? Math.round(bitmap.height * SHOWCASE_ASPECT) : bitmap.width;
-  const cropHeight = sourceAspect > SHOWCASE_ASPECT ? bitmap.height : Math.round(bitmap.width / SHOWCASE_ASPECT);
-  const cropX = Math.round((bitmap.width - cropWidth) / 2);
-  const cropY = Math.round((bitmap.height - cropHeight) / 2);
-
-  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(cropWidth, cropHeight));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(cropWidth * scale));
-  canvas.height = Math.max(1, Math.round(cropHeight * scale));
-  canvas.getContext("2d")?.drawImage(bitmap, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, file.type, 0.85));
-  if (!blob || blob.size > MAX_IMAGE_BYTES) {
-    throw new Error("Gambar terlalu besar setelah diproses. Gunakan gambar yang lebih kecil.");
-  }
-
-  return { blob, extension: file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1] };
-}
-
 export function KaryaClient({
   team,
   submission,
   showcasePublishedAt,
   showcaseFinalistsPublishedAt,
+  isAnnouncedFinalist,
   supabaseUrl,
 }: {
   team: Team;
   submission: Submission | null;
   showcasePublishedAt: string | null;
   showcaseFinalistsPublishedAt: string | null;
+  /** True only after the finalist announcement is published and this team is a finalist. */
+  isAnnouncedFinalist: boolean;
   supabaseUrl: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -90,16 +55,22 @@ export function KaryaClient({
   const [isPending, startTransition] = useTransition();
 
   const isSubmitted = submission?.status === "submitted";
-  const isLocked = showcasePublishedAt !== null;
-  const isFinalistWaiting = Boolean(team.showcase_is_finalist && showcasePublishedAt && !showcaseFinalistsPublishedAt);
+  // Finalists always appear in the gallery and stay editable until the finalist gallery is published.
+  const isFinalist = isAnnouncedFinalist;
+  const isLocked = isFinalist ? showcaseFinalistsPublishedAt !== null : showcasePublishedAt !== null;
+  const showLinks = consent;
+  const consentLabels = isFinalist
+    ? { on: "Tautan ditampilkan", off: "Tautan disembunyikan" }
+    : { on: "Tampil di galeri", off: "Tidak tampil di galeri" };
+  const consentLabel = consent ? consentLabels.on : consentLabels.off;
   const cardData: ShowcaseCardData = {
     teamName: team.team_name,
     title,
     description,
     imageUrl,
-    githubUrl: submission?.github_url ?? "",
-    liveDemoUrl: submission?.live_demo_url ?? "",
-    videoUrl: submission?.video_url ?? "",
+    githubUrl: showLinks ? (submission?.github_url ?? "") : "",
+    liveDemoUrl: showLinks ? (submission?.live_demo_url ?? "") : "",
+    videoUrl: showLinks ? (submission?.video_url ?? "") : "",
   };
 
   const handleImage = (file: File | undefined) => {
@@ -114,7 +85,8 @@ export function KaryaClient({
         });
         if (error) throw new Error("Gambar gagal diunggah. Coba lagi.");
         const previousPath = imagePath;
-        if (previousPath) {
+        // Only the team's own uploads are removed; an image prepared by the committee is left in place.
+        if (previousPath?.startsWith(`showcase/${team.profile_id}/`)) {
           await supabase.storage.from("web-showcase").remove([previousPath]);
         }
         setImagePath(path);
@@ -164,9 +136,16 @@ export function KaryaClient({
           {isLocked && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
               <LockKeyhole className="mt-0.5 size-4 shrink-0" />
+              <p>Tampilan karya telah dikunci karena galeri sudah diterbitkan.</p>
+            </div>
+          )}
+          {isFinalist && !isLocked && (
+            <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+              <ImageIcon className="mt-0.5 size-4 shrink-0 text-primary" />
               <p>
-                Tampilan karya telah dikunci karena galeri sudah diterbitkan.
-                {isFinalistWaiting && " Karya finalis akan ditampilkan pada pengumuman pemenang."}
+                Sebagai tim Top 5, karya Anda <strong>otomatis tampil di galeri finalis</strong>. Panitia dapat
+                menyiapkan judul, deskripsi, dan gambar, dan Anda tetap bisa mengubahnya di sini sampai galeri finalis
+                diterbitkan.
               </p>
             </div>
           )}
@@ -188,10 +167,12 @@ export function KaryaClient({
                   >
                     <div className="min-w-0 space-y-1">
                       <Label htmlFor="showcase-consent-page" className="font-semibold text-base">
-                        {consent ? "Tampil di galeri" : "Tidak tampil di galeri"}
+                        {consentLabel}
                       </Label>
                       <p id="showcase-consent-desc" className="text-muted-foreground text-xs leading-relaxed">
-                        Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri.
+                        {isFinalist
+                          ? "Saya bersedia tautan repositori, demo, dan video tim saya ditampilkan di galeri."
+                          : "Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri."}
                       </p>
                     </div>
                     <Switch

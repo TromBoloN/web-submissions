@@ -547,3 +547,83 @@ export async function publishShowcaseWinners(): Promise<ActionResult> {
   revalidatePath("/karya");
   return { success: true };
 }
+
+const finalistShowcaseSchema = z.object({
+  teamId: z.string().uuid("ID tim tidak valid."),
+  title: z.string().trim().max(80, "Judul maksimal 80 karakter."),
+  description: z.string().trim().max(300, "Deskripsi maksimal 300 karakter."),
+  imagePath: z.string().nullable(),
+});
+
+/**
+ * Admin edit of a finalist's gallery card. Writes the same columns the team edits on
+ * /team/karya, so whoever saves last wins. Finalists are listed in the gallery even
+ * without team consent (see migration 20261117000000).
+ */
+export async function saveFinalistShowcase(input: {
+  teamId: string;
+  title: string;
+  description: string;
+  imagePath: string | null;
+}): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = finalistShowcaseSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data kartu galeri tidak valid." };
+  }
+  const { teamId, title, description, imagePath } = parsed.data;
+
+  const supabase = await createClient();
+  const { data: team, error: teamError } = await supabase
+    .from("teams")
+    .select("id, is_finalist, showcase_image_path")
+    .eq("id", teamId)
+    .maybeSingle();
+
+  if (teamError || !team) {
+    return { success: false, error: "Tim tidak ditemukan." };
+  }
+  if (!team.is_finalist) {
+    return { success: false, error: "Kartu galeri hanya dapat diatur panitia untuk tim finalis." };
+  }
+
+  // New images must come from the admin folder for this team; the current image may be kept as is.
+  const adminImage = new RegExp(`^showcase/admin/${teamId}/[0-9a-fA-F-]{36}.(png|jpe?g|webp)$`);
+  if (imagePath !== null && imagePath !== team.showcase_image_path && !adminImage.test(imagePath)) {
+    return { success: false, error: "Lokasi gambar tidak valid. Unggah ulang gambar." };
+  }
+
+  const { data, error } = await supabase
+    .from("teams")
+    .update({ showcase_title: title, showcase_description: description, showcase_image_path: imagePath })
+    .eq("id", teamId)
+    .select("id");
+
+  if (error || !data || data.length === 0) {
+    console.error("Failed to save finalist showcase card", error);
+    return { success: false, error: "Gagal menyimpan kartu galeri. Coba lagi." };
+  }
+
+  // Remove the replaced image only if it was an admin upload (team uploads belong to the team).
+  const previous = team.showcase_image_path;
+  if (previous && previous !== imagePath && previous.startsWith("showcase/admin/")) {
+    await supabase.storage.from("web-showcase").remove([previous]);
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "finalist_showcase_updated",
+    targetType: "team",
+    targetId: teamId,
+  });
+
+  revalidatePath("/admin/pengaturan/galeri");
+  revalidatePath("/karya");
+  revalidatePath("/team");
+  revalidatePath("/team/karya");
+  return { success: true };
+}

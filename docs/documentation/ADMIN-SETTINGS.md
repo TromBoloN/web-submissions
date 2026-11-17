@@ -16,6 +16,7 @@ src/app/(main)/admin/pengaturan/
   pengumpulan/   page.tsx + deadline-client.tsx          submission deadline
   hasil/         page.tsx + results-release-client.tsx   results release + judging progress
   galeri/        page.tsx + showcase-client.tsx          gallery stage 1 / stage 2 publishing
+                 finalist-cards-client.tsx               admin editor for finalist gallery cards
   studi-kasus/   page.tsx + case-study-client.tsx        case study title, release time, Markdown
   tautan/        page.tsx + links-client.tsx             juknis URL + WhatsApp contact
 ```
@@ -29,11 +30,11 @@ The admin role is enforced by `src/app/(main)/admin/layout.tsx` (`requireRole("a
 | Ringkasan | `/admin/pengaturan` | `competition_settings`, `case_study` | none |
 | Pengumpulan | `/pengumpulan` | `submission_closes_at`, `updated_at` | `updateCompetitionDeadline` |
 | Rilis Hasil | `/hasil` | release flags, judges, teams, submissions, scores, recusals | `updateResultsRelease` (confirmation dialog) |
-| Galeri | `/galeri` | showcase timestamps, consenting teams, link checks | `publishShowcasePhase("gallery")`, `publishShowcaseWinners`, `unpublishShowcasePhase` |
+| Galeri | `/galeri` | showcase timestamps, consenting teams + finalists, link checks, finalist cards | `publishShowcasePhase("gallery")`, `publishShowcaseWinners`, `unpublishShowcasePhase`, `saveFinalistShowcase` |
 | Studi Kasus | `/studi-kasus` | `case_study` | `updateCaseStudy` |
 | Tautan & Kontak | `/tautan` | `juknis_url`, `contact_whatsapp` | `updateJuknisUrl`, `updateContactWhatsapp` |
 
-**Audit coverage:** `updateResultsRelease` and the three gallery actions write audit events. `updateCompetitionDeadline`, `updateJuknisUrl`, `updateContactWhatsapp` and `updateCaseStudy` currently do **not**. This is a known gap; new actions should log.
+**Audit coverage:** `updateResultsRelease`, the three gallery actions and `saveFinalistShowcase` write audit events. `updateCompetitionDeadline`, `updateJuknisUrl`, `updateContactWhatsapp` and `updateCaseStudy` currently do **not**. This is a known gap; new actions should log.
 
 Judging progress on Rilis Hasil uses the same eligibility rules as `/admin/peringkat`: active judges for the stage, non-disqualified teams with a submitted entry (finalists only for the final), counting locked scores plus recusals.
 

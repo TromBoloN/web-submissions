@@ -39,5 +39,5 @@ Usernames and emails are the same as in production.
 
 ## Limits
 
-- Backups hold no Storage files, so gallery screenshots uploaded in production show as missing.
+- Backups hold no Storage files, so gallery screenshots uploaded in production show as missing. The `web-showcase` bucket itself is created from `supabase/config.toml` on restore.
 - Schema comes from `supabase/migrations`, so it can be ahead of production if migrations are pending there.

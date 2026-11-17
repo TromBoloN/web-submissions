@@ -86,6 +86,7 @@ src/lib/audit.ts                     server-only audit event writer (logAuditEve
 src/lib/rubric.ts                    rubric weights, calcWeightedTotal (must match DB)
 src/lib/csv.ts                       CSV building and escaping
 src/lib/score-markdown.ts            judge score recap as Markdown (score.md export)
+src/lib/showcase-image.ts            gallery image resize/crop + public URL (team and admin editors)
 src/lib/link-check.ts                server-side URL validation, SSRF guard (DNS, private IP blocking)
 src/lib/identity.ts                  judge username <-> internal email (@juri.mitweek.invalid)
 src/lib/contact.ts                   WhatsApp number normalization and wa.me URLs
@@ -118,7 +119,7 @@ Full reference: [Data model](./DATA-MODEL.md).
 - Tables: `profiles`, `teams`, `competition_settings` (single row), `submissions`, `submission_history`, `preliminary_scores`, `final_scores`, `judge_recusals`, `case_study` (single row), `finalist_notice` (single row), `audit_logs`.
 - Pending (migration written, not applied): `competition_stages`, `final_presentation`, plus new `competition_settings` columns.
 - Views: `preliminary_ranking`, `final_ranking` (`security_invoker`).
-- Storage: bucket `web-showcase` (team showcase images).
+- Storage: bucket `web-showcase` (team uploads under `showcase/<uid>/`, admin finalist uploads under `showcase/admin/<team_id>/`). Created by hand in production; locally from `supabase/config.toml`.
 
 ## If you change X, also check Y
 

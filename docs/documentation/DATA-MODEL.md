@@ -78,6 +78,15 @@ Written, **not applied** at the time of writing. Check `src/types/database.ts` f
 
 After applying: regenerate types, then switch the hardcoded schedule listed in [Competition phases](./COMPETITION-PHASES.md) to these tables.
 
+### `20261117000000_showcase_finalists_shared_card.sql`
+
+Independent of the two above; the app code for it is already merged and needs no type changes. **Apply before the finalist gallery is published**, otherwise finalists who did not consent are missing from `/karya` and the admin editor's images fail to upload.
+
+- Finalists (`showcase_is_finalist`) are listed by `get_public_showcase()` even without `showcase_consent`, with their title, description and image. Repository/demo/video links still require consent. `get_public_showcase_winners()` uses the same card rule.
+- Admin and team edit the same `showcase_title`/`showcase_description`/`showcase_image_path` columns; last save wins. Admin edits go through `saveFinalistShowcase` (Pengaturan → Galeri).
+- `save_showcase_details()`: once the finalist notice is published, finalists stay editable until `showcase_finalists_published_at` (others still lock at `showcase_consent_locked_at`). Before the notice, finalists are treated like everyone else so the call never reveals finalist status. A team may keep an image the admin uploaded.
+- Storage: admins may upload/delete under `web-showcase/showcase/admin/<team_id>/`.
+
 ## Scoring
 
 The current rubric is defined in both the generated score columns and [rubric.ts](../../src/lib/rubric.ts):

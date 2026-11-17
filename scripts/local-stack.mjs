@@ -102,6 +102,8 @@ switch (command) {
     const env = writeEnvFile().env;
     console.log("Mengosongkan DB lokal dan menerapkan ulang migrasi ...");
     run("npx", ["supabase", "db", "reset", "--local", "--no-seed"]);
+    // Storage buckets come from supabase/config.toml (production created web-showcase by hand).
+    run("npx", ["supabase", "seed", "buckets"]);
     // Process env wins over .env inside restore.mjs, so it can only reach the local stack.
     run("node", ["scripts/restore.mjs", backupDir, "--yes"], { env: { ...process.env, ...env } });
     break;

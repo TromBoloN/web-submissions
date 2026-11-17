@@ -7,13 +7,15 @@ export default async function TeamKaryaPage() {
   const profile = await requireRole("team");
   const supabase = await createClient();
 
-  const [teamRes, settingsRes] = await Promise.all([
+  const [teamRes, settingsRes, noticeRes] = await Promise.all([
     supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
     supabase
       .from("competition_settings")
       .select("showcase_published_at, showcase_finalists_published_at")
       .eq("id", true)
       .maybeSingle(),
+    // Returns a row only once the finalist announcement is published.
+    supabase.rpc("get_my_finalist_notice"),
   ]);
 
   if (teamRes.error || !teamRes.data) {
@@ -40,6 +42,7 @@ export default async function TeamKaryaPage() {
       submission={submission ?? null}
       showcasePublishedAt={settingsRes.data?.showcase_published_at ?? null}
       showcaseFinalistsPublishedAt={settingsRes.data?.showcase_finalists_published_at ?? null}
+      isAnnouncedFinalist={noticeRes.data?.[0]?.is_finalist === true}
       supabaseUrl={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}
     />
   );
