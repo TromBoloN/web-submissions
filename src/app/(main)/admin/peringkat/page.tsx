@@ -31,6 +31,7 @@ export default async function AdminPeringkatPage() {
     prelimScoresRes,
     finalScoresRes,
     recusalsRes,
+    noticeRes,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -61,6 +62,7 @@ export default async function AdminPeringkatPage() {
       .from("judge_recusals")
       .select("judge_id, team_id, stage, reason, created_at")
       .order("created_at", { ascending: true }),
+    supabase.from("finalist_notice").select("is_published").eq("id", true).maybeSingle(),
   ]);
 
   if (
@@ -243,6 +245,10 @@ export default async function AdminPeringkatPage() {
       finalBreakdown={finalBreakdown}
       prelimRecusals={prelimRecusals}
       finalRecusals={finalRecusals}
+      currentFinalists={teams
+        .filter((t) => t.is_finalist)
+        .map((t) => ({ team_id: t.id, team_code: t.team_code, team_name: t.team_name }))}
+      finalistNoticePublished={noticeRes.data?.is_published ?? false}
     />
   );
 }

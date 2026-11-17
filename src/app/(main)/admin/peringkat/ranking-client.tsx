@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   AlertTriangle,
@@ -18,8 +19,18 @@ import {
   Lock,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +39,8 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FINAL_RUBRIC, PRELIMINARY_RUBRIC } from "@/lib/rubric";
+
+import { setTopFinalists } from "./actions";
 
 export interface JudgeProgress {
   judge_id: string;
@@ -80,6 +93,8 @@ interface RankingClientProps {
   finalBreakdown: Record<string, JudgeScoreDetail[]>;
   prelimRecusals: Record<string, JudgeRecusalDetail[]>;
   finalRecusals: Record<string, JudgeRecusalDetail[]>;
+  currentFinalists: { team_id: string; team_code: string; team_name: string }[];
+  finalistNoticePublished: boolean;
 }
 
 function formatWitaDateTime(iso: string | null | undefined): string {
@@ -140,6 +155,8 @@ export function RankingClient({
   finalBreakdown,
   prelimRecusals,
   finalRecusals,
+  currentFinalists,
+  finalistNoticePublished,
 }: RankingClientProps) {
   const [selectedTeam, setSelectedTeam] = useState<{
     team_id: string;
@@ -173,6 +190,38 @@ export function RankingClient({
     }
     return false;
   }, [prelimRanking]);
+
+  // Top 5 by preliminary average vs. the teams currently flagged as finalists
+  const topFive = useMemo(() => prelimRanking.filter((r) => r.rank !== null).slice(0, 5), [prelimRanking]);
+  const finalistPlan = useMemo(() => {
+    const currentIds = new Set(currentFinalists.map((t) => t.team_id));
+    const topIds = new Set(topFive.map((t) => t.team_id));
+    return {
+      toAdd: new Set(topFive.filter((t) => !currentIds.has(t.team_id)).map((t) => t.team_id)),
+      toRemove: currentFinalists.filter((t) => !topIds.has(t.team_id)),
+    };
+  }, [topFive, currentFinalists]);
+  const finalistsMatchTopFive =
+    topFive.length === 5 && finalistPlan.toAdd.size === 0 && finalistPlan.toRemove.length === 0;
+  const prelimJudgingIncomplete = judgesProgress.some(
+    (j) => (j.judge_stage === "preliminary" || j.judge_stage === "both") && j.prelim_completed < j.prelim_total,
+  );
+  const [isFinalistDialogOpen, setIsFinalistDialogOpen] = useState(false);
+  const [isSettingFinalists, startSettingFinalists] = useTransition();
+  const router = useRouter();
+
+  const handleSetFinalists = () => {
+    startSettingFinalists(async () => {
+      const res = await setTopFinalists({ expectedTeamIds: topFive.map((t) => t.team_id) });
+      if (res.ok) {
+        toast.success(`5 tim teratas ditetapkan sebagai finalis (${res.added} ditambahkan, ${res.removed} dilepas).`);
+        setIsFinalistDialogOpen(false);
+        router.refresh();
+      } else {
+        toast.error(res.message);
+      }
+    });
+  };
 
   // Breakdown data for the selected team
   const currentBreakdown = useMemo(() => {
@@ -309,11 +358,16 @@ export function RankingClient({
               Menampilkan rata-rata skor berbobot dari juri untuk babak penyisihan. 5 tim teratas ditandai.
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/tim">
-                  <Users className="mr-2 size-4" />
-                  Tetapkan finalis
-                </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={topFive.length < 5}
+                onClick={() => setIsFinalistDialogOpen(true)}
+                title={topFive.length < 5 ? "Dibutuhkan minimal 5 tim yang sudah dinilai" : undefined}
+              >
+                <Users className="mr-2 size-4" />
+                Tetapkan finalis
+                {finalistsMatchTopFive && <CheckCircle2 className="ml-1.5 size-3.5 text-emerald-600" />}
               </Button>
               <Button variant="outline" size="sm" asChild>
                 <a href="/admin/peringkat/export?tahap=preliminary" download>
@@ -512,6 +566,89 @@ export function RankingClient({
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Confirm: set top 5 preliminary teams as finalists */}
+      <AlertDialog open={isFinalistDialogOpen} onOpenChange={setIsFinalistDialogOpen}>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Users className="size-5 shrink-0 text-primary" />
+              Tetapkan 5 tim teratas sebagai finalis?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left text-sm">
+                <p>Berdasarkan rata-rata skor berbobot babak awal. Tim lain yang berstatus finalis akan dilepas.</p>
+
+                <ol className="space-y-1.5">
+                  {topFive.map((t) => (
+                    <li
+                      key={t.team_id}
+                      className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-foreground"
+                    >
+                      <span className="w-6 shrink-0 font-mono text-muted-foreground text-xs">#{t.rank}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="font-mono font-medium">{t.team_code}</span>{" "}
+                        <span className="text-muted-foreground">{t.team_name}</span>
+                      </span>
+                      {finalistPlan.toAdd.has(t.team_id) && (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-emerald-500/40 text-emerald-700 text-[10px] dark:text-emerald-300"
+                        >
+                          Baru
+                        </Badge>
+                      )}
+                      <span className="shrink-0 font-mono font-semibold">
+                        {t.avg_score !== null ? Number(t.avg_score).toFixed(2) : "-"}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+
+                {finalistPlan.toRemove.length > 0 && (
+                  <p className="text-foreground">
+                    <strong>Dilepas dari finalis:</strong>{" "}
+                    {finalistPlan.toRemove.map((t) => `${t.team_code} (${t.team_name})`).join(", ")}
+                  </p>
+                )}
+
+                {finalistsMatchTopFive && (
+                  <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                    Finalis saat ini sudah sama dengan 5 tim teratas.
+                  </p>
+                )}
+                {prelimTiesNearCutoff && (
+                  <p className="font-medium text-destructive">
+                    Ada nilai seri di batas peringkat 5. Tetapkan finalis secara manual di halaman Tim.
+                  </p>
+                )}
+                {prelimJudgingIncomplete && (
+                  <p className="font-medium text-amber-700 dark:text-amber-400">
+                    Penilaian babak awal belum selesai. Peringkat masih bisa berubah.
+                  </p>
+                )}
+                {finalistNoticePublished && (
+                  <p className="font-medium text-amber-700 dark:text-amber-400">
+                    Pengumuman finalis sudah dipublikasikan. Tim akan langsung melihat status barunya.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-wrap">
+            <Button variant="ghost" size="sm" asChild className="mr-auto">
+              <Link href="/admin/tim">Atur manual</Link>
+            </Button>
+            <AlertDialogCancel disabled={isSettingFinalists}>Batal</AlertDialogCancel>
+            <Button
+              onClick={handleSetFinalists}
+              disabled={isSettingFinalists || prelimTiesNearCutoff || finalistsMatchTopFive || topFive.length < 5}
+            >
+              {isSettingFinalists ? "Menetapkan..." : "Ya, tetapkan"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Per-team Breakdown Dialog */}
       <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>

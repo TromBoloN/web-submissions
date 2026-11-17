@@ -2,7 +2,7 @@
 
 Architecture map of `src/`. Update it when you add, move or remove a screen or shared file. If it disagrees with the file system, trust the file system.
 
-Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture](./ARCHITECTURE.md), [data model](./DATA-MODEL.md), [application reference](./API.md), [competition phases](./COMPETITION-PHASES.md), [admin settings](./ADMIN-SETTINGS.md), [design system](./DESIGN-SYSTEM.md), [frontend conventions](./FRONTEND.md), [operations](./OPERATIONS.md), [contributing](./CONTRIBUTING.md).
+Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture](./ARCHITECTURE.md), [data model](./DATA-MODEL.md), [application reference](./API.md), [competition phases](./COMPETITION-PHASES.md), [admin settings](./ADMIN-SETTINGS.md), [design system](./DESIGN-SYSTEM.md), [frontend conventions](./FRONTEND.md), [operations](./OPERATIONS.md), [local Docker stack](./LOCAL-DOCKER.md), [contributing](./CONTRIBUTING.md).
 
 ## Conventions
 
@@ -23,7 +23,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Audit | /admin/audit | `(main)/admin/audit/page.tsx` | `audit_logs` + `profiles` |
 | Finalists | /admin/finalis | `(main)/admin/finalis` | `teams.is_finalist`, ranking views, `finalist_notice` |
 | Settings | /admin/pengaturan/… | `(main)/admin/pengaturan` (see [Admin settings](./ADMIN-SETTINGS.md)) | `competition_settings`, `case_study`, scores (progress) |
-| Ranking, CSV and score.md | /admin/peringkat | `(main)/admin/peringkat` (+ `export/route.ts`, `export-md/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
+| Ranking, CSV, score.md, set top-5 finalists | /admin/peringkat | `(main)/admin/peringkat` (+ `actions.ts`, `export/route.ts`, `export-md/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
 | Submissions and CSV | /admin/submission | `(main)/admin/submission` (+ `export/route.ts`) | `submissions` |
 | Teams | /admin/tim | `(main)/admin/tim` | `teams` |
 | Judge queue | /judge | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals` |
@@ -103,7 +103,8 @@ src/components/ui/                   shadcn/ui, generated: do not edit
 src/app/globals.css                  theme tokens, Guardian tokens and utilities (see DESIGN-SYSTEM.md)
 src/types/database.ts                generated Supabase types (UTF-8)
 src/scripts/seed.mjs                 npm run seed / seed:clear (never against production)
-scripts/                             backup, restore, seed-showcase, import-registrations, whatsapp-links
+scripts/                             backup, restore, local-stack (local Docker Supabase), seed-showcase, import-registrations, whatsapp-links
+supabase/config.toml                 local Docker Supabase config (npm run local:*)
 ```
 
 UI preferences and theming internals (`lib/preferences`, `stores/preferences`, `server/server-actions.ts`, `styles/presets`, `scripts/theme-boot.tsx`, `generate-theme-presets.ts`) are unrelated to feature work. Do not touch them. The only consumer-facing piece is `ThemeToggle`.
