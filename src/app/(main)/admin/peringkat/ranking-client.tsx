@@ -13,6 +13,7 @@ import {
   Download,
   Eye,
   FileEdit,
+  FileText,
   Info,
   Lock,
   Users,
@@ -320,6 +321,12 @@ export function RankingClient({
                   Ekspor CSV Babak Awal
                 </a>
               </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/admin/peringkat/export-md?tahap=preliminary" download>
+                  <FileText className="mr-2 size-4" />
+                  Unduh score.md
+                </a>
+              </Button>
             </div>
           </div>
 
@@ -421,12 +428,20 @@ export function RankingClient({
             <div className="text-muted-foreground text-sm">
               Menampilkan rata-rata skor berbobot juri untuk babak final (hanya tim finalis).
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href="/admin/peringkat/export?tahap=final" download>
-                <Download className="mr-2 size-4" />
-                Ekspor CSV Final
-              </a>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href="/admin/peringkat/export?tahap=final" download>
+                  <Download className="mr-2 size-4" />
+                  Ekspor CSV Final
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/admin/peringkat/export-md?tahap=final" download>
+                  <FileText className="mr-2 size-4" />
+                  Unduh score.md
+                </a>
+              </Button>
+            </div>
           </div>
 
           {finalHasJudgesDiscrepancy && (

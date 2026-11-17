@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Award, Search, Shield, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 
-import { enrichGuardianCard, KARYA_DATES } from "@/app/karya/karya-constants";
 import { Input } from "@/components/ui/input";
 
-import { ShowcaseCard, type ShowcaseCardData, ShowcaseDetailModal } from "./showcase-card";
+import { ShowcaseCard, type ShowcaseCardData } from "./showcase-card";
 
 function hash(value: string): number {
   return Array.from(value).reduce((total, character) => (total * 31 + character.charCodeAt(0)) | 0, 7);
@@ -17,175 +16,60 @@ function shuffleForVisitor(cards: ShowcaseCardData[], seed: string): ShowcaseCar
   return [...cards].sort((a, b) => hash(`${seed}:${a.teamName}`) - hash(`${seed}:${b.teamName}`));
 }
 
-/**
- * Confetti particle burst for Rank 1
- */
-function ConfettiBurst() {
-  const particles = [
-    { x: -35, y: -45, color: "#2FBF71", delay: 0 },
-    { x: 30, y: -50, color: "#3FA9D9", delay: 100 },
-    { x: -20, y: -65, color: "#262470", delay: 200 },
-    { x: 25, y: -60, color: "#5B4FC9", delay: 150 },
-    { x: 0, y: -70, color: "#2FBF71", delay: 50 },
-  ];
+function ReleaseVault({ serverNow }: { serverNow: number }) {
+  const releaseAt = Date.parse("2026-11-18T00:00:00+08:00");
+  const [remaining, setRemaining] = useState(Math.max(0, releaseAt - serverNow));
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setRemaining(Math.max(0, releaseAt - serverNow - (Date.now() - startedAt)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [releaseAt, serverNow]);
+
+  const days = Math.floor(remaining / 86_400_000);
+  const hours = Math.floor((remaining % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((remaining % 3_600_000) / 60_000);
+  const seconds = Math.floor((remaining % 60_000) / 1000);
 
   return (
-    <div className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-20" aria-hidden="true">
-      {particles.map((p, idx) => (
-        <span
-          // biome-ignore lint/suspicious/noArrayIndexKey: confetti decorative elements
-          key={idx}
-          className="absolute size-2.5 rounded-full animate-bounce"
-          style={{
-            backgroundColor: p.color,
-            transform: `translate(${p.x}px, ${p.y}px)`,
-            animationDelay: `${p.delay}ms`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/**
- * Section 4.3: Pemenang (Podium Layout)
- * Displays top 3 cards with giant outlined rank numbers, committee note, and confetti on Rank 1.
- */
-function WinnersPodium({
-  winners,
-  onOpenDetail,
-}: {
-  winners: ShowcaseCardData[];
-  onOpenDetail: (card: ShowcaseCardData) => void;
-}) {
-  if (winners.length === 0) return null;
-
-  // Sort by rank: 1, 2, 3
-  const rank1 = winners.find((w) => w.winnerRank === 1);
-  const rank2 = winners.find((w) => w.winnerRank === 2);
-  const rank3 = winners.find((w) => w.winnerRank === 3);
-
-  const podiumOrder = [
-    { item: rank2, rankNumber: "02", label: "Juara 2", accentColor: "#3FA9D9", elevation: "" },
-    { item: rank1, rankNumber: "01", label: "Juara 1", accentColor: "#2FBF71", elevation: "sm:-mt-6 lg:-mt-8" },
-    { item: rank3, rankNumber: "03", label: "Juara 3", accentColor: "#5B4FC9", elevation: "" },
-  ].filter(
-    (p): p is { item: ShowcaseCardData; rankNumber: string; label: string; accentColor: string; elevation: string } =>
-      Boolean(p.item),
-  );
-
-  return (
-    <section className="space-y-6 pt-6" aria-labelledby="winners-podium-title">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 border-b-2 border-[#262470]/20 pb-4">
-        <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#262470] bg-[#2FBF71] px-3 py-0.5 text-xs font-black uppercase text-[#262470] shadow-[2px_2px_0_#262470]">
-            <Award className="size-3.5" />
-            <span>PODIUM FINALIS TERBAIK</span>
-          </div>
-          <h2 id="winners-podium-title" className="mt-2 font-display font-black text-2xl sm:text-3xl text-foreground">
-            Tiga Karya Penjaga Terpilih
-          </h2>
-          <p className="mt-1 text-xs sm:text-sm text-muted-foreground font-medium">
-            Dinilai oleh dewan juri berdasarkan dampak perlindungan, inovasi solusi, dan kemudahan bagi pengguna.
-          </p>
-        </div>
-      </div>
-
-      {/* Podium Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-end pt-4">
-        {podiumOrder.map(({ item, rankNumber, label, elevation }) => (
-          <div key={`podium-${item.teamName}`} className={`relative flex flex-col ${elevation}`}>
-            {/* Rank 1 Confetti Burst */}
-            {rankNumber === "01" && <ConfettiBurst />}
-
-            {/* Giant Outlined Rank Stand Header */}
-            <div className="flex items-center justify-between px-2 pb-2">
-              <span className="font-mono text-xs font-black uppercase tracking-wider text-[#262470] dark:text-[#6F8FD0]">
-                {label}
-              </span>
-              <span
-                className="font-display font-black text-5xl sm:text-6xl text-white select-none drop-shadow-[3px_3px_0_#262470]"
-                style={{
-                  WebkitTextStroke: "2.5px #262470",
-                }}
-              >
-                {rankNumber}
-              </span>
+    <div className="karya-vault relative overflow-hidden border border-amber-500/30 bg-card/80 p-4 text-center sm:p-6">
+      <div className="karya-vault-glow" aria-hidden="true" />
+      <div className="karya-vault-grid" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div className="karya-ghost-card" key={index}>
+            <div className="karya-ghost-image" />
+            <div className="karya-ghost-copy" />
+            <div className="karya-ghost-copy karya-ghost-copy-short" />
+            <div className="karya-ghost-buttons">
+              <span />
+              <span />
             </div>
-
-            {/* The Winner Card */}
-            <ShowcaseCard data={item} variant="winner" onOpenDetail={onOpenDetail} />
           </div>
         ))}
       </div>
-    </section>
-  );
-}
-
-/**
- * Locked Vault State: Sebentar lagi, 18 Nov
- */
-function LockedVaultState() {
-  return (
-    <div className="guardian-card relative overflow-hidden bg-white p-6 sm:p-10 text-center shadow-[6px_6px_0_#262470] dark:bg-slate-900">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* Status Pill */}
-        <div className="inline-flex items-center gap-2 rounded-full border-2 border-[#262470] bg-[#2FBF71] px-4 py-1 text-xs font-black uppercase text-[#262470] shadow-[3px_3px_0_#262470]">
-          <Shield className="size-3.5 fill-current" />
-          <span>STATUS: TERKUNCI · MENUNGGU RILIS</span>
+      <div className="relative z-10">
+        <div className="mx-auto mb-5 flex size-20 items-center justify-center border border-amber-500/50 text-amber-500">
+          <svg aria-hidden="true" viewBox="0 0 64 64" className="size-12 fill-none stroke-current stroke-2">
+            <path d="M17 28h30v24H17zM23 28V19a9 9 0 0 1 18 0v9" />
+            <circle cx="32" cy="39" r="3" />
+          </svg>
         </div>
-
-        <div>
-          <h3 className="font-display font-black text-2xl sm:text-3xl text-foreground">Kenalan sama para penjaga.</h3>
-          <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed font-medium">
-            Arsip karya dari tim peserta sedang dipersiapkan dan akan dibuka penuh untuk umum pada{" "}
-            <span className="font-extrabold text-[#262470] dark:text-[#3FA9D9]">
-              {KARYA_DATES.galleryReleaseDateFull}
-            </span>
-            .
-          </p>
-        </div>
-
-        {/* Static Date Display */}
-        <div className="guardian-card inline-flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 bg-[#F7F9FF] px-6 py-3.5 shadow-[4px_4px_0_#262470] dark:bg-slate-800 border-2 border-[#262470]">
-          <span className="font-mono text-xs font-black uppercase tracking-wider text-[#262470] dark:text-[#3FA9D9]">
-            JADWAL PEMBUKAAN GALERI:
-          </span>
-          <span className="font-display font-black text-sm sm:text-base text-foreground">
-            {KARYA_DATES.galleryPlannedText}
-          </span>
-        </div>
-
-        {/* Roadmap Timeline (3 Stages from Juknis) */}
-        <div className="mt-8 pt-6 border-t-2 border-[#262470]/20 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-          <div className="guardian-card p-4 bg-[#F7F9FF] dark:bg-slate-800 border-2 border-[#262470]">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[10px] font-extrabold uppercase text-[#262470] dark:text-[#3FA9D9]">
-                TAHAP 01
-              </span>
-              <span className="rounded bg-[#2FBF71] px-2 py-0.5 text-[9px] font-black text-[#262470]">SELANJUTNYA</span>
+        <p className="font-mono text-amber-500 text-xs uppercase tracking-[0.3em]">TERENKRIPSI · ARSIP BELUM DIBUKA</p>
+        <p className="mt-3 text-muted-foreground">Galeri karya akan dibuka pada 18 November 2026.</p>
+        <div className="mx-auto mt-6 grid max-w-md grid-cols-4 gap-2">
+          {[
+            ["HARI", days],
+            ["JAM", hours],
+            ["MENIT", minutes],
+            ["DETIK", seconds],
+          ].map(([label, value]) => (
+            <div key={label} className="border border-border bg-background/70 px-2 py-3">
+              <p className="font-display font-semibold text-xl text-foreground">{String(value).padStart(2, "0")}</p>
+              <p className="font-mono text-[9px] text-muted-foreground tracking-[0.16em]">{label}</p>
             </div>
-            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage1Label}</h4>
-            <p className="mt-1 text-xs text-muted-foreground font-medium leading-relaxed">{KARYA_DATES.stage1Desc}</p>
-          </div>
-
-          <div className="guardian-card p-4 bg-white dark:bg-slate-900 border-2 border-[#262470]">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground">TAHAP 1.5</span>
-              <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-bold text-muted-foreground">FINAL</span>
-            </div>
-            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage2Label}</h4>
-            <p className="mt-1 text-xs text-muted-foreground font-medium leading-relaxed">{KARYA_DATES.stage2Desc}</p>
-          </div>
-
-          <div className="guardian-card p-4 bg-white dark:bg-slate-900 border-2 border-[#262470]">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[10px] font-extrabold uppercase text-muted-foreground">TAHAP 03</span>
-              <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-bold text-muted-foreground">JUARA</span>
-            </div>
-            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground">{KARYA_DATES.stage3Label}</h4>
-            <p className="mt-1 text-xs text-muted-foreground font-medium leading-relaxed">{KARYA_DATES.stage3Desc}</p>
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -196,18 +80,17 @@ export function ShowcaseGallery({
   cards,
   winners,
   initialQuery = "",
+  serverNow,
 }: {
   cards: ShowcaseCardData[];
   winners: ShowcaseCardData[];
   initialQuery?: string;
-  serverNow?: number;
+  serverNow: number;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [visitorSeed, setVisitorSeed] = useState("server");
-  const [selectedCampus, setSelectedCampus] = useState("Semua");
-
-  // Detail Modal state
-  const [selectedCard, setSelectedCard] = useState<ShowcaseCardData | null>(null);
+  const connectorRef = useRef<HTMLDivElement>(null);
+  const [connectorVisible, setConnectorVisible] = useState(false);
 
   useEffect(() => {
     const storedSeed = sessionStorage.getItem("showcase-order-seed");
@@ -221,34 +104,30 @@ export function ShowcaseGallery({
     setQuery(urlQuery);
   }, []);
 
-  // Enrich all cards with Guardian model attributes
-  const enrichedWinners = useMemo(() => winners.map((winner, idx) => enrichGuardianCard(winner, idx)), [winners]);
+  useEffect(() => {
+    const element = connectorRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      setConnectorVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setConnectorVisible(true);
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
-  const enrichedCards = useMemo(() => cards.map((card, idx) => enrichGuardianCard(card, idx)), [cards]);
-
-  const shuffledCards = useMemo(() => shuffleForVisitor(enrichedCards, visitorSeed), [enrichedCards, visitorSeed]);
-
-  // Dynamic filter lists derived from cards
-  const uniqueCampuses = useMemo(() => {
-    const set = new Set(enrichedCards.map((c) => c.campus).filter(Boolean));
-    return ["Semua", ...Array.from(set)];
-  }, [enrichedCards]);
-
+  const shuffledCards = useMemo(() => shuffleForVisitor(cards, visitorSeed), [cards, visitorSeed]);
   const filteredCards = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
-
-    return shuffledCards.filter((card) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        `${card.teamName} ${card.title} ${card.description} ${card.campus}`
-          .toLocaleLowerCase("id-ID")
-          .includes(normalizedQuery);
-
-      const matchesCampus = selectedCampus === "Semua" || card.campus === selectedCampus;
-
-      return matchesQuery && matchesCampus;
-    });
-  }, [query, selectedCampus, shuffledCards]);
+    if (!normalizedQuery) return shuffledCards;
+    return shuffledCards.filter((card) =>
+      `${card.teamName} ${card.title}`.toLocaleLowerCase("id-ID").includes(normalizedQuery),
+    );
+  }, [query, shuffledCards]);
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
@@ -258,98 +137,74 @@ export function ShowcaseGallery({
     window.history.replaceState(null, "", url);
   };
 
+  const emptyState =
+    cards.length === 0 ? (
+      <ReleaseVault serverNow={serverNow} />
+    ) : (
+      <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+        Tidak ada karya yang cocok dengan pencarian.
+      </div>
+    );
+
   return (
-    <section className="relative space-y-10" aria-labelledby="gallery-grid-title">
-      {/* Detail Modal */}
-      <ShowcaseDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
-
-      {/* Winners Section if released */}
-      {enrichedWinners.length > 0 && <WinnersPodium winners={enrichedWinners} onOpenDetail={setSelectedCard} />}
-
-      {/* Main Gallery Cards or Vault State */}
-      {cards.length === 0 ? (
-        <LockedVaultState />
-      ) : (
-        <>
-          {/* Main Gallery Section Header */}
-          <div className="space-y-6 pt-4 border-t-2 border-[#262470]/20">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 font-mono text-xs font-extrabold uppercase text-[#262470] dark:text-[#3FA9D9]">
-                  <Sparkles className="size-3.5 text-[#2FBF71]" />
-                  <span>KOLEKSI LENGKAP KARYA</span>
-                </div>
-                <h2 id="gallery-grid-title" className="font-display font-black text-2xl sm:text-3xl text-foreground">
-                  Jelajahi Karya Para Penjaga
-                </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-                  Temukan solusi nyata dan inovasi digital yang dikembangkan oleh seluruh tim peserta.
-                </p>
-              </div>
-
-              {/* Search Input & Campus Filter */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                {uniqueCampuses.length > 2 && (
-                  <select
-                    id="filter-campus"
-                    value={selectedCampus}
-                    aria-label="Saring berdasarkan kampus"
-                    onChange={(e) => setSelectedCampus(e.target.value)}
-                    className="rounded-xl border-2 border-[#262470] bg-white px-3 py-2 text-xs font-bold text-[#262470] shadow-[3px_3px_0_#262470] dark:bg-slate-800 dark:text-slate-200 focus:outline-none"
-                  >
-                    {uniqueCampuses.map((c) => (
-                      <option key={c} value={c}>
-                        {c === "Semua" ? "Semua Kampus" : c}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                <div className="relative w-full sm:w-72 md:w-80">
-                  <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#262470] dark:text-[#3FA9D9]" />
-                  <Input
-                    value={query}
-                    onChange={(e) => handleQueryChange(e.target.value)}
-                    placeholder="Cari nama tim atau karya..."
-                    className="guardian-card h-10 w-full pl-10 pr-4 text-xs font-semibold shadow-[3px_3px_0_#262470]"
-                  />
-                </div>
-              </div>
-            </div>
+    <section ref={connectorRef} className="relative space-y-6" aria-labelledby="gallery-grid-title">
+      <svg
+        aria-hidden="true"
+        className={`karya-gallery-connector-line ${connectorVisible ? "is-connected" : ""}`}
+        viewBox="0 0 120 48"
+        preserveAspectRatio="none"
+      >
+        <path d="M20 0 V24 H50 L68 42 H120" />
+        <path d="M28 0 V20 H54 L72 34 H120" />
+        <path d="M36 0 V16 H58 L76 26 H120" />
+        <circle cx="20" cy="0" r="3" />
+        <circle cx="28" cy="0" r="3" />
+        <circle cx="36" cy="0" r="3" />
+      </svg>
+      {winners.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <p className="font-medium text-amber-500 text-sm">Pengumuman pemenang</p>
+            <h2 className="mt-1 font-display font-semibold text-2xl text-foreground">Tiga karya terbaik</h2>
           </div>
-
-          {filteredCards.length === 0 ? (
-            <div className="guardian-card p-10 text-center bg-white dark:bg-slate-900 shadow-[4px_4px_0_#262470]">
-              <p className="font-display font-bold text-lg text-foreground">Tidak ada karya yang cocok</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Coba sesuaikan kata kunci pencarian atau pilih kampus lain.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setSelectedCampus("Semua");
-                }}
-                className="guardian-btn-secondary mt-4 px-4 py-1.5 text-xs"
-              >
-                Reset Pencarian
-              </button>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {winners.map((winner) => (
+              <ShowcaseCard key={`winner-${winner.teamName}`} data={winner} variant="winner" />
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="karya-section-divider flex flex-col gap-4 border-border border-b py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="flex items-center gap-2 font-medium text-signal text-sm">
+            <Sparkles className="size-4" />
+            {"//"} ARSIP
+          </p>
+          <h2 id="gallery-grid-title" className="mt-1 font-display font-semibold text-2xl text-foreground">
+            Koleksi karya
+          </h2>
+        </div>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => handleQueryChange(event.target.value)}
+            placeholder="Cari nama tim atau karya"
+            aria-label="Cari nama tim atau karya"
+            className="border-border bg-card pl-9 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
+          />
+        </div>
+      </div>
+      {filteredCards.length > 0 ? (
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {filteredCards.map((card, index) => (
+            <div key={`${card.teamName}-${card.title}`} style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}>
+              <ShowcaseCard data={card} />
             </div>
-          ) : (
-            /* Bento Layout: Mixed Tile Sizes */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredCards.map((card, idx) => {
-                const isBentoHero = idx === 0 && filteredCards.length > 2;
-
-                return (
-                  <div key={`gallery-${card.teamName}`} className={isBentoHero ? "md:col-span-2 md:row-span-1" : ""}>
-                    <ShowcaseCard data={card} onOpenDetail={setSelectedCard} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+          ))}
+        </div>
+      ) : (
+        emptyState
       )}
     </section>
   );
