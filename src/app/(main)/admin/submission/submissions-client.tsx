@@ -192,9 +192,9 @@ function LinkCheckDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Detail Pemeriksaan Tautan</DialogTitle>
+          <DialogTitle>Detail Submission</DialogTitle>
           <DialogDescription>
             {row.team_code} — {row.team_name}
           </DialogDescription>
@@ -260,6 +260,17 @@ function LinkCheckDetailDialog({
                 {item?.message && <p className="text-muted-foreground text-xs">{item.message}</p>}
               </div>
             ))}
+          </div>
+
+          <div className="min-w-0 space-y-1.5 rounded-md border p-3">
+            <span className="font-medium text-muted-foreground text-xs">Catatan untuk Juri</span>
+            {row.notes_for_judges.trim() ? (
+              <p className="whitespace-pre-wrap break-words text-foreground text-sm leading-relaxed">
+                {row.notes_for_judges}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-xs italic">Tim tidak menulis catatan untuk juri.</p>
+            )}
           </div>
         </div>
 
@@ -721,9 +732,14 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
       header: "Catatan Juri",
       cell: ({ row }) =>
         row.original.notes_for_judges.trim() ? (
-          <span className="block max-w-[220px] truncate text-xs" title={row.original.notes_for_judges}>
+          <button
+            type="button"
+            className="block max-w-[220px] truncate text-left text-xs hover:underline focus-visible:underline focus-visible:outline-none"
+            title="Klik untuk membaca catatan lengkap"
+            onClick={() => setDetailRow(row.original)}
+          >
             {row.original.notes_for_judges}
-          </span>
+          </button>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>
         ),
