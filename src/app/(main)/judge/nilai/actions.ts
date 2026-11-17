@@ -619,3 +619,54 @@ export async function cancelRecusal(input: {
   revalidateRecusalPaths(parsed.data.tahap, parsed.data.team_id);
   return { ok: true };
 }
+
+export type ReplaceFeedbackResult = { ok: true } | { ok: false; message: string };
+
+const replaceFeedbackSchema = z.object({
+  tahap: z.enum(["preliminary", "final"]),
+  teamId: z.string().uuid("ID tim tidak valid."),
+  feedback: z.string().trim().max(2000, "Masukan maksimal 2000 karakter."),
+});
+
+/**
+ * Replaces the judge's comment (feedback) on their own submitted score. Works after the score is
+ * locked or results are released; scores themselves never change. The database function writes the
+ * audit event (with the previous comment), see migration 20261118000000.
+ */
+export async function replaceScoreFeedback(input: {
+  tahap: "preliminary" | "final";
+  teamId: string;
+  feedback: string;
+}): Promise<ReplaceFeedbackResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "judge") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = replaceFeedbackSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Data masukan tidak valid." };
+  }
+  const { tahap, teamId, feedback } = parsed.data;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_my_score_feedback", {
+    p_stage: tahap,
+    p_team_id: teamId,
+    p_feedback: feedback,
+  });
+
+  if (error) {
+    console.error("Failed to replace score feedback", error);
+    return { ok: false, message: "Gagal menyimpan masukan. Coba lagi." };
+  }
+  if (!data) {
+    return { ok: false, message: "Masukan hanya dapat diubah pada nilai final milik Anda." };
+  }
+
+  revalidatePath("/judge");
+  revalidatePath(`/judge/nilai/${tahap}/${teamId}`);
+  revalidatePath("/admin/peringkat");
+  revalidatePath("/team/hasil");
+  return { ok: true };
+}

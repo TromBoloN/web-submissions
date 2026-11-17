@@ -19,6 +19,7 @@ import {
   Globe,
   Info,
   Lock,
+  PencilLine,
   Save,
   StickyNote,
   Undo2,
@@ -47,7 +48,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { calcWeightedTotal, getRubricForStage, type ScoringStage } from "@/lib/rubric";
 
-import { cancelRecusal, createRecusal, lockScore, saveScore } from "../../actions";
+import { cancelRecusal, createRecusal, lockScore, replaceScoreFeedback, saveScore } from "../../actions";
 
 interface TeamData {
   id: string;
@@ -209,6 +210,35 @@ export function ScoringFormClient({
   const isLocked = lockedAt !== null;
   const isReadOnly = isRecused || isLocked || isStageReleased;
   const isInputDisabled = isReadOnly ? true : isPending;
+
+  // After a score is submitted, the judge may still replace the comment (never the scores),
+  // even once it is locked or results are released. Server side: update_my_score_feedback().
+  const canReplaceFeedback = isReadOnly && !isRecused && scoreStatus === "final";
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [feedbackBeforeEdit, setFeedbackBeforeEdit] = useState("");
+  const [isSavingFeedback, startSavingFeedback] = useTransition();
+
+  const startFeedbackEdit = () => {
+    setFeedbackBeforeEdit(feedback);
+    setIsEditingFeedback(true);
+  };
+  const cancelFeedbackEdit = () => {
+    setFeedback(feedbackBeforeEdit);
+    setIsEditingFeedback(false);
+  };
+  const saveFeedbackEdit = () => {
+    startSavingFeedback(async () => {
+      const res = await replaceScoreFeedback({ tahap, teamId: team.id, feedback: feedback.trim() });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      setFeedback(feedback.trim());
+      setSavedSnapshot((prev) => ({ ...prev, feedback: feedback.trim() }));
+      setIsEditingFeedback(false);
+      toast.success(isStageReleased ? "Masukan diperbarui dan langsung terlihat oleh tim." : "Masukan diperbarui.");
+    });
+  };
 
   const isDirty = useMemo(() => {
     if (isReadOnly) return false;
@@ -838,9 +868,39 @@ export function ScoringFormClient({
                   rows={4}
                   maxLength={2000}
                   value={feedback}
-                  disabled={isInputDisabled}
+                  disabled={isEditingFeedback ? isSavingFeedback : isInputDisabled}
                   onChange={(e) => setFeedback(e.target.value)}
                 />
+                {canReplaceFeedback && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {isEditingFeedback ? (
+                      <>
+                        <Button type="button" size="sm" disabled={isSavingFeedback} onClick={saveFeedbackEdit}>
+                          <Save className="mr-1.5 size-3.5" />
+                          {isSavingFeedback ? "Menyimpan..." : "Simpan masukan"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={isSavingFeedback}
+                          onClick={cancelFeedbackEdit}
+                        >
+                          Batal
+                        </Button>
+                      </>
+                    ) : (
+                      <Button type="button" size="sm" variant="outline" onClick={startFeedbackEdit}>
+                        <PencilLine className="mr-1.5 size-3.5" />
+                        Ubah masukan
+                      </Button>
+                    )}
+                    <span className="text-muted-foreground text-xs">
+                      Hanya masukan yang dapat diubah; nilai tetap terkunci.
+                      {isStageReleased && " Perubahan langsung terlihat oleh tim."}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Private note, never shared with the team */}

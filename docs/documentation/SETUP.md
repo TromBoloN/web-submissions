@@ -71,7 +71,7 @@ npm run build
 | --- | --- |
 | `npm run seed` | Create the documented seed data in the configured Supabase project. |
 | `npm run seed:clear` | Remove seed data from the configured project. |
-| `npm run backup` | Export configured Supabase data to JSON under `private-output/`. |
+| `npm run backup` | Export configured Supabase data to JSON, and gallery images from storage, under `private-output/`. |
 | `npm run restore` | Restore a JSON backup after verifying the target project and backup manifest. |
 | `npm run onboard` | Convert registration input for account onboarding. |
 | `npm run whatsapp` | Generate WhatsApp links using `PORTAL_URL`. |

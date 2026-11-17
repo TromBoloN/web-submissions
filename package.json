@@ -16,7 +16,7 @@
     "backup": "node scripts/backup.mjs",
     "restore": "node scripts/restore.mjs",
     "local:up": "node scripts/local-stack.mjs up",
-    "local:restore": "node scripts/local-stack.mjs restore private-output/backup-2026-11-17-140536",
+    "local:restore": "node scripts/local-stack.mjs restore private-output/backup-2026-11-17-154544",
     "local:dev": "node scripts/local-stack.mjs dev",
     "local:down": "node scripts/local-stack.mjs down",
     "seed": "node --env-file=.env src/scripts/seed.mjs seed",

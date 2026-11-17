@@ -8,7 +8,7 @@ import { cn } from "cn";
 import { ImageIcon, ImageUp, LoaderCircle, LockKeyhole, Save } from "lucide-react";
 import { toast } from "sonner";
 
-import { ShowcaseCard, type ShowcaseCardData } from "@/components/showcase-card";
+import { KaryaCardPreview, type KaryaItem } from "@/app/karya/karya-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -63,7 +63,8 @@ export function KaryaClient({
     ? { on: "Tautan ditampilkan", off: "Tautan disembunyikan" }
     : { on: "Tampil di galeri", off: "Tidak tampil di galeri" };
   const consentLabel = consent ? consentLabels.on : consentLabels.off;
-  const cardData: ShowcaseCardData = {
+  // Same card as the public gallery (/karya), including the finalist header once announced.
+  const cardData: KaryaItem = {
     teamName: team.team_name,
     title,
     description,
@@ -71,6 +72,7 @@ export function KaryaClient({
     githubUrl: showLinks ? (submission?.github_url ?? "") : "",
     liveDemoUrl: showLinks ? (submission?.live_demo_url ?? "") : "",
     videoUrl: showLinks ? (submission?.video_url ?? "") : "",
+    isFinalist,
   };
 
   const handleImage = (file: File | undefined) => {
@@ -288,15 +290,15 @@ export function KaryaClient({
               </Card>
             )}
             <div
-              className={`w-full max-w-sm lg:sticky lg:top-6 lg:mx-auto lg:self-start ${
-                isLocked ? "lg:col-start-1" : "lg:col-start-2 lg:row-start-1"
+              className={`w-full max-w-sm lg:sticky lg:top-6 lg:self-start ${
+                isLocked ? "lg:col-span-2" : "lg:col-start-2 lg:row-start-1 lg:mx-auto"
               }`}
             >
               <div className="mb-3 flex items-center gap-2 font-medium text-sm">
                 <ImageIcon className="size-4 text-primary" />
                 Pratinjau galeri
               </div>
-              <ShowcaseCard data={cardData} />
+              <KaryaCardPreview item={cardData} />
             </div>
           </div>
         </>

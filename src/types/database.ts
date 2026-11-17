@@ -665,6 +665,10 @@ export type Database = {
       };
       set_showcase_consent: { Args: { p_consent: boolean }; Returns: boolean };
       team_can_submit: { Args: { p_team_id: string }; Returns: boolean };
+      update_my_score_feedback: {
+        Args: { p_feedback: string; p_stage: string; p_team_id: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       judge_stage_type: "preliminary" | "final" | "both";

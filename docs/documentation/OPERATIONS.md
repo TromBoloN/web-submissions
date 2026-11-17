@@ -22,7 +22,7 @@ There is no repository-provided rollback command. Roll back the application depl
 
 ## Backup and restore
 
-`npm run backup` writes JSON output under `private-output/`. Protect that directory because backups can contain account and competition data. Review the generated manifest before storing or transferring a backup.
+`npm run backup` writes JSON output under `private-output/`, plus a copy of every file in the `web-showcase` storage bucket under `storage/web-showcase/` in the same folder (download only). `npm run restore` uploads those files back to the same paths; older backups without a `storage/` folder skip that step. Protect that directory because backups can contain account and competition data. Review the generated manifest (`storage` section included) before storing or transferring a backup.
 
 Before `npm run restore`:
 

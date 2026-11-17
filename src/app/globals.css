@@ -1202,6 +1202,13 @@ html {
   isolation: isolate;
 }
 
+/* A single gallery card shown inside the app (team "Atur Tampilan", admin finalist editor):
+   same card styles as /karya, without the page background and height. */
+.karya-page.karya-preview {
+  min-height: 0;
+  background: transparent;
+}
+
 :is(.dark, [data-theme-mode="dark"]) .karya-page,
 .karya-page[data-theme="dark"] {
   --bg: #090c1d;
@@ -1573,6 +1580,17 @@ html {
   height: 100%;
   object-fit: cover;
   object-position: top;
+}
+/* Whole image, centered; a blurred copy fills the gaps when the image is not 16:10. */
+.karya-page .thumb img.thumb-fg {
+  object-fit: contain;
+  object-position: center;
+}
+.karya-page .thumb img.thumb-bg {
+  object-position: center;
+  filter: blur(18px) saturate(1.15);
+  transform: scale(1.2);
+  opacity: 0.9;
 }
 .karya-page .fb {
   position: absolute;

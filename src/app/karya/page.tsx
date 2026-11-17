@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { KARYA_DESCRIPTION_FALLBACK } from "./karya-card";
 import { KaryaClient, type KaryaItem } from "./karya-client";
 
 export const metadata: Metadata = {
@@ -59,7 +60,7 @@ export default async function PublicKaryaPage() {
   const winners: KaryaItem[] = (isWinnersPublished ? (rawWinners ?? []) : []).map((item) => ({
     teamName: item.team_name,
     title: item.showcase_title || item.team_name,
-    description: item.showcase_description || "Solusi inovatif ruang digital.",
+    description: item.showcase_description || KARYA_DESCRIPTION_FALLBACK,
     imageUrl: item.showcase_image_path
       ? `${supabaseUrl}/storage/v1/object/public/web-showcase/${item.showcase_image_path}`
       : null,
@@ -74,7 +75,7 @@ export default async function PublicKaryaPage() {
   const allCards: KaryaItem[] = (rawShowcase ?? []).map((item) => ({
     teamName: item.team_name,
     title: item.showcase_title || item.team_name,
-    description: item.showcase_description || "Solusi inovatif ruang digital.",
+    description: item.showcase_description || KARYA_DESCRIPTION_FALLBACK,
     imageUrl: item.showcase_image_path
       ? `${supabaseUrl}/storage/v1/object/public/web-showcase/${item.showcase_image_path}`
       : null,

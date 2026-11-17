@@ -142,6 +142,57 @@ async function restoreAuthUsers(supabase, users, defaultPassword) {
   return { created, existing, failed };
 }
 
+const STORAGE_DIR = "storage";
+const CONTENT_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+
+function listLocalFiles(dir) {
+  const files = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listLocalFiles(full));
+    } else {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+// Uploads <backup>/storage/<bucket>/** back to the same paths (overwrites files with the same name).
+async function restoreStorage(supabase, backupDir) {
+  const storageRoot = path.join(backupDir, STORAGE_DIR);
+  if (!fs.existsSync(storageRoot)) {
+    return null;
+  }
+
+  const results = [];
+  for (const bucketEntry of fs.readdirSync(storageRoot, { withFileTypes: true })) {
+    if (!bucketEntry.isDirectory()) continue;
+    const bucket = bucketEntry.name;
+    const bucketDir = path.join(storageRoot, bucket);
+    let uploaded = 0;
+    let failed = 0;
+
+    for (const file of listLocalFiles(bucketDir)) {
+      const objectPath = path.relative(bucketDir, file).split(path.sep).join("/");
+      const contentType = CONTENT_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(objectPath, fs.readFileSync(file), { contentType, upsert: true });
+      if (error) {
+        if (failed === 0) {
+          console.warn(`\n  ⚠️ Gagal mengunggah ${bucket}/${objectPath}: ${error.message}`);
+        }
+        failed += 1;
+      } else {
+        uploaded += 1;
+      }
+    }
+    results.push({ bucket, uploaded, failed });
+  }
+  return results;
+}
+
 async function main() {
   loadLocalEnv();
 
@@ -298,6 +349,22 @@ async function main() {
     });
     const res = await upsertInBatches(supabase, "final_scores", cleaned, "id");
     console.log(`OK (${res.count} baris)`);
+  }
+
+  // 11. Storage files (backups made before storage was included have no storage/ folder)
+  process.stdout.write("Memulihkan file storage ... ");
+  const storageResults = await restoreStorage(supabase, backupDir);
+  if (!storageResults) {
+    console.log("dilewati (backup ini tidak berisi file storage)");
+  } else {
+    console.log(
+      storageResults.map((r) => `${r.bucket}: ${r.uploaded} file${r.failed ? `, ${r.failed} gagal` : ""}`).join("; ") ||
+        "tidak ada file",
+    );
+    const totalFailed = storageResults.reduce((sum, r) => sum + r.failed, 0);
+    if (totalFailed > 0) {
+      throw new Error(`${totalFailed} file storage gagal diunggah. Pastikan bucket sudah ada, lalu jalankan ulang.`);
+    }
   }
 
   console.log("\n========================================================");

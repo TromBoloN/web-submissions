@@ -1,7 +1,7 @@
+import { createClient } from "@supabase/supabase-js";
+
 import fs from "node:fs";
 import path from "node:path";
-
-import { createClient } from "@supabase/supabase-js";
 
 const PAGE_SIZE = 1000;
 const WITA_TIME_ZONE = "Asia/Makassar";
@@ -56,8 +56,7 @@ function isMissingTableError(error) {
   return (
     code === "42P01" ||
     code === "PGRST205" ||
-    (typeof message === "string" &&
-      /could not find the table|relation .* does not exist|schema cache/i.test(message))
+    (typeof message === "string" && /could not find the table|relation .* does not exist|schema cache/i.test(message))
   );
 }
 
@@ -223,6 +222,69 @@ async function backupAuthUsers(supabase, outDir) {
   };
 }
 
+// Storage buckets copied file by file into <backup>/storage/<bucket>/ (download only).
+const STORAGE_BUCKETS = ["web-showcase"];
+const STORAGE_DIR = "storage";
+
+async function listBucketFiles(supabase, bucket, prefix = "") {
+  const files = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .list(prefix, { limit: PAGE_SIZE, offset, sortBy: { column: "name", order: "asc" } });
+    if (error) {
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      break;
+    }
+    for (const entry of data) {
+      const fullPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      // Folders have no id; placeholder files keep empty folders alive and are not needed.
+      if (entry.id === null) {
+        files.push(...(await listBucketFiles(supabase, bucket, fullPath)));
+      } else if (entry.name !== ".emptyFolderPlaceholder") {
+        files.push(fullPath);
+      }
+    }
+    if (data.length < PAGE_SIZE) {
+      break;
+    }
+  }
+  return files;
+}
+
+async function backupBucket(supabase, bucket, outDir) {
+  const files = await listBucketFiles(supabase, bucket);
+  const bucketDir = path.join(outDir, STORAGE_DIR, bucket);
+  let bytes = 0;
+  const failed = [];
+
+  for (const filePath of files) {
+    const { data, error } = await supabase.storage.from(bucket).download(filePath);
+    if (error || !data) {
+      failed.push(filePath);
+      continue;
+    }
+    const target = path.join(bucketDir, ...filePath.split("/"));
+    fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
+    const buffer = Buffer.from(await data.arrayBuffer());
+    fs.writeFileSync(target, buffer, { mode: 0o600 });
+    bytes += buffer.length;
+  }
+
+  const result = {
+    status: failed.length === 0 ? "OK" : "GAGAL",
+    rows: files.length - failed.length,
+    bytes,
+    dir: `${STORAGE_DIR}/${bucket}`,
+  };
+  if (failed.length > 0) {
+    result.error = `${failed.length} file gagal diunduh: ${failed.slice(0, 5).join(", ")}`;
+  }
+  return result;
+}
+
 function printTableResult(table, result) {
   let detail;
   if (result.status === "OK") {
@@ -263,7 +325,7 @@ async function main() {
     },
   });
 
-  console.log("Membaca database (hanya SELECT, tanpa mengubah data).");
+  console.log("Membaca database dan storage (hanya SELECT dan unduh, tanpa mengubah data).");
   console.log(`Folder backup: ${displayPath(outDir)}`);
   console.log();
 
@@ -292,6 +354,24 @@ async function main() {
   }));
   printTableResult("auth_users", authResult);
 
+  const storageResults = {};
+  for (const bucket of STORAGE_BUCKETS) {
+    const result = await backupBucket(supabase, bucket, outDir).catch((error) => ({
+      status: "GAGAL",
+      rows: null,
+      error: errorMessage(error),
+    }));
+    storageResults[bucket] = result;
+    const label = `storage:${bucket}`;
+    if (result.status === "OK") {
+      console.log(
+        `  ${label.padEnd(24)} OK        ${result.rows} file (${(result.bytes / 1024 / 1024).toFixed(1)} MB)`,
+      );
+    } else {
+      printTableResult(label, result);
+    }
+  }
+
   const tableEntries = {};
   for (const result of results) {
     const entry = { status: result.status, rows: result.rows };
@@ -318,8 +398,23 @@ async function main() {
     authEntry.error = authResult.error;
   }
 
+  const storageEntries = {};
+  for (const [bucket, result] of Object.entries(storageResults)) {
+    const entry = { status: result.status, files: result.rows };
+    if (result.dir) {
+      entry.dir = result.dir;
+      entry.bytes = result.bytes;
+    }
+    if (result.error) {
+      entry.error = result.error;
+    }
+    storageEntries[bucket] = entry;
+  }
+
   const allOk =
-    authResult.status === "OK" && results.every((result) => result.status === "OK" || result.status === "SKIPPED");
+    authResult.status === "OK" &&
+    results.every((result) => result.status === "OK" || result.status === "SKIPPED") &&
+    Object.values(storageResults).every((result) => result.status === "OK");
 
   const manifest = {
     format_version: 1,
@@ -330,6 +425,7 @@ async function main() {
     page_size: PAGE_SIZE,
     tables: tableEntries,
     auth_users: authEntry,
+    storage: storageEntries,
     result: allOk ? "OK" : "GAGAL",
   };
 

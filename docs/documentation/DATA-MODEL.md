@@ -114,3 +114,11 @@ Scores are bounded from 0 to 100. Totals are generated numeric values, displayed
 - Admin CSV routes independently return 401 for unauthenticated requests and 403 for non-admin users; exports use BOM, formula-neutralized cells, and `no-store`.
 
 Treat these as invariants when adding a route, action, table, function, or export.
+
+### `20261118000000_judge_feedback_edit.sql`
+
+Independent of the others; app code is merged. Apply before judges need to correct a comment after release.
+
+- `update_my_score_feedback(p_stage, p_team_id, p_feedback)`: judge-only. Replaces `feedback` (max 2,000 chars) on the caller's own score with `status = 'final'`, even when `locked_at` is set or the stage results are released. Scores, lock and status never change. Writes `score_feedback_replaced` to `audit_logs` with the previous comment.
+- The release-lock triggers (`check_*_scores_not_released`) allow that one write only: the function sets a transaction-local flag (`mitweek.feedback_only_edit`) and the trigger checks nothing but `feedback`/`updated_at` changed. Clients cannot set the flag; `is_feedback_only_edit()` is not client-callable.
+- Teams see the new comment immediately through `get_my_results()` (still anonymous).

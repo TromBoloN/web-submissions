@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { ImageUp, LoaderCircle, Save, Trash2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
-import { ShowcaseCard } from "@/components/showcase-card";
+import { KaryaCardPreview } from "@/app/karya/karya-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,8 +173,8 @@ function FinalistCardEditor({ team, supabaseUrl }: { team: FinalistCardTeam; sup
 
       <div className="min-w-0">
         <p className="mb-2 text-muted-foreground text-xs">Pratinjau di galeri</p>
-        <ShowcaseCard
-          data={{
+        <KaryaCardPreview
+          item={{
             teamName: team.teamName,
             title,
             description,
@@ -182,6 +182,7 @@ function FinalistCardEditor({ team, supabaseUrl }: { team: FinalistCardTeam; sup
             githubUrl: team.consent ? team.githubUrl : "",
             liveDemoUrl: team.consent ? team.liveDemoUrl : "",
             videoUrl: team.consent ? team.videoUrl : "",
+            isFinalist: true,
           }}
         />
       </div>
