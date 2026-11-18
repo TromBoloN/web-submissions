@@ -132,7 +132,7 @@ Apply after `20261117000000`. The gallery code works without it (no "Demo aktif"
 
 ### `20261118020000_showcase_finalist_links.sql`
 
-Apply after `20261118010000`. Competition rule: finalists' code and demo must be public.
+Apply after `20261118010000`. Per the finalist announcement ("Galeri Karya (Wajib)"), finalists' links are public.
 
-- `get_public_showcase()` and `get_public_showcase_winners()`: for finalists (`showcase_is_finalist`), `github_url` and `live_demo_url` are returned even without `showcase_consent`; `video_url` still needs consent. `live_demo_ok` follows the same rule. Non-finalists are unchanged (every link needs consent).
-- Until applied, finalists without consent show a disabled "Buka demo" on `/karya` (the admin and team previews already assume the new rule).
+- `get_public_showcase()` and `get_public_showcase_winners()`: for finalists (`showcase_is_finalist`), `github_url`, `live_demo_url` and `video_url` are returned even without `showcase_consent`. `live_demo_ok` follows the same rule. Non-finalists are unchanged (every link needs consent).
+- The team page hides the consent switch for announced finalists. Until applied, finalists without consent show disabled link buttons on `/karya` (the admin and team previews already assume the new rule).

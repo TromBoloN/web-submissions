@@ -54,7 +54,6 @@ export default async function GallerySettingsPage() {
         title: team.showcase_title,
         description: team.showcase_description,
         imagePath: team.showcase_image_path,
-        consent: team.showcase_consent,
         githubUrl: submission?.github_url ?? "",
         liveDemoUrl: submission?.live_demo_url ?? "",
         videoUrl: submission?.video_url ?? "",

@@ -167,12 +167,14 @@ export function KaryaClient({
       return;
     }
 
-    rememberIntroSeen();
+    // Remember the intro only once it has played: marking it before the timers would leave the
+    // loader stuck if this effect is cleaned up and re-run (React dev double-run, fast navigation).
     setShowLoader(true);
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
     const openTimer = setTimeout(() => {
       setLoaderOpen(true);
       hideTimer = setTimeout(() => {
+        rememberIntroSeen();
         setShowLoader(false);
         setEntered(true);
       }, 900);
@@ -185,6 +187,7 @@ export function KaryaClient({
   }, [initialKarya]);
 
   const handleDismissLoader = () => {
+    rememberIntroSeen();
     setLoaderOpen(true);
     setTimeout(() => {
       setShowLoader(false);
@@ -392,6 +395,14 @@ export function KaryaClient({
   }, [isModalOpen]);
 
   const modalTouchX = useRef<number | null>(null);
+
+  // Switching project inside the dialog (next/previous, similar, random) starts at the top,
+  // otherwise the next project opens scrolled to its buttons instead of its image and title.
+  const modalPanelRef = useRef<HTMLDivElement>(null);
+  const activeModalKey = activeModalItem?.teamName ?? null;
+  useEffect(() => {
+    if (activeModalKey !== null) modalPanelRef.current?.scrollTo({ top: 0 });
+  }, [activeModalKey]);
 
   // Opened project extras: similar projects, video player, neighbouring images preloaded.
   const similarItems = useMemo(
@@ -691,7 +702,10 @@ export function KaryaClient({
       <header className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 pt-5 sm:px-6">
         <KaryaLogo className="size-9 shrink-0" spin={false} />
         <span className="font-extrabold text-base tracking-tight sm:text-lg">MIT-WEEK 2026</span>
-        <span className="pill mono ml-1 hidden sm:inline-flex">Web Development Competition</span>
+        {/* Wrapper carries the breakpoint: .pill sets display itself, which would override "hidden". */}
+        <span className="ml-1 hidden sm:inline-flex">
+          <span className="pill mono">Web Development Competition</span>
+        </span>
       </header>
 
       {/* Main Content */}
@@ -1161,13 +1175,14 @@ export function KaryaClient({
         >
           <button
             type="button"
-            className="fixed inset-0 bg-black/65 backdrop-blur-xs cursor-default border-0"
+            className="mback fixed inset-0 bg-black/65 backdrop-blur-xs cursor-default border-0"
             aria-label="Tutup"
             tabIndex={-1}
             onClick={closeModal}
           />
           <div
-            className="box relative z-10 max-h-[90vh] w-full max-w-[640px] overflow-y-auto"
+            ref={modalPanelRef}
+            className="mpanel box relative z-10 max-h-[90vh] w-full max-w-[640px] overflow-y-auto"
             onTouchStart={(e) => {
               modalTouchX.current = e.touches[0]?.clientX ?? null;
             }}
@@ -1230,8 +1245,6 @@ export function KaryaClient({
               <p className="mt-3 leading-relaxed text-sm sm:text-base">{activeModalItem.description}</p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <ActionButtons item={activeModalItem} isModal />
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" className="btn" onClick={() => void shareItem(activeModalItem)}>
                   <Share2 aria-hidden="true" className="size-4" />
                   Bagikan
@@ -1249,7 +1262,7 @@ export function KaryaClient({
               {similarItems.length > 0 && (
                 <div className="similar mt-6">
                   <p className="mono muted mb-2 text-xs">Karya serupa</p>
-                  <ul className="grid gap-2 sm:grid-cols-3">
+                  <ul className="grid grid-cols-3 gap-2">
                     {similarItems.map((item) => (
                       <li key={item.teamName} className="min-w-0">
                         <button type="button" className="simcard" onClick={() => openModal(item, allVisible)}>

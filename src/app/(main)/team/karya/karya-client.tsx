@@ -58,12 +58,9 @@ export function KaryaClient({
   // Finalists always appear in the gallery and stay editable until the finalist gallery is published.
   const isFinalist = isAnnouncedFinalist;
   const isLocked = isFinalist ? showcaseFinalistsPublishedAt !== null : showcasePublishedAt !== null;
-  // Finalists: repository and demo are always public (competition rule); only the video needs consent.
+  // Finalists: every link is always public (finalist announcement), so there is no consent switch.
   const showLinks = consent || isFinalist;
-  const consentLabels = isFinalist
-    ? { on: "Video ditampilkan", off: "Video disembunyikan" }
-    : { on: "Tampil di galeri", off: "Tidak tampil di galeri" };
-  const consentLabel = consent ? consentLabels.on : consentLabels.off;
+  const consentLabel = consent ? "Tampil di galeri" : "Tidak tampil di galeri";
   // Same card as the public gallery (/karya), including the finalist header once announced.
   const cardData: KaryaItem = {
     teamName: team.team_name,
@@ -72,7 +69,7 @@ export function KaryaClient({
     imageUrl,
     githubUrl: showLinks ? (submission?.github_url ?? "") : "",
     liveDemoUrl: showLinks ? (submission?.live_demo_url ?? "") : "",
-    videoUrl: consent ? (submission?.video_url ?? "") : "",
+    videoUrl: showLinks ? (submission?.video_url ?? "") : "",
     isFinalist,
   };
 
@@ -162,30 +159,38 @@ export function KaryaClient({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <div
-                    className={cn(
-                      "flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors",
-                      consent ? "border-primary/40 bg-primary/5" : "bg-muted/30",
-                    )}
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <Label htmlFor="showcase-consent-page" className="font-semibold text-base">
-                        {consentLabel}
-                      </Label>
-                      <p id="showcase-consent-desc" className="text-muted-foreground text-xs leading-relaxed">
-                        {isFinalist
-                          ? "Repositori dan demo finalis selalu ditampilkan sesuai aturan lomba. Saya bersedia video tim saya juga ditampilkan."
-                          : "Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri."}
+                  {isFinalist ? (
+                    <div className="space-y-1 rounded-xl border border-primary/40 bg-primary/5 p-4">
+                      <p className="font-semibold text-base">Tampil di galeri finalis</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Sesuai pengumuman finalis, karya beserta tautan repositori, demo, dan video tim Anda selalu
+                        ditampilkan di galeri.
                       </p>
                     </div>
-                    <Switch
-                      id="showcase-consent-page"
-                      checked={consent}
-                      onCheckedChange={setConsent}
-                      aria-describedby="showcase-consent-desc"
-                      className="scale-125"
-                    />
-                  </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors",
+                        consent ? "border-primary/40 bg-primary/5" : "bg-muted/30",
+                      )}
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <Label htmlFor="showcase-consent-page" className="font-semibold text-base">
+                          {consentLabel}
+                        </Label>
+                        <p id="showcase-consent-desc" className="text-muted-foreground text-xs leading-relaxed">
+                          Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri.
+                        </p>
+                      </div>
+                      <Switch
+                        id="showcase-consent-page"
+                        checked={consent}
+                        onCheckedChange={setConsent}
+                        aria-describedby="showcase-consent-desc"
+                        className="scale-125"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="showcase-title">Judul karya</Label>
                     <Input

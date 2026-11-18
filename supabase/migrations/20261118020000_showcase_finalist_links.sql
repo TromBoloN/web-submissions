@@ -1,8 +1,8 @@
 -- ============================================================================
--- MIT-WEEK 2026: finalists' repository and demo links are always public
--- Per the competition rules, Top 5 projects must show their code and live demo in the
--- gallery. For finalists (showcase_is_finalist), github_url and live_demo_url are returned
--- without showcase_consent; video_url still needs consent (the team may keep it private).
+-- MIT-WEEK 2026: finalists' project links are always public
+-- Per the finalist announcement ("Galeri Karya (Wajib)": the gallery uses the team name
+-- and submission links), finalists (showcase_is_finalist) get github_url, live_demo_url and
+-- video_url without showcase_consent, so every gallery card has the same three links.
 -- Non-finalists are unchanged: every link needs consent.
 -- Applies to get_public_showcase() and get_public_showcase_winners(); return types are
 -- unchanged, so CREATE OR REPLACE keeps the existing grants (re-applied anyway).
@@ -32,7 +32,7 @@ AS $$
     t.showcase_image_path,
     CASE WHEN t.showcase_consent OR t.showcase_is_finalist IS TRUE THEN s.github_url ELSE '' END,
     CASE WHEN t.showcase_consent OR t.showcase_is_finalist IS TRUE THEN s.live_demo_url ELSE '' END,
-    CASE WHEN t.showcase_consent THEN s.video_url ELSE '' END,
+    CASE WHEN t.showcase_consent OR t.showcase_is_finalist IS TRUE THEN s.video_url ELSE '' END,
     COALESCE(
       (t.showcase_consent OR t.showcase_is_finalist IS TRUE)
         AND s.live_demo_url <> ''
@@ -85,7 +85,7 @@ AS $$
     t.showcase_image_path,
     CASE WHEN t.showcase_consent OR t.showcase_is_finalist IS TRUE THEN s.github_url ELSE '' END,
     CASE WHEN t.showcase_consent OR t.showcase_is_finalist IS TRUE THEN s.live_demo_url ELSE '' END,
-    CASE WHEN t.showcase_consent THEN s.video_url ELSE '' END
+    CASE WHEN t.showcase_consent OR t.showcase_is_finalist IS TRUE THEN s.video_url ELSE '' END
     FROM public.final_ranking AS ranking
     JOIN public.teams AS t ON t.id = ranking.team_id
     JOIN public.profiles AS p ON p.id = t.profile_id

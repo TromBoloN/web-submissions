@@ -1858,7 +1858,15 @@ html {
   display: grid;
   gap: 6px;
   width: 240px;
+  max-width: calc(100vw - 32px);
   padding: 10px;
+}
+/* On phones the button wraps to the start of its row, so open the menu to the right. */
+@media (max-width: 639px) {
+  .karya-page .remind {
+    right: auto;
+    left: 0;
+  }
 }
 
 /* ---- Opened project: video, similar projects ---- */
@@ -1890,6 +1898,7 @@ html {
   color: #06150d;
   font-weight: 800;
   font-size: 14px;
+  white-space: nowrap;
   cursor: pointer;
   box-shadow: 0 12px 26px -14px color-mix(in srgb, var(--shadow) 80%, transparent);
 }
@@ -1903,6 +1912,7 @@ html {
   flex-direction: column;
   gap: 4px;
   width: 100%;
+  height: 100%;
   padding: 0 0 8px;
   border: 1px solid var(--edge);
   border-radius: 12px;
@@ -1930,12 +1940,48 @@ html {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+@media (max-width: 639px) {
+  .karya-page .simtitle {
+    font-size: 12px;
+  }
+}
 .karya-page .simteam {
+  margin-top: auto;
   padding: 0 10px;
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---- Opened project: entrance and project switch ---- */
+.karya-page .mback {
+  animation: karya-m-fade 0.2s ease both;
+}
+.karya-page .mpanel {
+  animation: karya-m-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+/* The image is keyed by project, so it fades in again on every switch. */
+.karya-page .mpanel > .thumb {
+  animation: karya-m-fade 0.3s ease both;
+}
+@keyframes karya-m-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes karya-m-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .karya-page .mback,
+  .karya-page .mpanel,
+  .karya-page .mpanel > .thumb {
+    animation: none;
+  }
 }
 
 /* ---- Finish moment ---- */
