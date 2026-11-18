@@ -17,7 +17,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Screen | URL | Folder (under `src/app/`) | Data |
 | --- | --- | --- | --- |
 | Login | /login | `(auth)/login`, `(auth)/_components` | Auth, `get_public_contact_whatsapp()`, link to gallery |
-| Public gallery | /karya (`?karya=<slug>` opens one project) | `karya` (`page.tsx`, `karya-client.tsx`, `karya-card.tsx` shared card + editor previews, `karya-spotlight.tsx` "Sorotan" carousel, `karya-visitor.ts` Simpan/Dilihat in localStorage, `karya-utils.ts` slugs + daily pick, `karya-hero.tsx`, `karya-logo.tsx`, `karya-constants.ts`) | `get_public_showcase()`, `get_public_showcase_winners()` (anon RPCs) |
+| Public gallery | /karya (`?karya=<slug>` opens one project) | `karya` (`page.tsx`, `karya-client.tsx`, `karya-card.tsx` shared card + editor previews, `karya-spotlight.tsx` "Sorotan" carousel, `karya-visitor.ts` Simpan/Dilihat in localStorage, `karya-utils.ts` slugs, video embeds, Karya serupa, calendar reminder, `karya-hero.tsx`, `karya-logo.tsx`, `karya-constants.ts`) | `get_public_showcase()`, `get_public_showcase_winners()` (anon RPCs) |
 | Admin dashboard | /admin | `(main)/admin` (`page.tsx`, `dashboard-client.tsx`, `dashboard-countdown.tsx`) | counts, deadline, submissions, judging, ranking, audit |
 | Accounts | /admin/akun | `(main)/admin/akun` | `profiles` + Auth (service role) |
 | Audit | /admin/audit | `(main)/admin/audit/page.tsx` | `audit_logs` + `profiles` |

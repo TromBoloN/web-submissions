@@ -18,6 +18,8 @@ export type KaryaItem = {
   githubUrl: string;
   liveDemoUrl: string;
   videoUrl: string;
+  /** Last admin link check found the demo reachable (only when the link is shown). */
+  demoOk?: boolean;
   isFinalist?: boolean;
   winnerRank?: number;
   winnerScore?: number;
@@ -203,6 +205,16 @@ export function SaveButton({
   );
 }
 
+/** "Demo aktif": the last committee link check reached this demo. */
+export function DemoOkMark() {
+  return (
+    <span className="demook mono" title="Tautan demo berhasil diakses saat pemeriksaan terakhir panitia">
+      <i aria-hidden="true" />
+      Demo aktif
+    </span>
+  );
+}
+
 /** Small "Dilihat" mark for projects this visitor already opened. */
 export function SeenMark() {
   return (
@@ -260,7 +272,10 @@ export function CardView({
       </div>
 
       <div className="cb">
-        <p className="mono tm">Oleh {item.teamName}</p>
+        <p className="mono tm">
+          Oleh {item.teamName}
+          {item.demoOk && <DemoOkMark />}
+        </p>
         <h3>
           <button type="button" className="tt" onClick={onOpenModal}>
             {item.title}

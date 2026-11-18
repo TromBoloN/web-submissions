@@ -623,6 +623,8 @@ export type Database = {
         Returns: {
           github_url: string;
           live_demo_url: string;
+          /** Added by 20261118010000; absent until that migration is applied. */
+          live_demo_ok?: boolean;
           showcase_description: string;
           showcase_image_path: string | null;
           showcase_title: string;

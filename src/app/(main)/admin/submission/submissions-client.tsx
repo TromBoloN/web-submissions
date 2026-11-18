@@ -599,6 +599,35 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
     setPage(1);
   };
 
+  // "Periksa ulang semua": one request per team (no single long-running request), 3 at a time.
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
+  const handleRecheckAll = async () => {
+    const teamIds = rows.filter((r) => r.submission_id).map((r) => r.team_id);
+    if (teamIds.length === 0) return;
+    let done = 0;
+    let failed = 0;
+    setBulkProgress({ done, total: teamIds.length, failed });
+    const queue = [...teamIds];
+    const worker = async () => {
+      for (let teamId = queue.shift(); teamId; teamId = queue.shift()) {
+        try {
+          const res = await adminRecheckLinks(teamId);
+          if (!res.ok) failed += 1;
+        } catch {
+          failed += 1;
+        }
+        done += 1;
+        setBulkProgress({ done, total: teamIds.length, failed });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    setBulkProgress(null);
+    if (failed > 0)
+      toast.error(`${teamIds.length - failed} tim diperiksa, ${failed} gagal. Coba lagi untuk yang gagal.`);
+    else toast.success(`Tautan ${teamIds.length} tim selesai diperiksa ulang.`);
+    router.refresh();
+  };
+
   const handleRecheck = async (teamId: string) => {
     setRecheckingId(teamId);
     try {
@@ -825,12 +854,23 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
           <h1 className="font-semibold text-2xl">Submission</h1>
           <p className="text-muted-foreground">Pantau dan kelola berkas submission dari seluruh tim peserta.</p>
         </div>
-        <Button variant="outline" asChild>
-          <a href="/admin/submission/export" download>
-            <Download className="mr-2 size-4" />
-            Ekspor CSV
-          </a>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            disabled={bulkProgress !== null}
+            onClick={() => void handleRecheckAll()}
+            title="Periksa ulang tautan GitHub, demo, dan video semua tim. Hasilnya dipakai untuk tanda Demo aktif di galeri."
+          >
+            <RotateCw className={`mr-2 size-4 ${bulkProgress ? "animate-spin" : ""}`} />
+            {bulkProgress ? `Memeriksa ${bulkProgress.done}/${bulkProgress.total}...` : "Periksa ulang semua"}
+          </Button>
+          <Button variant="outline" asChild>
+            <a href="/admin/submission/export" download>
+              <Download className="mr-2 size-4" />
+              Ekspor CSV
+            </a>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

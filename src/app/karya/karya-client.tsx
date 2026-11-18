@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Bookmark, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Share2, Shuffle, X } from "lucide-react";
+import {
+  BellRing,
+  Bookmark,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  List,
+  Share2,
+  Shuffle,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -11,6 +22,7 @@ import {
   ActionButtons,
   CardThumbnail,
   CardView,
+  DemoOkMark,
   GhIcon,
   type KaryaItem,
   SaveButton,
@@ -20,8 +32,8 @@ import {
 import { KARYA_DATES } from "./karya-constants";
 import { KaryaLogo } from "./karya-logo";
 import { SpotlightCarousel } from "./karya-spotlight";
-import { karyaSlug } from "./karya-utils";
-import { hasSeenIntro, rememberIntroSeen, useKaryaVisitor } from "./karya-visitor";
+import { findSimilar, getVideoEmbed, karyaSlug, winnersCalendarIcs, winnersGoogleCalendarUrl } from "./karya-utils";
+import { hasSeenIntro, hasShownFinish, rememberFinishShown, rememberIntroSeen, useKaryaVisitor } from "./karya-visitor";
 
 export type { KaryaItem } from "./karya-card";
 
@@ -82,6 +94,7 @@ export function KaryaClient({
   finalists,
   spotlightNames,
   initialKarya,
+  initialQuery,
 }: {
   initialState: "locked" | "open" | "win";
   cards: KaryaItem[];
@@ -91,13 +104,16 @@ export function KaryaClient({
   spotlightNames: string[];
   /** Slug from ?karya= in a shared project link. */
   initialKarya: string | null;
+  /** ?q= from the address bar, so a search can be shared. */
+  initialQuery: string;
 }) {
   const state = initialState;
   const isLocked = state === "locked";
   const isWin = state === "win";
 
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
+  const [sortMode, setSortMode] = useState<"acak" | "unseen" | "az">("acak");
   // Opened project plus the list it was opened from, so previous/next follow that list.
   const [modal, setModal] = useState<{ list: KaryaItem[]; index: number } | null>(null);
   const activeModalItem = modal ? (modal.list[modal.index] ?? null) : null;
@@ -224,7 +240,14 @@ export function KaryaClient({
 
   // The works list: "Favoritku" (saved projects from any section) or the other projects, then search.
   const filteredRestCards = useMemo(() => {
-    const base = showSavedOnly ? savedItems : restCards;
+    const source = showSavedOnly ? savedItems : restCards;
+    // "acak" keeps the server order (random per team); the others re-sort a copy.
+    let base = source;
+    if (sortMode === "az") base = [...source].sort((a, b) => a.title.localeCompare(b.title, "id"));
+    else if (sortMode === "unseen") {
+      const isSeen = (item: KaryaItem) => seen.has(karyaSlug(item.teamName));
+      base = [...source.filter((item) => !isSeen(item)), ...source.filter(isSeen)];
+    }
     const q = query.trim().toLowerCase();
     if (!q) return base;
     return base.filter(
@@ -233,7 +256,7 @@ export function KaryaClient({
         c.title.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q),
     );
-  }, [restCards, savedItems, showSavedOnly, query]);
+  }, [restCards, savedItems, showSavedOnly, query, sortMode, seen]);
 
   // Remaining 2 finalists in winner release
   const remainingFinalists = useMemo(() => {
@@ -345,6 +368,113 @@ export function KaryaClient({
   }, [isModalOpen]);
 
   const modalTouchX = useRef<number | null>(null);
+
+  // Opened project extras: similar projects, video player, neighbouring images preloaded.
+  const similarItems = useMemo(
+    () => (activeModalItem ? findSimilar(allVisible, activeModalItem, 3) : []),
+    [activeModalItem, allVisible],
+  );
+  const videoEmbed = activeModalItem ? getVideoEmbed(activeModalItem.videoUrl) : null;
+  const [playingVideoFor, setPlayingVideoFor] = useState<string | null>(null);
+  const isVideoPlaying = Boolean(videoEmbed && activeModalItem && playingVideoFor === activeModalItem.teamName);
+
+  useEffect(() => {
+    if (!modal || modal.list.length < 2) return;
+    const n = modal.list.length;
+    for (const offset of [1, -1]) {
+      const url = modal.list[(modal.index + offset + n) % n]?.imageUrl;
+      if (url) {
+        const img = new Image();
+        img.src = url;
+      }
+    }
+  }, [modal]);
+
+  // Search text lives in ?q= so a search can be shared (debounced, replaces history).
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const url = new URL(window.location.href);
+        const q = query.trim();
+        if (q) url.searchParams.set("q", q);
+        else url.searchParams.delete("q");
+        if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url);
+      } catch {
+        // convenience only
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  // Shortcuts: "/" focuses search, "R" opens a random project (ignored while typing).
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (isLocked) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      if (e.key === "/") {
+        e.preventDefault();
+        if (modal) closeModal();
+        searchRef.current?.focus();
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        openRandom();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isLocked, modal, closeModal, openRandom]);
+
+  // "Ingatkan saya": winners announcement on 25 Nov (no gallery changes are planned before then).
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const downloadReminder = () => {
+    const galleryUrl = `${window.location.origin}/karya`;
+    const blob = new Blob([winnersCalendarIcs(galleryUrl)], { type: "text/calendar;charset=utf-8" });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = "pengumuman-juara-mitweek-2026.ics";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+    setReminderOpen(false);
+    toast.success("Pengingat 25 November disimpan. Buka berkasnya untuk menambah ke kalender.");
+  };
+  const googleCalendarHref = () => winnersGoogleCalendarUrl(`${window.location.origin}/karya`);
+
+  // Finish moment: the first time this visitor has opened every visible project.
+  const [showFinish, setShowFinish] = useState(false);
+  const prevSeenCount = useRef<number | null>(null);
+  useEffect(() => {
+    if (!visitorReady || allVisible.length === 0) return;
+    const before = prevSeenCount.current;
+    prevSeenCount.current = seenCount;
+    if (before !== null && before < allVisible.length && seenCount >= allVisible.length && !hasShownFinish()) {
+      rememberFinishShown();
+      setShowFinish(true);
+    }
+  }, [visitorReady, seenCount, allVisible.length]);
+
+  const shareGallery = useCallback(async () => {
+    const url = `${window.location.origin}/karya`;
+    if (window.matchMedia("(pointer: coarse)").matches && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "GUARDIANS · Galeri Karya MIT-WEEK 2026", url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Tautan galeri disalin.");
+    } catch {
+      toast.error("Tautan gagal disalin. Salin dari bilah alamat browser.");
+    }
+  }, []);
 
   const shareItem = useCallback(async (item: KaryaItem) => {
     const url = `${window.location.origin}/karya?karya=${karyaSlug(item.teamName)}`;
@@ -623,6 +753,38 @@ export function KaryaClient({
                     <CalendarDays aria-hidden="true" className="size-4" />
                     {showSchedule ? "Tutup jadwal" : "Lihat jadwal"}
                   </button>
+                  {!isWin && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="btn"
+                        aria-expanded={reminderOpen}
+                        aria-haspopup="true"
+                        onClick={() => setReminderOpen((v) => !v)}
+                      >
+                        <BellRing aria-hidden="true" className="size-4" />
+                        Ingatkan saya
+                      </button>
+                      {reminderOpen && (
+                        <div className="remind box" role="menu" aria-label="Pengingat pengumuman juara">
+                          <p className="mono muted px-1 pb-1 text-xs">Pengumuman juara · 25 Nov 2026</p>
+                          <button type="button" role="menuitem" className="btn w-full" onClick={downloadReminder}>
+                            Simpan ke kalender (.ics)
+                          </button>
+                          <a
+                            role="menuitem"
+                            className="btn w-full"
+                            href={googleCalendarHref()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setReminderOpen(false)}
+                          >
+                            Google Calendar
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="mono muted mt-4 text-xs">{`Galeri dibuka 18 Nov 2026 · Final ${KARYA_DATES.stage2Date} · Juara ${KARYA_DATES.stage3Date}`}</p>
@@ -775,17 +937,40 @@ export function KaryaClient({
                     <Bookmark aria-hidden="true" className="size-4" />
                     Favoritku{visitorReady && savedItems.length > 0 ? ` (${savedItems.length})` : ""}
                   </button>
+                  <label className="sr-only" htmlFor="sort">
+                    Urutkan karya
+                  </label>
+                  <select
+                    id="sort"
+                    className="btn sortsel"
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as "acak" | "unseen" | "az")}
+                  >
+                    <option value="acak">Urutan acak</option>
+                    <option value="unseen">Belum dilihat dulu</option>
+                    <option value="az">Judul A–Z</option>
+                  </select>
                   <label className="sr-only" htmlFor="q">
                     Cari nama tim atau judul karya
                   </label>
-                  <input
-                    id="q"
-                    type="search"
-                    placeholder="Cari nama tim atau judul..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="box w-full px-4 py-2.5 text-base md:w-64"
-                  />
+                  <div className="relative w-full md:w-64">
+                    <input
+                      ref={searchRef}
+                      id="q"
+                      type="search"
+                      placeholder="Cari nama tim atau judul..."
+                      title="Tekan / untuk mencari, R untuk karya acak"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      aria-keyshortcuts="/"
+                      className="box w-full px-4 py-2.5 pr-10 text-base"
+                    />
+                    {!query && (
+                      <span className="kbdhint mono" aria-hidden="true">
+                        /
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -840,7 +1025,10 @@ export function KaryaClient({
                     {visitorProps(item).seen && <SeenMark />}
                   </div>
                   <div className="min-w-0">
-                    <p className="mono tm">Oleh {item.teamName}</p>
+                    <p className="mono tm">
+                      Oleh {item.teamName}
+                      {item.demoOk && <DemoOkMark />}
+                    </p>
                     <h3>
                       <button type="button" className="tt" onClick={() => openModal(item, filteredRestCards)}>
                         {item.title}
@@ -973,9 +1161,31 @@ export function KaryaClient({
               stepModal(endX < startX ? 1 : -1);
             }}
           >
-            <div className="thumb" key={activeModalItem.teamName}>
-              <CardThumbnail item={activeModalItem} />
-            </div>
+            {isVideoPlaying && videoEmbed ? (
+              <div className="vidframe">
+                <iframe
+                  src={videoEmbed.embedUrl}
+                  title={`Video demo ${activeModalItem.title}`}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+            ) : (
+              <div className="thumb" key={activeModalItem.teamName}>
+                <CardThumbnail item={activeModalItem} />
+                {videoEmbed && (
+                  <button
+                    type="button"
+                    className="playbtn"
+                    onClick={() => setPlayingVideoFor(activeModalItem.teamName)}
+                  >
+                    <VidIcon />
+                    Putar video demo
+                  </button>
+                )}
+              </div>
+            )}
             <button
               ref={closeButtonRef}
               type="button"
@@ -988,7 +1198,10 @@ export function KaryaClient({
             </button>
             <div className="dbody p-5 sm:p-6">
               <div className="flex items-center justify-between gap-3">
-                <p className="mono muted text-xs">Oleh {activeModalItem.teamName}</p>
+                <p className="mono muted flex flex-wrap items-center gap-2 text-xs">
+                  Oleh {activeModalItem.teamName}
+                  {activeModalItem.demoOk && <DemoOkMark />}
+                </p>
                 {modal.list.length > 1 && (
                   <span className="mono muted text-xs" aria-live="polite">
                     {modal.index + 1} / {modal.list.length}
@@ -1015,6 +1228,24 @@ export function KaryaClient({
                   {visitorProps(activeModalItem).saved ? "Tersimpan" : "Simpan"}
                 </button>
               </div>
+              {similarItems.length > 0 && (
+                <div className="similar mt-6">
+                  <p className="mono muted mb-2 text-xs">Karya serupa</p>
+                  <ul className="grid gap-2 sm:grid-cols-3">
+                    {similarItems.map((item) => (
+                      <li key={item.teamName} className="min-w-0">
+                        <button type="button" className="simcard" onClick={() => openModal(item, allVisible)}>
+                          <span className="thumb">
+                            <CardThumbnail item={item} />
+                          </span>
+                          <span className="simtitle">{item.title}</span>
+                          <span className="mono muted simteam">{item.teamName}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="mnav mt-5">
                 <button
                   type="button"
@@ -1042,6 +1273,38 @@ export function KaryaClient({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finish moment: shown once, when the visitor has opened every project */}
+      {showFinish && (
+        <div className="finish box" role="status">
+          <p className="font-extrabold text-lg leading-tight">Kamu sudah menjelajah semua {allVisible.length} karya!</p>
+          <p className="muted mt-1 text-sm">
+            Terima kasih sudah mengenal para penjaga digital. Ajak temanmu ikut menjelajah.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" className="btn pri slim-cta" onClick={() => void shareGallery()}>
+              <Share2 aria-hidden="true" className="size-4" />
+              Bagikan galeri
+            </button>
+            {!isWin && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  downloadReminder();
+                  setShowFinish(false);
+                }}
+              >
+                <BellRing aria-hidden="true" className="size-4" />
+                Ingatkan saya 25 Nov
+              </button>
+            )}
+            <button type="button" className="btn" onClick={() => setShowFinish(false)}>
+              Tutup
+            </button>
           </div>
         </div>
       )}

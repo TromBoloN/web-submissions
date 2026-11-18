@@ -122,3 +122,10 @@ Independent of the others; app code is merged. Apply before judges need to corre
 - `update_my_score_feedback(p_stage, p_team_id, p_feedback)`: judge-only. Replaces `feedback` (max 2,000 chars) on the caller's own score with `status = 'final'`, even when `locked_at` is set or the stage results are released. Scores, lock and status never change. Writes `score_feedback_replaced` to `audit_logs` with the previous comment.
 - The release-lock triggers (`check_*_scores_not_released`) allow that one write only: the function sets a transaction-local flag (`mitweek.feedback_only_edit`) and the trigger checks nothing but `feedback`/`updated_at` changed. Clients cannot set the flag; `is_feedback_only_edit()` is not client-callable.
 - Teams see the new comment immediately through `get_my_results()` (still anonymous).
+
+### `20261118010000_showcase_demo_status.sql`
+
+Apply after `20261117000000`. The gallery code works without it (no "Demo aktif" marks until it is applied).
+
+- Drops and recreates `get_public_showcase()` with an extra `live_demo_ok BOOLEAN` column: `TRUE` only when the team's demo link is shown (consent) and `submissions.link_check -> 'liveDemo' ->> 'status' = 'ok'`. Rows and visibility rules are the same as `20261117000000`.
+- Freshness depends on the last link check; Admin → Submission → "Periksa ulang semua" re-checks every team.

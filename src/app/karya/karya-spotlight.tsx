@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { ActionButtons, CardThumbnail, type KaryaItem } from "./karya-card";
+import { ActionButtons, CardThumbnail, DemoOkMark, type KaryaItem } from "./karya-card";
 
 const ROTATE_MS = 6000;
 
 /**
- * "Sorotan hari ini": a small carousel of projects picked per day (see pickDaily), never by score.
+ * "Sorotan": a small carousel of projects picked at random on every visit (page.tsx), never by score.
  * Auto-rotates unless the visitor hovers, focuses inside, has the tab hidden, or prefers reduced motion.
  */
 export function SpotlightCarousel({ items, onOpen }: { items: KaryaItem[]; onOpen: (item: KaryaItem) => void }) {
@@ -40,7 +40,7 @@ export function SpotlightCarousel({ items, onOpen }: { items: KaryaItem[]; onOpe
       id="spot"
       className="mt-8"
       aria-roledescription="carousel"
-      aria-label="Sorotan hari ini"
+      aria-label="Sorotan"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -50,8 +50,8 @@ export function SpotlightCarousel({ items, onOpen }: { items: KaryaItem[]; onOpe
     >
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-extrabold text-2xl tracking-tight sm:text-3xl">Sorotan hari ini</h2>
-          <p className="muted mt-1 text-sm">Pilihan acak yang berganti setiap hari, bukan berdasarkan nilai.</p>
+          <h2 className="font-extrabold text-2xl tracking-tight sm:text-3xl">Sorotan</h2>
+          <p className="muted mt-1 text-sm">Pilihan acak yang berganti setiap kunjungan, bukan berdasarkan nilai.</p>
         </div>
         {count > 1 && (
           <div className="flex items-center gap-2">
@@ -93,8 +93,9 @@ export function SpotlightCarousel({ items, onOpen }: { items: KaryaItem[]; onOpe
             <CardThumbnail item={item} />
           </button>
           <div className="spot-body">
-            <p className="mono muted text-xs">
+            <p className="mono muted flex flex-wrap items-center gap-2 text-xs">
               Sorotan {index + 1}/{count} · Oleh {item.teamName}
+              {item.demoOk && <DemoOkMark />}
             </p>
             <h3 className="spot-title">
               <button type="button" className="tt" onClick={() => onOpen(item)}>

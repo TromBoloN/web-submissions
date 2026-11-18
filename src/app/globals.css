@@ -1802,6 +1802,167 @@ html {
   }
 }
 
+/* ---- "Demo aktif", sort, shortcut hint, reminder menu ---- */
+.karya-page .demook {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--acc) 55%, transparent);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.karya-page .demook i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acc);
+}
+.karya-page .sortsel {
+  appearance: auto;
+  padding-right: 10px;
+}
+.karya-page .kbdhint {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  padding: 0 7px;
+  border-radius: 6px;
+  border: 1px solid var(--edge);
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .karya-page .kbdhint {
+    display: none;
+  }
+}
+.karya-page .remind {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  width: 240px;
+  padding: 10px;
+}
+
+/* ---- Opened project: video, similar projects ---- */
+.karya-page .vidframe {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.karya-page .vidframe iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.karya-page .playbtn {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  background: var(--acc);
+  color: #06150d;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 12px 26px -14px color-mix(in srgb, var(--shadow) 80%, transparent);
+}
+.karya-page .playbtn:focus-visible,
+.karya-page .simcard:focus-visible {
+  outline: 2px solid var(--vio);
+  outline-offset: 2px;
+}
+.karya-page .simcard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.karya-page .simcard:hover {
+  transform: translateY(-2px);
+}
+.karya-page .simcard .thumb {
+  display: block;
+  width: 100%;
+}
+.karya-page .simtitle {
+  padding: 0 10px;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.karya-page .simteam {
+  padding: 0 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Finish moment ---- */
+/* Centered with insets, not a transform: the entrance animation animates transform. */
+.karya-page .finish {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  max-width: 440px;
+  margin-inline: auto;
+  padding: 18px 20px;
+  border: 2px solid var(--line);
+  animation: finish-in 0.4s ease both;
+}
+@keyframes finish-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .karya-page .finish {
+    animation: none;
+  }
+}
+
 /* ---- Opened project: close + previous / random / next ---- */
 .karya-page .mclose {
   position: absolute;

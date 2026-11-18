@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { KARYA_DESCRIPTION_FALLBACK } from "./karya-card";
 import { KaryaClient, type KaryaItem } from "./karya-client";
-import { karyaSlug, pickDaily, witaDateKey } from "./karya-utils";
+import { karyaSlug } from "./karya-utils";
 
 const BASE_TITLE = "GUARDIANS · Galeri Karya MIT-WEEK 2026";
 const BASE_DESCRIPTION =
@@ -21,6 +21,13 @@ async function readKaryaParam(searchParams: SearchParams): Promise<string | null
   const raw = (await searchParams).karya;
   const value = Array.isArray(raw) ? raw[0] : raw;
   return value && /^[a-z0-9-]{1,80}$/.test(value) ? value : null;
+}
+
+/** ?q= search text, so a search can be shared as a link. */
+async function readQueryParam(searchParams: SearchParams): Promise<string> {
+  const raw = (await searchParams).q;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return (value ?? "").trim().slice(0, 80);
 }
 
 /** Everything the gallery may show right now. Cached per request (page + metadata share it). */
@@ -60,6 +67,7 @@ const loadGallery = cache(async () => {
   }
 
   const finalistNames = new Set((finalistTeams ?? []).map((t) => t.team_name));
+  const demoOkByTeam = new Map((rawShowcase ?? []).map((row) => [row.team_name, row.live_demo_ok === true]));
 
   const winners: KaryaItem[] = (isWinnersPublished ? (rawWinners ?? []) : []).map((item) => ({
     teamName: item.team_name,
@@ -71,6 +79,7 @@ const loadGallery = cache(async () => {
     videoUrl: item.video_url,
     winnerRank: item.winner_rank,
     winnerScore: item.final_score,
+    demoOk: demoOkByTeam.get(item.team_name) ?? false,
     isFinalist: true,
   }));
 
@@ -82,6 +91,7 @@ const loadGallery = cache(async () => {
     githubUrl: item.github_url,
     liveDemoUrl: item.live_demo_url,
     videoUrl: item.video_url,
+    demoOk: item.live_demo_ok === true,
     isFinalist: finalistNames.has(item.team_name),
   }));
 
@@ -126,7 +136,11 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 }
 
 export default async function PublicKaryaPage({ searchParams }: { searchParams: SearchParams }) {
-  const [gallery, initialKarya] = await Promise.all([loadGallery(), readKaryaParam(searchParams)]);
+  const [gallery, initialKarya, initialQuery] = await Promise.all([
+    loadGallery(),
+    readKaryaParam(searchParams),
+    readQueryParam(searchParams),
+  ]);
 
   if (!gallery) {
     return (
@@ -139,13 +153,12 @@ export default async function PublicKaryaPage({ searchParams }: { searchParams: 
     );
   }
 
-  // "Sorotan hari ini": same picks for everyone on a given WITA day, never score-based.
-  const spotlightNames = pickDaily(
-    gallery.visible,
-    (item) => item.teamName,
-    witaDateKey(new Date()),
-    SPOTLIGHT_COUNT,
-  ).map((item) => item.teamName);
+  // "Sorotan": a fresh random pick on every visit (rendered per request), never score-based.
+  const spotlightNames = [...gallery.visible]
+    .map((item) => ({ name: item.teamName, rank: Math.random() }))
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, SPOTLIGHT_COUNT)
+    .map((entry) => entry.name);
 
   return (
     <KaryaClient
@@ -155,6 +168,7 @@ export default async function PublicKaryaPage({ searchParams }: { searchParams: 
       finalists={gallery.finalists}
       spotlightNames={spotlightNames}
       initialKarya={initialKarya}
+      initialQuery={initialQuery}
     />
   );
 }

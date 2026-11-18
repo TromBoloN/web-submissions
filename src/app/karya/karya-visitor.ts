@@ -77,3 +77,22 @@ export function useKaryaVisitor() {
 
   return { saved, seen, ready, toggleSaved, markSeen };
 }
+
+const FINISH_KEY = "karya:finish-shown:v1";
+
+/** The "explored everything" moment is shown once per browser. */
+export function hasShownFinish(): boolean {
+  try {
+    return window.localStorage.getItem(FINISH_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function rememberFinishShown() {
+  try {
+    window.localStorage.setItem(FINISH_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
