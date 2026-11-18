@@ -1592,6 +1592,233 @@ html {
   transform: scale(1.2);
   opacity: 0.9;
 }
+
+/* ---- Visitor features: Simpan, Dilihat, progress ---- */
+.karya-page .savebtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--edge);
+  background: var(--glass);
+  color: var(--ink);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    background-color 0.15s;
+}
+.karya-page .savebtn svg {
+  width: 18px;
+  height: 18px;
+}
+.karya-page .savebtn:hover {
+  transform: translateY(-1px);
+}
+.karya-page .savebtn.on {
+  background: var(--acc);
+  color: #06150d;
+  border-color: transparent;
+}
+.karya-page .savebtn.inrow {
+  position: static;
+  width: 42px;
+  height: auto;
+  align-self: stretch;
+}
+.karya-page .savebtn:focus-visible,
+.karya-page .spot-dots button:focus-visible,
+.karya-page .spot-thumb:focus-visible {
+  outline: 2px solid var(--vio);
+  outline-offset: 2px;
+}
+.karya-page .seenmark {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  background: var(--glass);
+  font-size: 11px;
+  font-weight: 600;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.karya-page .seenmark svg {
+  width: 12px;
+  height: 12px;
+}
+.karya-page .prog {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.karya-page .prog-bar {
+  width: min(220px, 100%);
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  background: var(--glass);
+  overflow: hidden;
+}
+.karya-page .prog-bar i {
+  display: block;
+  height: 100%;
+  background: var(--acc);
+  transition: width 0.4s ease;
+}
+.karya-page .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---- Slim hero once the gallery is open ---- */
+.karya-page .hero.slim {
+  border-width: 2px;
+  box-shadow: 5px 5px 0 var(--shadow);
+}
+.karya-page .slim-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+}
+.karya-page .slim-ttl {
+  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.9rem, 6vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.karya-page .btn.slim-cta {
+  flex: none;
+}
+
+/* ---- "Sorotan hari ini" carousel ---- */
+.karya-page .spot {
+  overflow: hidden;
+}
+.karya-page .spot-slide {
+  display: grid;
+  animation: spot-in 0.45s ease both;
+}
+@media (min-width: 768px) {
+  .karya-page .spot-slide {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  }
+}
+.karya-page .spot-thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--edge);
+  background: transparent;
+  cursor: pointer;
+}
+@media (min-width: 768px) {
+  .karya-page .spot-thumb {
+    border-bottom: 0;
+    border-right: 1px solid var(--edge);
+  }
+}
+.karya-page .spot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px;
+  min-width: 0;
+}
+.karya-page .spot-title {
+  font-weight: 800;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.karya-page .spot-title .tt {
+  text-align: left;
+}
+.karya-page .spot-desc {
+  color: var(--muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.karya-page .spot-body .act {
+  display: flex;
+  gap: 8px;
+}
+.karya-page .spot-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.karya-page .spot-dots button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    width 0.25s,
+    background-color 0.25s;
+}
+.karya-page .spot-dots button.on {
+  width: 28px;
+  background: var(--acc);
+}
+@keyframes spot-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .karya-page .spot-slide {
+    animation: none;
+  }
+}
+
+/* ---- Opened project: close + previous / random / next ---- */
+.karya-page .mclose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.karya-page .mnav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--edge);
+}
 .karya-page .fb {
   position: absolute;
   inset: 0;

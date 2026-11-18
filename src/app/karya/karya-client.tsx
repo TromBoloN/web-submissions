@@ -1,14 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { LayoutGrid, List } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Share2, Shuffle, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
-import { ActionButtons, CardThumbnail, CardView, GhIcon, type KaryaItem, VidIcon } from "./karya-card";
+import {
+  ActionButtons,
+  CardThumbnail,
+  CardView,
+  GhIcon,
+  type KaryaItem,
+  SaveButton,
+  SeenMark,
+  VidIcon,
+} from "./karya-card";
 import { KARYA_DATES } from "./karya-constants";
 import { KaryaLogo } from "./karya-logo";
+import { SpotlightCarousel } from "./karya-spotlight";
+import { karyaSlug } from "./karya-utils";
+import { hasSeenIntro, rememberIntroSeen, useKaryaVisitor } from "./karya-visitor";
 
 export type { KaryaItem } from "./karya-card";
 
@@ -67,11 +80,17 @@ export function KaryaClient({
   cards,
   winners,
   finalists,
+  spotlightNames,
+  initialKarya,
 }: {
   initialState: "locked" | "open" | "win";
   cards: KaryaItem[];
   winners: KaryaItem[];
   finalists: KaryaItem[];
+  /** Team names for "Sorotan hari ini", picked on the server per WITA day. */
+  spotlightNames: string[];
+  /** Slug from ?karya= in a shared project link. */
+  initialKarya: string | null;
 }) {
   const state = initialState;
   const isLocked = state === "locked";
@@ -79,7 +98,12 @@ export function KaryaClient({
 
   const [view, setView] = useState<"grid" | "list">("grid");
   const [query, setQuery] = useState("");
-  const [activeModalItem, setActiveModalItem] = useState<KaryaItem | null>(null);
+  // Opened project plus the list it was opened from, so previous/next follow that list.
+  const [modal, setModal] = useState<{ list: KaryaItem[]; index: number } | null>(null);
+  const activeModalItem = modal ? (modal.list[modal.index] ?? null) : null;
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const { saved, seen, ready: visitorReady, toggleSaved, markSeen } = useKaryaVisitor();
 
   // Floating thumbnail preview in list view
   const [hoveredItem, setHoveredItem] = useState<KaryaItem | null>(null);
@@ -92,17 +116,18 @@ export function KaryaClient({
   const themeButtonRef = useRef<HTMLButtonElement>(null);
   const [themeSpin, setThemeSpin] = useState(false);
 
-  // Loader + hero entrance on every refresh or entry
+  // Intro animation: first visit in this browser only, and never when arriving through a project link.
   const [showLoader, setShowLoader] = useState(false);
   const [loaderOpen, setLoaderOpen] = useState(false);
   const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || hasSeenIntro() || initialKarya) {
       setEntered(true);
       return;
     }
 
+    rememberIntroSeen();
     setShowLoader(true);
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
     const openTimer = setTimeout(() => {
@@ -117,7 +142,7 @@ export function KaryaClient({
       clearTimeout(openTimer);
       if (hideTimer) clearTimeout(hideTimer);
     };
-  }, []);
+  }, [initialKarya]);
 
   const handleDismissLoader = () => {
     setLoaderOpen(true);
@@ -171,16 +196,44 @@ export function KaryaClient({
     return cards.filter((c) => !finalistNames.has(c.teamName) && !winnerNames.has(c.teamName));
   }, [cards, finalists, winners]);
 
+  // Every project visible in this phase (winners, finalists, others), without duplicates.
+  const allVisible = useMemo(() => {
+    const names = new Set<string>();
+    const out: KaryaItem[] = [];
+    for (const item of [...winners, ...finalists, ...cards]) {
+      if (names.has(item.teamName)) continue;
+      names.add(item.teamName);
+      out.push(item);
+    }
+    return out;
+  }, [winners, finalists, cards]);
+
+  const spotlightItems = useMemo(() => {
+    const byName = new Map(allVisible.map((item) => [item.teamName, item]));
+    return spotlightNames.map((name) => byName.get(name)).filter((item): item is KaryaItem => Boolean(item));
+  }, [allVisible, spotlightNames]);
+
+  const savedItems = useMemo(
+    () => allVisible.filter((item) => saved.has(karyaSlug(item.teamName))),
+    [allVisible, saved],
+  );
+  const seenCount = useMemo(
+    () => allVisible.filter((item) => seen.has(karyaSlug(item.teamName))).length,
+    [allVisible, seen],
+  );
+
+  // The works list: "Favoritku" (saved projects from any section) or the other projects, then search.
   const filteredRestCards = useMemo(() => {
+    const base = showSavedOnly ? savedItems : restCards;
     const q = query.trim().toLowerCase();
-    if (!q) return restCards;
-    return restCards.filter(
+    if (!q) return base;
+    return base.filter(
       (c) =>
         c.teamName.toLowerCase().includes(q) ||
         c.title.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q),
     );
-  }, [restCards, query]);
+  }, [restCards, savedItems, showSavedOnly, query]);
 
   // Remaining 2 finalists in winner release
   const remainingFinalists = useMemo(() => {
@@ -200,6 +253,120 @@ export function KaryaClient({
       { item: r3, rank: 3, orderClass: "p3" },
     ].filter((p): p is { item: KaryaItem; rank: number; orderClass: string } => Boolean(p.item));
   }, [winners]);
+
+  const visitorProps = (item: KaryaItem) => {
+    const slug = karyaSlug(item.teamName);
+    return { saved: saved.has(slug), seen: visitorReady && seen.has(slug), onToggleSave: () => toggleSaved(slug) };
+  };
+
+  // Keep ?karya=<slug> in the address bar in step with the opened project, so it can be copied and shared.
+  const syncUrl = useCallback((item: KaryaItem | null) => {
+    try {
+      const url = new URL(window.location.href);
+      if (item) url.searchParams.set("karya", karyaSlug(item.teamName));
+      else url.searchParams.delete("karya");
+      window.history.replaceState(window.history.state, "", url);
+    } catch {
+      // URL sync is a convenience only.
+    }
+  }, []);
+
+  const showItem = useCallback(
+    (list: KaryaItem[], index: number) => {
+      const item = list[index];
+      if (!item) return;
+      setModal({ list, index });
+      markSeen(karyaSlug(item.teamName));
+      syncUrl(item);
+    },
+    [markSeen, syncUrl],
+  );
+
+  const openModal = useCallback(
+    (item: KaryaItem, list: KaryaItem[]) => {
+      const index = list.findIndex((entry) => entry.teamName === item.teamName);
+      if (index === -1) showItem([item], 0);
+      else showItem(list, index);
+    },
+    [showItem],
+  );
+
+  const closeModal = useCallback(() => {
+    setModal(null);
+    syncUrl(null);
+  }, [syncUrl]);
+
+  const stepModal = useCallback(
+    (delta: number) => {
+      if (!modal || modal.list.length < 2) return;
+      const n = modal.list.length;
+      showItem(modal.list, (modal.index + delta + n) % n);
+    },
+    [modal, showItem],
+  );
+
+  // Random project, preferring ones this visitor has not opened yet.
+  const openRandom = useCallback(() => {
+    const currentName = activeModalItem?.teamName;
+    const others = allVisible.filter((item) => item.teamName !== currentName);
+    if (others.length === 0) return;
+    const unseen = others.filter((item) => !seen.has(karyaSlug(item.teamName)));
+    const pool = unseen.length > 0 ? unseen : others;
+    openModal(pool[Math.floor(Math.random() * pool.length)], allVisible);
+  }, [activeModalItem, allVisible, seen, openModal]);
+
+  // Shared link: open that project once. A slug that is not visible (yet) just shows the gallery.
+  const openedInitial = useRef(false);
+  useEffect(() => {
+    if (openedInitial.current || !initialKarya) return;
+    openedInitial.current = true;
+    const item = allVisible.find((entry) => karyaSlug(entry.teamName) === initialKarya);
+    if (item) openModal(item, allVisible);
+    else syncUrl(null);
+  }, [initialKarya, allVisible, openModal, syncUrl]);
+
+  // Keyboard: arrows move between projects, Escape closes.
+  useEffect(() => {
+    if (!modal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeModal();
+      else if (e.key === "ArrowRight") stepModal(1);
+      else if (e.key === "ArrowLeft") stepModal(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [modal, closeModal, stepModal]);
+
+  // Move focus into the dialog when it opens.
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const isModalOpen = modal !== null;
+  useEffect(() => {
+    if (isModalOpen) closeButtonRef.current?.focus();
+  }, [isModalOpen]);
+
+  const modalTouchX = useRef<number | null>(null);
+
+  const shareItem = useCallback(async (item: KaryaItem) => {
+    const url = `${window.location.origin}/karya?karya=${karyaSlug(item.teamName)}`;
+    if (window.matchMedia("(pointer: coarse)").matches && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: `${item.title} · Galeri Karya MIT-WEEK 2026`,
+          text: `Lihat karya ${item.teamName} di galeri MIT-WEEK 2026.`,
+          url,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Tautan karya disalin.");
+    } catch {
+      toast.error("Tautan gagal disalin. Salin dari bilah alamat browser.");
+    }
+  }, []);
 
   const toggleTheme = () => {
     const next = isDark ? "light" : "dark";
@@ -262,6 +429,62 @@ export function KaryaClient({
     worksNoteText = "Karya lainnya tampil dalam urutan acak.";
   }
 
+  let worksTitle = isLocked ? "Karya peserta" : "Karya lainnya";
+  if (showSavedOnly) worksTitle = "Favoritku";
+
+  // Full schedule: always shown while locked, behind "Lihat jadwal" once the gallery is open.
+  const timelineSection = (
+    <section id="tl" className="mt-10" aria-label="Jadwal">
+      <p className="mono muted mb-3 text-xs">Jadwal · Web Development Competition MIT-WEEK 2026</p>
+      <ol id="tlist" className="grid w-full gap-6 md:grid-cols-3">
+        {TIMELINE_STAGES.map((stage, index) => {
+          const status = getStageStatus(index, activeStage);
+          const isDone = status === "done";
+          const isNow = status === "now";
+
+          return (
+            <li key={stage.label} className="box relative p-5">
+              <div className="flex items-center gap-3">
+                <svg width="30" height="34" viewBox="0 0 38 42" aria-hidden="true">
+                  <polygon
+                    points="19,2 36,11 36,31 19,40 2,31 2,11"
+                    fill={isNow ? "var(--acc)" : "var(--card)"}
+                    stroke="var(--line)"
+                    strokeWidth="3"
+                  />
+                  {isDone && (
+                    <path d="M12 22l5 5 9-11" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" />
+                  )}
+                  {isNow && <circle cx="19" cy="21" r="4.5" fill="#06150d" />}
+                  {!isDone && !isNow && index === 0 && (
+                    <>
+                      <rect
+                        x="12"
+                        y="20"
+                        width="14"
+                        height="10"
+                        rx="2"
+                        fill="none"
+                        stroke="var(--ink)"
+                        strokeWidth="2.6"
+                      />
+                      <path d="M15 20v-3a4 4 0 0 1 8 0v3" fill="none" stroke="var(--ink)" strokeWidth="2.6" />
+                    </>
+                  )}
+                  {!isDone && !isNow && index !== 0 && <circle cx="19" cy="21" r="2.5" fill="var(--ink)" />}
+                </svg>
+                <span className="mono muted text-xs">TAHAP 0{index + 1}</span>
+                <span className={`st ${status}`}>{STAGE_LABELS[status]}</span>
+              </div>
+              <h3 className="mt-3 font-extrabold leading-tight">{stage.label}</h3>
+              {isLocked && <p className="tdesc muted mt-1 text-sm leading-relaxed">{stage.description}</p>}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+
   return (
     <div className={`karya-page${isDark ? " dark" : ""}${entered ? " go" : ""}`} data-theme={isDark ? "dark" : "light"}>
       {/* Background Atmosphere */}
@@ -319,109 +542,95 @@ export function KaryaClient({
 
       {/* Main Content */}
       <main className="mx-auto max-w-[1360px] px-4 pb-28 sm:px-6">
-        {/* Hero Section */}
-        <section
-          id="hero"
-          className={`hero mt-6 grid items-center gap-8 p-6 sm:p-10 lg:mt-10 lg:grid-cols-12 lg:p-14 ${
-            !isLocked ? "compact" : ""
-          }`}
-        >
-          <div className="lg:col-span-8">
-            <span className="pill mono rise" style={{ "--e": ".2s" } as React.CSSProperties}>
-              Galeri karya · Web Development Competition
-            </span>
-            <h1 className="ttl mt-5" aria-label="GUARDIANS">
-              {TITLE_LETTERS.map((item) => (
-                <span key={item.id} className="lw" aria-hidden="true">
-                  <span className="ltr" style={{ "--i": item.i } as React.CSSProperties}>
-                    {item.ch}
-                  </span>
-                </span>
-              ))}
-            </h1>
-            <p
-              className="mt-4 font-extrabold text-xl tracking-tight sm:text-3xl rise"
-              style={{ "--e": ".9s" } as React.CSSProperties}
+        {isLocked ? (
+          <>
+            <section
+              id="hero"
+              className={`hero mt-6 grid items-center gap-8 p-6 sm:p-10 lg:mt-10 lg:grid-cols-12 lg:p-14 ${
+                !isLocked ? "compact" : ""
+              }`}
             >
-              Kenalan sama para penjaga digital.
-            </p>
-            <div className="hx">
-              <p
-                className="muted mt-4 max-w-xl text-base leading-relaxed sm:text-lg rise"
+              <div className="lg:col-span-8">
+                <span className="pill mono rise" style={{ "--e": ".2s" } as React.CSSProperties}>
+                  Galeri karya · Web Development Competition
+                </span>
+                <h1 className="ttl mt-5" aria-label="GUARDIANS">
+                  {TITLE_LETTERS.map((item) => (
+                    <span key={item.id} className="lw" aria-hidden="true">
+                      <span className="ltr" style={{ "--i": item.i } as React.CSSProperties}>
+                        {item.ch}
+                      </span>
+                    </span>
+                  ))}
+                </h1>
+                <p
+                  className="mt-4 font-extrabold text-xl tracking-tight sm:text-3xl rise"
+                  style={{ "--e": ".9s" } as React.CSSProperties}
+                >
+                  Kenalan sama para penjaga digital.
+                </p>
+                <div className="hx">
+                  <p
+                    className="muted mt-4 max-w-xl text-base leading-relaxed sm:text-lg rise"
+                    style={{ "--e": "1.1s" } as React.CSSProperties}
+                  >
+                    Ruang pameran karya peserta Web Development Competition, salah satu kompetisi di MIT-WEEK 2026.
+                    Jelajahi ide, eksperimen, dan solusi nyata dari teman-temanmu yang menjaga ruang digital kita tetap
+                    aman, inklusif, dan bersahabat.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="hx flex flex-col items-center gap-4 lg:col-span-4 rise"
                 style={{ "--e": "1.1s" } as React.CSSProperties}
               >
-                Ruang pameran karya peserta Web Development Competition, salah satu kompetisi di MIT-WEEK 2026. Jelajahi
-                ide, eksperimen, dan solusi nyata dari teman-temanmu yang menjaga ruang digital kita tetap aman,
-                inklusif, dan bersahabat.
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="hx flex flex-col items-center gap-4 lg:col-span-4 rise"
-            style={{ "--e": "1.1s" } as React.CSSProperties}
-          >
-            <KaryaLogo className="size-36 sm:size-44" />
-            <span className="pill mono">MIT-WEEK 2026 · Web Development</span>
-          </div>
-        </section>
-
-        {/* Schedule Timeline */}
-        <section id="tl" className="mt-10" aria-label="Jadwal">
-          <p className="mono muted mb-3 text-xs">Jadwal · Web Development Competition MIT-WEEK 2026</p>
-          <ol id="tlist" className="grid w-full gap-6 md:grid-cols-3">
-            {TIMELINE_STAGES.map((stage, index) => {
-              const status = getStageStatus(index, activeStage);
-              const isDone = status === "done";
-              const isNow = status === "now";
-
-              return (
-                <li key={stage.label} className="box relative p-5">
-                  <div className="flex items-center gap-3">
-                    <svg width="30" height="34" viewBox="0 0 38 42" aria-hidden="true">
-                      <polygon
-                        points="19,2 36,11 36,31 19,40 2,31 2,11"
-                        fill={isNow ? "var(--acc)" : "var(--card)"}
-                        stroke="var(--line)"
-                        strokeWidth="3"
-                      />
-                      {isDone && (
-                        <path
-                          d="M12 22l5 5 9-11"
-                          fill="none"
-                          stroke="var(--ink)"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                      )}
-                      {isNow && <circle cx="19" cy="21" r="4.5" fill="#06150d" />}
-                      {!isDone && !isNow && index === 0 && (
-                        <>
-                          <rect
-                            x="12"
-                            y="20"
-                            width="14"
-                            height="10"
-                            rx="2"
-                            fill="none"
-                            stroke="var(--ink)"
-                            strokeWidth="2.6"
-                          />
-                          <path d="M15 20v-3a4 4 0 0 1 8 0v3" fill="none" stroke="var(--ink)" strokeWidth="2.6" />
-                        </>
-                      )}
-                      {!isDone && !isNow && index !== 0 && <circle cx="19" cy="21" r="2.5" fill="var(--ink)" />}
-                    </svg>
-                    <span className="mono muted text-xs">TAHAP 0{index + 1}</span>
-                    <span className={`st ${status}`}>{STAGE_LABELS[status]}</span>
-                  </div>
-                  <h3 className="mt-3 font-extrabold leading-tight">{stage.label}</h3>
-                  {isLocked && <p className="tdesc muted mt-1 text-sm leading-relaxed">{stage.description}</p>}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+                <KaryaLogo className="size-36 sm:size-44" />
+                <span className="pill mono">MIT-WEEK 2026 · Web Development</span>
+              </div>
+            </section>
+            {timelineSection}
+          </>
+        ) : (
+          <>
+            {/* Slim hero once the gallery is open: projects come first */}
+            <section id="hero" className="hero slim mt-6 p-5 sm:p-6">
+              <div className="slim-row">
+                <div className="min-w-0">
+                  <span className="pill mono">Galeri karya · Web Development Competition</span>
+                  <h1 className="slim-ttl mt-3">GUARDIANS</h1>
+                  <p className="muted mt-1 text-sm sm:text-base">
+                    Kenalan sama para penjaga digital · {allVisible.length} karya
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn pri slim-cta"
+                    onClick={openRandom}
+                    disabled={allVisible.length === 0}
+                  >
+                    <Shuffle aria-hidden="true" className="size-4" />
+                    Acak karya
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-expanded={showSchedule}
+                    aria-controls="tl"
+                    onClick={() => setShowSchedule((v) => !v)}
+                  >
+                    <CalendarDays aria-hidden="true" className="size-4" />
+                    {showSchedule ? "Tutup jadwal" : "Lihat jadwal"}
+                  </button>
+                </div>
+              </div>
+              <p className="mono muted mt-4 text-xs">{`Galeri dibuka 18 Nov 2026 · Final ${KARYA_DATES.stage2Date} · Juara ${KARYA_DATES.stage3Date}`}</p>
+            </section>
+            {showSchedule && timelineSection}
+            <SpotlightCarousel items={spotlightItems} onOpen={(item) => openModal(item, spotlightItems)} />
+          </>
+        )}
 
         {/* Works Section */}
         <section id="works" className="mt-12" aria-labelledby="h-works">
@@ -437,7 +646,13 @@ export function KaryaClient({
                     item={item}
                     podiumRank={rank}
                     orderClass={orderClass}
-                    onOpenModal={() => setActiveModalItem(item)}
+                    onOpenModal={() =>
+                      openModal(
+                        item,
+                        podiumWinners.map((p) => p.item),
+                      )
+                    }
+                    {...visitorProps(item)}
                   />
                 ))}
               </div>
@@ -472,7 +687,8 @@ export function KaryaClient({
                       key={item.teamName}
                       item={item}
                       isFinalistBadge
-                      onOpenModal={() => setActiveModalItem(item)}
+                      onOpenModal={() => openModal(item, remainingFinalists)}
+                      {...visitorProps(item)}
                     />
                   ))}
                 </div>
@@ -486,7 +702,8 @@ export function KaryaClient({
                       key={item.teamName}
                       item={item}
                       isFinalistBadge
-                      onOpenModal={() => setActiveModalItem(item)}
+                      onOpenModal={() => openModal(item, finalists)}
+                      {...visitorProps(item)}
                     />
                   ))}
                 </div>
@@ -498,11 +715,30 @@ export function KaryaClient({
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <h2 id="h-works" className="font-extrabold text-3xl tracking-tight sm:text-4xl">
-                {isLocked ? "Karya peserta" : "Karya lainnya"}
+                {worksTitle}
               </h2>
               <p id="note" className="muted mt-2 max-w-xl" aria-live="polite">
-                {worksNoteText}
+                {showSavedOnly ? "Karya yang kamu simpan. Tersimpan di browser ini saja." : worksNoteText}
               </p>
+              {!isLocked && visitorReady && allVisible.length > 0 && (
+                <div className="prog mt-3">
+                  <div
+                    className="prog-bar"
+                    role="progressbar"
+                    aria-label="Karya yang sudah kamu jelajahi"
+                    aria-valuemin={0}
+                    aria-valuemax={allVisible.length}
+                    aria-valuenow={seenCount}
+                  >
+                    <i style={{ width: `${Math.round((seenCount / allVisible.length) * 100)}%` }} />
+                  </div>
+                  <span className="mono text-xs">
+                    {seenCount >= allVisible.length
+                      ? `Kamu sudah menjelajah semua ${allVisible.length} karya. Mantap!`
+                      : `Kamu sudah menjelajah ${seenCount} dari ${allVisible.length} karya`}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div id="tools" className="flex flex-wrap items-center gap-3">
@@ -530,6 +766,15 @@ export function KaryaClient({
               </fieldset>
               {!isLocked && (
                 <>
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-pressed={showSavedOnly}
+                    onClick={() => setShowSavedOnly((v) => !v)}
+                  >
+                    <Bookmark aria-hidden="true" className="size-4" />
+                    Favoritku{visitorReady && savedItems.length > 0 ? ` (${savedItems.length})` : ""}
+                  </button>
                   <label className="sr-only" htmlFor="q">
                     Cari nama tim atau judul karya
                   </label>
@@ -570,7 +815,13 @@ export function KaryaClient({
           {!isLocked && view === "grid" && (
             <div className="view-anim works-grid mt-8">
               {filteredRestCards.map((item) => (
-                <CardView key={item.teamName} item={item} onOpenModal={() => setActiveModalItem(item)} />
+                <CardView
+                  key={item.teamName}
+                  item={item}
+                  isFinalistBadge={showSavedOnly && item.isFinalist}
+                  onOpenModal={() => openModal(item, filteredRestCards)}
+                  {...visitorProps(item)}
+                />
               ))}
             </div>
           )}
@@ -586,16 +837,23 @@ export function KaryaClient({
                 <article key={`row-${item.teamName}`} className="row" onPointerEnter={() => setHoveredItem(item)}>
                   <div className="thumb">
                     <CardThumbnail item={item} />
+                    {visitorProps(item).seen && <SeenMark />}
                   </div>
                   <div className="min-w-0">
                     <p className="mono tm">Oleh {item.teamName}</p>
                     <h3>
-                      <button type="button" className="tt" onClick={() => setActiveModalItem(item)}>
+                      <button type="button" className="tt" onClick={() => openModal(item, filteredRestCards)}>
                         {item.title}
                       </button>
                     </h3>
                   </div>
                   <div className="act">
+                    <SaveButton
+                      item={item}
+                      saved={visitorProps(item).saved}
+                      onToggle={visitorProps(item).onToggleSave}
+                      className="inrow"
+                    />
                     <ActionButtons item={item} />
                   </div>
                 </article>
@@ -605,7 +863,11 @@ export function KaryaClient({
 
           {/* Empty search notice */}
           {!isLocked && filteredRestCards.length === 0 && (
-            <p className="box mt-6 p-6 font-semibold">Tidak ada karya yang cocok. Coba nama tim atau judul lain.</p>
+            <p className="box mt-6 p-6 font-semibold">
+              {showSavedOnly && savedItems.length === 0
+                ? "Belum ada karya yang kamu simpan. Tekan ikon simpan di pojok gambar karya."
+                : "Tidak ada karya yang cocok. Coba nama tim atau judul lain."}
+            </p>
           )}
         </section>
       </main>
@@ -684,26 +946,99 @@ export function KaryaClient({
       </button>
 
       {/* Detail Modal Dialog */}
-      {activeModalItem && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {activeModalItem && modal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={activeModalItem.title}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
           <button
             type="button"
             className="fixed inset-0 bg-black/65 backdrop-blur-xs cursor-default border-0"
-            aria-label="Tutup modal"
-            onClick={() => setActiveModalItem(null)}
+            aria-label="Tutup"
+            tabIndex={-1}
+            onClick={closeModal}
           />
-          <div className="box relative z-10 max-h-[90vh] w-full max-w-[640px] overflow-y-auto">
-            <div className="thumb">
+          <div
+            className="box relative z-10 max-h-[90vh] w-full max-w-[640px] overflow-y-auto"
+            onTouchStart={(e) => {
+              modalTouchX.current = e.touches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(e) => {
+              const startX = modalTouchX.current;
+              const endX = e.changedTouches[0]?.clientX;
+              modalTouchX.current = null;
+              if (startX === null || endX === undefined || Math.abs(endX - startX) < 60) return;
+              stepModal(endX < startX ? 1 : -1);
+            }}
+          >
+            <div className="thumb" key={activeModalItem.teamName}>
               <CardThumbnail item={activeModalItem} />
             </div>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="btn ico mclose"
+              aria-label="Tutup"
+              title="Tutup (Esc)"
+              onClick={closeModal}
+            >
+              <X aria-hidden="true" />
+            </button>
             <div className="dbody p-5 sm:p-6">
-              <p className="mono muted text-xs">Oleh {activeModalItem.teamName}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="mono muted text-xs">Oleh {activeModalItem.teamName}</p>
+                {modal.list.length > 1 && (
+                  <span className="mono muted text-xs" aria-live="polite">
+                    {modal.index + 1} / {modal.list.length}
+                  </span>
+                )}
+              </div>
               <h3 className="mt-1 font-extrabold text-2xl tracking-tight">{activeModalItem.title}</h3>
               <p className="mt-3 leading-relaxed text-sm sm:text-base">{activeModalItem.description}</p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <ActionButtons item={activeModalItem} isModal />
-                <button type="button" className="btn ml-auto" onClick={() => setActiveModalItem(null)}>
-                  Tutup
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" className="btn" onClick={() => void shareItem(activeModalItem)}>
+                  <Share2 aria-hidden="true" className="size-4" />
+                  Bagikan
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  aria-pressed={visitorProps(activeModalItem).saved}
+                  onClick={visitorProps(activeModalItem).onToggleSave}
+                >
+                  <Bookmark aria-hidden="true" className="size-4" />
+                  {visitorProps(activeModalItem).saved ? "Tersimpan" : "Simpan"}
+                </button>
+              </div>
+              <div className="mnav mt-5">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => stepModal(-1)}
+                  disabled={modal.list.length < 2}
+                  aria-label="Karya sebelumnya"
+                >
+                  <ChevronLeft aria-hidden="true" className="size-4" />
+                  <span className="hidden sm:inline">Sebelumnya</span>
+                </button>
+                <button type="button" className="btn" onClick={openRandom} disabled={allVisible.length < 2}>
+                  <Shuffle aria-hidden="true" className="size-4" />
+                  Acak
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => stepModal(1)}
+                  disabled={modal.list.length < 2}
+                  aria-label="Karya berikutnya"
+                >
+                  <span className="hidden sm:inline">Berikutnya</span>
+                  <ChevronRight aria-hidden="true" className="size-4" />
                 </button>
               </div>
             </div>

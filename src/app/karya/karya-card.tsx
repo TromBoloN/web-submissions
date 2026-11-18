@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
+import { Bookmark, BookmarkCheck, Eye } from "lucide-react";
+
 // Public gallery card, shared by /karya and the editor previews (team "Atur Tampilan", admin finalist cards).
 // Styles live under .karya-page in globals.css; KaryaCardPreview provides that wrapper outside /karya.
 
@@ -73,8 +77,18 @@ export const VidIcon = () => (
 export function CardThumbnail({ item }: { item: KaryaItem }) {
   const [c1, c2] = getPalette(item.teamName);
   const initials = getInitials(item.teamName);
+  // A missing or broken image falls back to the gradient placeholder instead of a broken icon.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  if (item.imageUrl) {
+  // onError can fire before hydration (server-rendered <img>), so also check once after mount.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth === 0 && item.imageUrl) setFailedUrl(item.imageUrl);
+  }, [item.imageUrl]);
+
+  if (item.imageUrl && failedUrl !== item.imageUrl) {
+    const onError = () => setFailedUrl(item.imageUrl);
     // The whole image is always visible (contain). Images that are not 16:10 sit on a blurred,
     // zoomed copy of themselves instead of being cropped. Same URL, so it downloads once.
     return (
@@ -82,7 +96,14 @@ export function CardThumbnail({ item }: { item: KaryaItem }) {
         {/* biome-ignore lint/performance/noImgElement: public storage image */}
         <img src={item.imageUrl} alt="" aria-hidden="true" loading="lazy" className="thumb-bg" />
         {/* biome-ignore lint/performance/noImgElement: public storage image */}
-        <img src={item.imageUrl} alt={`Pratinjau karya ${item.title}`} loading="lazy" className="thumb-fg" />
+        <img
+          ref={imgRef}
+          src={item.imageUrl}
+          alt={`Pratinjau karya ${item.title}`}
+          loading="lazy"
+          className="thumb-fg"
+          onError={onError}
+        />
       </>
     );
   }
@@ -152,18 +173,65 @@ export function ActionButtons({ item, isModal = false }: { item: KaryaItem; isMo
   );
 }
 
+/** "Simpan" toggle (visitor's own shortlist, stored in their browser). */
+export function SaveButton({
+  item,
+  saved,
+  onToggle,
+  className = "",
+}: {
+  item: KaryaItem;
+  saved: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  const label = saved ? `Hapus ${item.title} dari Favoritku` : `Simpan ${item.title} ke Favoritku`;
+  return (
+    <button
+      type="button"
+      className={`savebtn ${saved ? "on" : ""} ${className}`}
+      aria-pressed={saved}
+      aria-label={label}
+      title={saved ? "Tersimpan di Favoritku" : "Simpan ke Favoritku"}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+    >
+      {saved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+    </button>
+  );
+}
+
+/** Small "Dilihat" mark for projects this visitor already opened. */
+export function SeenMark() {
+  return (
+    <span className="seenmark mono">
+      <Eye aria-hidden="true" />
+      Dilihat
+    </span>
+  );
+}
+
 export function CardView({
   item,
   isFinalistBadge = false,
   podiumRank,
   orderClass,
   onOpenModal,
+  saved,
+  seen = false,
+  onToggleSave,
 }: {
   item: KaryaItem;
   isFinalistBadge?: boolean;
   podiumRank?: number;
   orderClass?: string;
   onOpenModal: () => void;
+  /** Visitor features; omitted in editor previews. */
+  saved?: boolean;
+  seen?: boolean;
+  onToggleSave?: () => void;
 }) {
   return (
     <article className={`card box ${orderClass ?? ""}`}>
@@ -187,6 +255,8 @@ export function CardView({
 
       <div className="thumb">
         <CardThumbnail item={item} />
+        {seen && <SeenMark />}
+        {onToggleSave && <SaveButton item={item} saved={Boolean(saved)} onToggle={onToggleSave} />}
       </div>
 
       <div className="cb">
