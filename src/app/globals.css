@@ -1659,6 +1659,11 @@ html {
   width: 12px;
   height: 12px;
 }
+.karya-page .seenmark.compact {
+  top: 4px;
+  left: 4px;
+  padding: 3px;
+}
 .karya-page .prog {
   display: flex;
   flex-wrap: wrap;

@@ -215,8 +215,16 @@ export function DemoOkMark() {
   );
 }
 
-/** Small "Dilihat" mark for projects this visitor already opened. */
-export function SeenMark() {
+/** Small "Dilihat" mark for projects this visitor already opened. Compact = icon only (small thumbnails). */
+export function SeenMark({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <span className="seenmark compact" title="Sudah dilihat">
+        <Eye aria-hidden="true" />
+        <span className="sr-only">Dilihat</span>
+      </span>
+    );
+  }
   return (
     <span className="seenmark mono">
       <Eye aria-hidden="true" />

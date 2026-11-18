@@ -71,6 +71,21 @@ function getStageStatus(index: number, activeIndex: number): StageStatus {
   return "later";
 }
 
+// Floating list preview: 270px wide, 16:10 image. Kept fully inside the viewport.
+const FP_WIDTH = 270;
+const FP_HEIGHT = Math.round(FP_WIDTH / 1.6);
+const FP_MARGIN = 8;
+function floatX(pointerX: number): number {
+  const vw = window.innerWidth;
+  const right = pointerX + 28;
+  const x = right + FP_WIDTH + FP_MARGIN > vw ? pointerX - FP_WIDTH - 28 : right;
+  return Math.min(Math.max(x, FP_MARGIN), vw - FP_WIDTH - FP_MARGIN);
+}
+function floatY(pointerY: number): number {
+  const vh = window.innerHeight;
+  return Math.min(Math.max(pointerY - FP_HEIGHT / 2, FP_MARGIN), vh - FP_HEIGHT - FP_MARGIN);
+}
+
 const LockIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -124,6 +139,15 @@ export function KaryaClient({
   // Floating thumbnail preview in list view
   const [hoveredItem, setHoveredItem] = useState<KaryaItem | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  // The floating preview is a desktop flourish: mouse + hover + at least 768px wide.
+  const [canFloatPreview, setCanFloatPreview] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 768px)");
+    const update = () => setCanFloatPreview(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   // Theme store
   const themeMode = usePreferencesStore((s) => s.values.theme_mode);
@@ -1022,7 +1046,7 @@ export function KaryaClient({
                 <article key={`row-${item.teamName}`} className="row" onPointerEnter={() => setHoveredItem(item)}>
                   <div className="thumb">
                     <CardThumbnail item={item} />
-                    {visitorProps(item).seen && <SeenMark />}
+                    {visitorProps(item).seen && <SeenMark compact />}
                   </div>
                   <div className="min-w-0">
                     <p className="mono tm">
@@ -1061,17 +1085,11 @@ export function KaryaClient({
       </main>
 
       {/* Floating Thumbnail Preview following mouse on List View (Desktop) */}
-      {hoveredItem && view === "list" && (
+      {hoveredItem && view === "list" && canFloatPreview && (
         <div
           id="fp"
           className="box on"
-          style={{
-            transform: `translate(${
-              mousePos.x + 28 + 270 > (typeof window !== "undefined" ? window.innerWidth : 1200)
-                ? mousePos.x - 298
-                : mousePos.x + 28
-            }px, ${mousePos.y - 90}px) rotate(-3deg)`,
-          }}
+          style={{ transform: `translate(${floatX(mousePos.x)}px, ${floatY(mousePos.y)}px) rotate(-3deg)` }}
           aria-hidden="true"
         >
           <div className="thumb">
