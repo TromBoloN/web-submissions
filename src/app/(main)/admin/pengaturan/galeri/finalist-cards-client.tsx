@@ -96,7 +96,7 @@ function FinalistCardEditor({ team, supabaseUrl }: { team: FinalistCardTeam; sup
           <span className="font-mono font-semibold text-sm">{team.teamCode}</span>
           <span className="min-w-0 text-muted-foreground text-sm">{team.teamName}</span>
           <Badge variant="outline" className="ml-auto text-[10px]">
-            {team.consent ? "Tautan ditampilkan" : "Tautan disembunyikan (tim belum setuju)"}
+            {team.consent ? "Video ditampilkan" : "Video disembunyikan (tim belum setuju)"}
           </Badge>
         </div>
 
@@ -179,8 +179,8 @@ function FinalistCardEditor({ team, supabaseUrl }: { team: FinalistCardTeam; sup
             title,
             description,
             imageUrl: getPublicImageUrl(supabaseUrl, imagePath),
-            githubUrl: team.consent ? team.githubUrl : "",
-            liveDemoUrl: team.consent ? team.liveDemoUrl : "",
+            githubUrl: team.githubUrl,
+            liveDemoUrl: team.liveDemoUrl,
             videoUrl: team.consent ? team.videoUrl : "",
             isFinalist: true,
           }}
@@ -201,7 +201,7 @@ export function FinalistCardsClient({ teams, supabaseUrl }: { teams: FinalistCar
         <CardDescription>
           Tim finalis otomatis tampil di galeri finalis, termasuk yang belum memberi persetujuan. Tim tetap bisa
           mengubah kartunya sendiri sampai galeri finalis diterbitkan; perubahan terakhir yang disimpan yang dipakai.
-          Tautan repositori, demo, dan video hanya tampil jika tim setuju.
+          Repositori dan demo finalis selalu tampil sesuai aturan lomba; video hanya tampil jika tim setuju.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

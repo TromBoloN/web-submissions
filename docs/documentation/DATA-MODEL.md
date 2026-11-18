@@ -129,3 +129,10 @@ Apply after `20261117000000`. The gallery code works without it (no "Demo aktif"
 
 - Drops and recreates `get_public_showcase()` with an extra `live_demo_ok BOOLEAN` column: `TRUE` only when the team's demo link is shown (consent) and `submissions.link_check -> 'liveDemo' ->> 'status' = 'ok'`. Rows and visibility rules are the same as `20261117000000`.
 - Freshness depends on the last link check; Admin → Submission → "Periksa ulang semua" re-checks every team.
+
+### `20261118020000_showcase_finalist_links.sql`
+
+Apply after `20261118010000`. Competition rule: finalists' code and demo must be public.
+
+- `get_public_showcase()` and `get_public_showcase_winners()`: for finalists (`showcase_is_finalist`), `github_url` and `live_demo_url` are returned even without `showcase_consent`; `video_url` still needs consent. `live_demo_ok` follows the same rule. Non-finalists are unchanged (every link needs consent).
+- Until applied, finalists without consent show a disabled "Buka demo" on `/karya` (the admin and team previews already assume the new rule).

@@ -58,9 +58,10 @@ export function KaryaClient({
   // Finalists always appear in the gallery and stay editable until the finalist gallery is published.
   const isFinalist = isAnnouncedFinalist;
   const isLocked = isFinalist ? showcaseFinalistsPublishedAt !== null : showcasePublishedAt !== null;
-  const showLinks = consent;
+  // Finalists: repository and demo are always public (competition rule); only the video needs consent.
+  const showLinks = consent || isFinalist;
   const consentLabels = isFinalist
-    ? { on: "Tautan ditampilkan", off: "Tautan disembunyikan" }
+    ? { on: "Video ditampilkan", off: "Video disembunyikan" }
     : { on: "Tampil di galeri", off: "Tidak tampil di galeri" };
   const consentLabel = consent ? consentLabels.on : consentLabels.off;
   // Same card as the public gallery (/karya), including the finalist header once announced.
@@ -71,7 +72,7 @@ export function KaryaClient({
     imageUrl,
     githubUrl: showLinks ? (submission?.github_url ?? "") : "",
     liveDemoUrl: showLinks ? (submission?.live_demo_url ?? "") : "",
-    videoUrl: showLinks ? (submission?.video_url ?? "") : "",
+    videoUrl: consent ? (submission?.video_url ?? "") : "",
     isFinalist,
   };
 
@@ -173,7 +174,7 @@ export function KaryaClient({
                       </Label>
                       <p id="showcase-consent-desc" className="text-muted-foreground text-xs leading-relaxed">
                         {isFinalist
-                          ? "Saya bersedia tautan repositori, demo, dan video tim saya ditampilkan di galeri."
+                          ? "Repositori dan demo finalis selalu ditampilkan sesuai aturan lomba. Saya bersedia video tim saya juga ditampilkan."
                           : "Saya bersedia karya, judul, deskripsi, dan gambar pratinjau tim saya ditampilkan di galeri."}
                       </p>
                     </div>
