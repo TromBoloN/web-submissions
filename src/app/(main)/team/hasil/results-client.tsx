@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { Award, Info, MessageSquareQuote, Sparkles } from "lucide-react";
 
 import { type RubricBarItem, RubricBars } from "@/components/rubric-bars";
@@ -33,8 +31,6 @@ export type TeamResultsData = {
 
 export interface ResultsClientProps {
   results: TeamResultsData;
-  /** Rendered below the stage results (the published ranking). */
-  footer?: ReactNode;
 }
 
 const idScoreFormatter = new Intl.NumberFormat("id-ID", {
@@ -266,7 +262,7 @@ function StageResultsView({
   );
 }
 
-export function ResultsClient({ results, footer }: ResultsClientProps) {
+export function ResultsClient({ results }: ResultsClientProps) {
   const showFinalTab = results.is_finalist && Boolean(results.final);
   const defaultTab = results.preliminary ? "preliminary" : "final";
 
@@ -335,8 +331,6 @@ export function ResultsClient({ results, footer }: ResultsClientProps) {
       </Card>
 
       {renderContent()}
-
-      {footer}
     </div>
   );
 }

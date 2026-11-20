@@ -21,11 +21,14 @@ export async function DashboardShell({
   children,
   user,
   resultsReleased,
+  rankingPublished,
   teamCode,
 }: Readonly<{
   children: ReactNode;
   user: CurrentUser;
   resultsReleased?: boolean;
+  /** Team role only: shows the "Peringkat" sidebar item. */
+  rankingPublished?: boolean;
   /** Team role only: shown on the sidebar user chip. */
   teamCode?: string | null;
 }>) {
@@ -60,6 +63,7 @@ export async function DashboardShell({
         user={user}
         juknisUrl={juknisUrl}
         resultsReleased={resultsReleased}
+        rankingPublished={rankingPublished}
         galleryState={galleryState}
         teamCode={teamCode}
         variant={variant}

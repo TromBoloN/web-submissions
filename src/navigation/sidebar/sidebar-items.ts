@@ -7,6 +7,7 @@ import {
   FileText,
   History,
   LayoutDashboard,
+  ListOrdered,
   Palette,
   Settings,
   Trophy,
@@ -79,6 +80,7 @@ export function getSidebarItems(
   juknisUrl?: string | null,
   resultsReleased?: boolean,
   galleryState: GalleryNavState = "open",
+  rankingPublished?: boolean,
 ): NavGroup[] {
   if (role === "admin") {
     return [
@@ -116,6 +118,9 @@ export function getSidebarItems(
   const roleItems: NavMainItem[] = [{ id: "home", title: "Dasbor", url: basePath, icon: LayoutDashboard }];
   if (role === "team" && resultsReleased === true) {
     roleItems.push({ id: "results", title: "Hasil Penilaian", url: "/team/hasil", icon: Award });
+  }
+  if (role === "team" && rankingPublished === true) {
+    roleItems.push({ id: "ranking", title: "Peringkat", url: "/team/peringkat", icon: ListOrdered });
   }
 
   const exploreItems: NavMainItem[] = [

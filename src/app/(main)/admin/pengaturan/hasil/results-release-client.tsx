@@ -223,8 +223,8 @@ export function ResultsReleaseClient({
             Peringkat Publik
           </CardTitle>
           <CardDescription>
-            Tampilkan peringkat seluruh tim, dari pertama sampai terakhir, di bawah halaman Hasil Penilaian peserta.
-            Finalis diurutkan dengan nilai final, tim lainnya dengan nilai babak awal.
+            Tampilkan peringkat seluruh tim, dari pertama sampai terakhir, di halaman Peringkat portal peserta (menu
+            baru di sidebar). Finalis diurutkan dengan nilai final, tim lainnya dengan nilai babak awal.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -297,7 +297,7 @@ export function ResultsReleaseClient({
                   <>
                     <p>
                       Seluruh tim peserta akan melihat peringkat semua tim beserta total nilai rata-ratanya di halaman
-                      Hasil Penilaian.
+                      Peringkat.
                     </p>
                     {!finalResultsReleased && (
                       <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-amber-700 text-xs dark:text-amber-400">

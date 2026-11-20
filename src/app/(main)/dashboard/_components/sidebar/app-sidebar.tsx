@@ -27,6 +27,7 @@ export function AppSidebar({
   user,
   juknisUrl,
   resultsReleased,
+  rankingPublished,
   galleryState,
   teamCode,
   ...props
@@ -34,6 +35,7 @@ export function AppSidebar({
   user: CurrentUser;
   juknisUrl?: string | null;
   resultsReleased?: boolean;
+  rankingPublished?: boolean;
   galleryState?: GalleryNavState;
   teamCode?: string | null;
 }) {
@@ -76,7 +78,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={getSidebarItems(user.role, juknisUrl, resultsReleased, galleryState)} />
+        <NavMain items={getSidebarItems(user.role, juknisUrl, resultsReleased, galleryState, rankingPublished)} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} teamCode={teamCode} />

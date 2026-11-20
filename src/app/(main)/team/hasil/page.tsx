@@ -7,7 +7,6 @@ import { APP_CONFIG } from "@/config/app-config";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-import { PublicRanking } from "./public-ranking";
 import { ResultsClient, type TeamResultsData } from "./results-client";
 
 export const metadata: Metadata = {
@@ -20,37 +19,21 @@ export default async function TeamHasilPage() {
   const supabase = await createClient();
 
   // 1. Check release flags in competition_settings
-  const [{ data: settings, error: settingsError }, { data: rankingSetting }] = await Promise.all([
-    supabase
-      .from("competition_settings")
-      .select("preliminary_results_released, final_results_released")
-      .eq("id", true)
-      .maybeSingle(),
-    // Separate query so the page still loads before 20261121000000_public_ranking is applied.
-    supabase.from("competition_settings").select("ranking_published").eq("id", true).maybeSingle(),
-  ]);
+  const { data: settings, error: settingsError } = await supabase
+    .from("competition_settings")
+    .select("preliminary_results_released, final_results_released")
+    .eq("id", true)
+    .maybeSingle();
 
-  const rankingPublished = Boolean(rankingSetting?.ranking_published);
   const isAnyReleased =
     !settingsError && Boolean(settings?.preliminary_results_released || settings?.final_results_released);
 
-  if (!isAnyReleased && !rankingPublished) {
+  if (!isAnyReleased) {
     redirect("/team");
   }
 
-  // 2. Fetch results (and the published ranking, if any) from RPCs
-  const [{ data: rawResults, error }, rankingRes] = await Promise.all([
-    supabase.rpc("get_my_results"),
-    rankingPublished ? supabase.rpc("get_public_ranking") : Promise.resolve(null),
-  ]);
-
-  const ranking = rankingRes ? (
-    <PublicRanking
-      rows={rankingRes.data ?? []}
-      provisional={!settings?.final_results_released}
-      failed={Boolean(rankingRes.error)}
-    />
-  ) : null;
+  // 2. Fetch results from RPC
+  const { data: rawResults, error } = await supabase.rpc("get_my_results");
 
   // Handle function error with friendly generic message
   if (error || !rawResults) {
@@ -63,7 +46,6 @@ export default async function TeamHasilPage() {
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive text-sm">
           Gagal memuat hasil penilaian. Silakan coba beberapa saat lagi atau hubungi panitia.
         </div>
-        {ranking}
       </div>
     );
   }
@@ -83,7 +65,6 @@ export default async function TeamHasilPage() {
             <p className="text-muted-foreground text-sm">Tidak ada penilaian karena submission belum terkirim.</p>
           </CardContent>
         </Card>
-        {ranking}
       </div>
     );
   }
@@ -101,11 +82,10 @@ export default async function TeamHasilPage() {
             <p className="text-muted-foreground text-sm">Tim Anda tidak memenuhi syarat penilaian kompetisi.</p>
           </CardContent>
         </Card>
-        {ranking}
       </div>
     );
   }
 
   // 5. Handle released state
-  return <ResultsClient results={results} footer={ranking} />;
+  return <ResultsClient results={results} />;
 }
