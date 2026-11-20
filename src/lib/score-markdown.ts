@@ -28,12 +28,14 @@ const STAGE_LABEL: Record<ScoringStage, string> = {
   final: "Babak Final",
 };
 
-/** Keep user-provided text from breaking table cells or headings. */
-function inline(text: string): string {
-  return text
-    .replace(/\r?\n+/g, " ")
-    .replace(/\|/g, "\\|")
-    .trim();
+/** Keep user-provided text on one line so it can't break a heading. */
+function oneLine(text: string): string {
+  return text.replace(/\r?\n+/g, " ").trim();
+}
+
+/** One line plus escaped pipes, for table cells. */
+function cell(text: string): string {
+  return oneLine(text).replace(/\|/g, "\\|");
 }
 
 function fmt(value: number | null | undefined): string {
@@ -73,7 +75,7 @@ export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: Sc
   out.push("| Peringkat | Tim | Jumlah Juri | Rata-rata |", "| ---: | --- | ---: | ---: |");
   for (const t of teams) {
     out.push(
-      `| ${t.rank ?? "-"} | ${inline(t.team_code)} — ${inline(t.team_name)} | ${t.judges.length} | ${fmt(t.avg_score)} |`,
+      `| ${t.rank ?? "-"} | ${cell(t.team_code)} — ${cell(t.team_name)} | ${t.judges.length} | ${fmt(t.avg_score)} |`,
     );
   }
   out.push("");
@@ -81,7 +83,7 @@ export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: Sc
   for (const t of teams) {
     out.push("---", "");
     const rankPrefix = t.rank ? `#${t.rank} · ` : "";
-    out.push(`## ${rankPrefix}${inline(t.team_code)} — ${inline(t.team_name)}`, "");
+    out.push(`## ${rankPrefix}${oneLine(t.team_code)} — ${oneLine(t.team_name)}`, "");
     out.push(`Rata-rata skor berbobot: **${fmt(t.avg_score)}**`, "");
 
     if (t.judges.length === 0) {
@@ -90,7 +92,7 @@ export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: Sc
     }
 
     for (const j of t.judges) {
-      out.push(`### ${inline(j.judge_name)}`, "");
+      out.push(`### ${oneLine(j.judge_name)}`, "");
       out.push("| Kriteria | Nilai |", "| --- | ---: |");
       for (const c of rubric) {
         out.push(`| ${c.label} (${c.weight}%) | ${fmt(j.scores[c.column])} |`);
