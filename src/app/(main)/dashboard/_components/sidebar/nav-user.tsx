@@ -17,6 +17,8 @@ import { signOut } from "@/lib/auth-actions";
 import { type CurrentUser, getRoleLabel, getUserDisplayEmail } from "@/lib/user-display";
 import { getInitials } from "@/lib/utils";
 
+import { NavPendingIndicator } from "./nav-pending-indicator";
+
 /** Hex avatar with initials, matching the Guardian ID badge. */
 function HexAvatar({ name }: { name: string }) {
   return (
@@ -77,6 +79,7 @@ export function NavUser({ user, teamCode }: { readonly user: CurrentUser; readon
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href={`/${user.role}/kata-sandi`}>
+                <NavPendingIndicator />
                 <KeyRound className="size-4" />
                 Ganti kata sandi
               </Link>

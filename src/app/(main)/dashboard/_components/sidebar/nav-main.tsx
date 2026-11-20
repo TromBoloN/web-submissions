@@ -35,6 +35,8 @@ import type {
   NavMainParentItem,
 } from "@/navigation/sidebar/sidebar-items";
 
+import { NavPendingIndicator } from "./nav-pending-indicator";
+
 interface NavMainProps {
   readonly items: readonly NavGroup[];
 }
@@ -178,6 +180,7 @@ function NavLinkItem({ item, isActive, showIconFallback }: NavLinkItemProps) {
           rel={item.newTab ? "noreferrer" : undefined}
           aria-current={isActive ? "page" : undefined}
         >
+          <NavPendingIndicator />
           <NavLinkIcon item={item} showFallback={showIconFallback} isActive={isActive} />
           <span className="truncate">{item.title}</span>
           {isActive && !item.badge && (
@@ -250,6 +253,7 @@ function NavDropdownItem({ item, isActive, isSubItemActive }: NavDropdownItemPro
                     aria-current={isSubItemActive(subItem.url) ? "page" : undefined}
                     className="flex items-center gap-2"
                   >
+                    <NavPendingIndicator />
                     {SubIcon && <SubIcon />}
                     <span>{subItem.title}</span>
                   </Link>
@@ -301,6 +305,7 @@ function NavCollapsibleItem({ item, isActive, defaultOpen, isSubItemActive }: Na
                       target={subItem.newTab ? "_blank" : undefined}
                       rel={subItem.newTab ? "noreferrer" : undefined}
                     >
+                      <NavPendingIndicator />
                       {SubIcon && <SubIcon />}
                       <span>{subItem.title}</span>
                     </Link>

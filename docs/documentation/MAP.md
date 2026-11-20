@@ -66,6 +66,7 @@ See [Competition phases](./COMPETITION-PHASES.md) for behavior.
 | `sidebar/app-sidebar.tsx` | Hex logo header with mono sub-label |
 | `sidebar/nav-main.tsx` | Guardian nav rows (icon tiles, ink active state + mint hex marker, press effect), mono section labels, badges |
 | `sidebar/nav-user.tsx` | Guardian user chip: hex avatar, name, team code (teams) or role chip (admin/judge) |
+| `sidebar/nav-pending-indicator.tsx` | Top-right "Memuat halaman…" pill while a sidebar link navigation is pending (`useLinkStatus`, portalled) |
 | `header/search-dialog.tsx` | Admin command search over sidebar items |
 
 Menu structure comes from `src/navigation/sidebar/sidebar-items.ts`:
