@@ -29,7 +29,7 @@ The admin role is enforced by `src/app/(main)/admin/layout.tsx` (`requireRole("a
 | --- | --- | --- | --- |
 | Ringkasan | `/admin/pengaturan` | `competition_settings`, `case_study` | none |
 | Pengumpulan | `/pengumpulan` | `submission_closes_at`, `updated_at` | `updateCompetitionDeadline` |
-| Rilis Hasil | `/hasil` | release flags, judges, teams, submissions, scores, recusals | `updateResultsRelease` (confirmation dialog) |
+| Rilis Hasil | `/hasil` | release flags, `ranking_published`, judges, teams, submissions, scores, recusals | `updateResultsRelease`, `updateRankingPublication` (confirmation dialogs; ranking before final release = test mode, teams see "Peringkat sementara") |
 | Galeri | `/galeri` | showcase timestamps, consenting teams + finalists, link checks, finalist cards | `publishShowcasePhase("gallery")`, `publishShowcaseWinners`, `unpublishShowcasePhase`, `saveFinalistShowcase` |
 | Studi Kasus | `/studi-kasus` | `case_study` | `updateCaseStudy` |
 | Tautan & Kontak | `/tautan` | `juknis_url`, `contact_whatsapp` | `updateJuknisUrl`, `updateContactWhatsapp` |

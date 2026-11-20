@@ -30,7 +30,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Judge scoring | /judge/nilai/[tahap]/[teamId] | `(main)/judge/nilai/[tahap]/[teamId]` | `preliminary_scores`, `final_scores`, `judge_recusals` |
 | Team dashboard | /team | `(main)/team` (files beside `page.tsx`, see below) | own `teams`, own `submissions`, `competition_settings`, `get_my_finalist_notice()` |
 | Team showcase editor | /team/karya | `(main)/team/karya` | own `teams`, own `submissions`, `save_showcase_details()`, storage bucket `web-showcase` |
-| Team results | /team/hasil | `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`) | `get_my_results()` (RPC) |
+| Team results | /team/hasil | `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `public-ranking.tsx`, `loading.tsx`) | `get_my_results()`, `get_public_ranking()` (RPCs) |
 | Case study | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus` (view lives in `team/studi-kasus`) | `case_study`; team page also reads own `submissions` |
 | Change password | `/<role>/kata-sandi` | `(main)/<role>/kata-sandi` | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized | /unauthorized | `(main)/unauthorized` | none |

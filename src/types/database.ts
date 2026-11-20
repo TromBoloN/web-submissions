@@ -88,6 +88,8 @@ export type Database = {
           id: boolean;
           juknis_url: string | null;
           preliminary_results_released: boolean;
+          /** Added by 20261121000000_public_ranking. */
+          ranking_published: boolean;
           showcase_finalists_published_at: string | null;
           showcase_published_at: string | null;
           showcase_consent_locked_at: string | null;
@@ -101,6 +103,7 @@ export type Database = {
           id?: boolean;
           juknis_url?: string | null;
           preliminary_results_released?: boolean;
+          ranking_published?: boolean;
           showcase_finalists_published_at?: string | null;
           showcase_published_at?: string | null;
           showcase_consent_locked_at?: string | null;
@@ -114,6 +117,7 @@ export type Database = {
           id?: boolean;
           juknis_url?: string | null;
           preliminary_results_released?: boolean;
+          ranking_published?: boolean;
           showcase_finalists_published_at?: string | null;
           showcase_published_at?: string | null;
           showcase_consent_locked_at?: string | null;
@@ -613,6 +617,17 @@ export type Database = {
       get_my_results: {
         Args: never;
         Returns: Json;
+      };
+      get_public_ranking: {
+        Args: never;
+        Returns: {
+          institution: string;
+          is_own_team: boolean;
+          rank: number;
+          score: number | null;
+          stage: string;
+          team_name: string;
+        }[];
       };
       get_public_contact_whatsapp: {
         Args: never;

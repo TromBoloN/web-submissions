@@ -329,6 +329,44 @@ export async function updateResultsRelease(stage: "preliminary" | "final", relea
   return { success: true };
 }
 
+export async function updateRankingPublication(published: boolean): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = z.boolean({ message: "Status publikasi harus berupa nilai boolean." }).safeParse(published);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data publikasi peringkat tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("competition_settings")
+    .update({ ranking_published: parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", true)
+    .select("id");
+
+  if (error) {
+    console.error("Failed to update ranking publication", error);
+    return { success: false, error: "Gagal memperbarui publikasi peringkat. Silakan coba lagi." };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: parsed.data ? "ranking_published" : "ranking_unpublished",
+    targetType: "competition_settings",
+  });
+
+  revalidatePath("/admin/pengaturan", "layout");
+  revalidatePath("/team", "layout");
+  return { success: true };
+}
+
 export async function publishShowcasePhase(phase: "initial" | "finalists" | "gallery"): Promise<ActionResult> {
   const caller = await getCurrentProfile();
   if (caller?.role !== "admin") {

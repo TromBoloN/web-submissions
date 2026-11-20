@@ -40,7 +40,7 @@ Team-facing results
 - Expose team score and comment data only through `SECURITY DEFINER` functions with an empty `search_path`, deriving the team from `auth.uid()`. No team id parameter. No team SELECT policy on score tables.
 - Return aggregates and anonymous comments only. Never `judge_id`, name, or anything that identifies a judge, including through ordering or timestamps.
 - The function checks authorization in its own body (active team role, results released, caller owns the team).
-- Never expose other teams' scores or comments, rank, or per-judge raw scores.
+- Never expose other teams' scores or comments, rank, or per-judge raw scores. Sole exception (committee request): the published ranking (`get_public_ranking()`, admin toggle `ranking_published`) shows every team's rank, name, institution and aggregate total. Normally switched on after final results are released; earlier only for testing, shown to teams as "Peringkat sementara".
 
 Grants and functions
 

@@ -27,7 +27,7 @@ Single-row tables (`id BOOLEAN PRIMARY KEY CHECK (id)`): `competition_settings`,
 | --- | --- |
 | `profiles` | Role (`admin`/`judge`/`team`), judge stage (`preliminary`/`final`/`both`), `is_active`, linked to `auth.users`. The only source of roles. |
 | `teams` | Team code, name, institution, leader, members, `is_finalist`, `is_disqualified`, showcase consent/title/description/image path, `showcase_is_finalist` snapshot. |
-| `competition_settings` | Deadline (`submission_closes_at`, exclusive), `juknis_url`, `contact_whatsapp`, result-release flags, showcase/winners publication timestamps, `showcase_consent_locked_at`. |
+| `competition_settings` | Deadline (`submission_closes_at`, exclusive), `juknis_url`, `contact_whatsapp`, result-release flags, `ranking_published`, showcase/winners publication timestamps, `showcase_consent_locked_at`. |
 | `submissions` | One draft or submitted set of GitHub, live-demo and video links per team, notes for judges, link-check result, `first_submitted_at`. |
 | `submission_history` | Trigger-written history of submission changes (`log_submission_change`). |
 | `case_study` | Markdown case study, optional `release_at`, last updater. |
@@ -49,6 +49,7 @@ All are `SECURITY DEFINER` with an empty `search_path` unless noted, and check a
 | `submission_open()`, `team_can_submit()` | internal / policies | Deadline and ownership checks for submissions |
 | `judge_can_view_team()`, `judge_can_score_preliminary()`, `judge_can_score_final()` | internal / policies | Judge assignment and stage checks |
 | `get_my_results()` | authenticated (team) | Released, anonymized aggregates and feedback for the caller's own team |
+| `get_public_ranking()` | authenticated (team, admin) | Only when `ranking_published`: every submitted, non-disqualified team's rank, name, institution, aggregate score and its stage, plus `is_own_team`. Finalists first by final average, then the rest by preliminary average. Committee-approved exception to the no-rank rule |
 | `get_my_finalist_notice()` | authenticated (team) | Finalist or non-finalist message once published; nothing for disqualified teams |
 | `set_showcase_consent()`, `save_showcase_details()` | authenticated (team) | Team edits its own showcase while unlocked |
 | `publish_showcase_phase_one()`, `publish_showcase_phase_two()`, `publish_showcase_winners()` | authenticated (admin check inside) | Gallery publication stages |
@@ -61,6 +62,10 @@ Anon access is only ever granted on functions that return public fields. `anon` 
 ## Pending migrations
 
 Written, **not applied** at the time of writing. Check `src/types/database.ts` for `competition_stages`: if it is missing, they have not been applied.
+
+### `20261121000000_public_ranking.sql`
+
+Independent of the others; app code is merged and tolerates the migration being missing (toggle disabled, no ranking shown). Adds `competition_settings.ranking_published` and `get_public_ranking()` (see the functions table).
 
 ### `20261114000000_competition_stages.sql`
 

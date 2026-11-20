@@ -12,6 +12,8 @@ const actionLabels: Record<string, string> = {
   finalist_unselected: "Membatalkan finalis",
   results_released: "Merilis hasil",
   results_unreleased: "Menarik rilis hasil",
+  ranking_published: "Memublikasikan peringkat",
+  ranking_unpublished: "Menarik publikasi peringkat",
   score_changed: "Mengubah nilai",
   score_locked: "Mengunci nilai",
   team_disqualified: "Mendiskualifikasi tim",

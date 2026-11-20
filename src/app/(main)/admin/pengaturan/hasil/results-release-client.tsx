@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { AlertTriangle, Award, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Award, CheckCircle2, FlaskConical, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 
-import { updateResultsRelease } from "../actions";
+import { updateRankingPublication, updateResultsRelease } from "../actions";
 
 export type StageJudgingProgress = {
   totalJudges: number;
@@ -133,15 +133,36 @@ function StageReleaseRow({
 export function ResultsReleaseClient({
   preliminaryResultsReleased,
   finalResultsReleased,
+  rankingPublished,
+  rankingAvailable,
   judgingStats,
 }: {
   preliminaryResultsReleased: boolean;
   finalResultsReleased: boolean;
+  rankingPublished: boolean;
+  rankingAvailable: boolean;
   judgingStats: JudgingProgressStats;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<{ stage: Stage; targetState: boolean } | null>(null);
+  const [rankingTarget, setRankingTarget] = useState<boolean | null>(null);
+
+  const handleRankingConfirm = () => {
+    if (rankingTarget === null) return;
+    const target = rankingTarget;
+    setRankingTarget(null);
+
+    startTransition(async () => {
+      const result = await updateRankingPublication(target);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(target ? "Peringkat berhasil dipublikasikan ke tim." : "Publikasi peringkat berhasil ditarik.");
+      router.refresh();
+    });
+  };
 
   const handleConfirm = () => {
     if (!confirm) return;
@@ -194,6 +215,118 @@ export function ResultsReleaseClient({
           />
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ListOrdered className="size-5 shrink-0 text-primary" />
+            Peringkat Publik
+          </CardTitle>
+          <CardDescription>
+            Tampilkan peringkat seluruh tim, dari pertama sampai terakhir, di bawah halaman Hasil Penilaian peserta.
+            Finalis diurutkan dengan nilai final, tim lainnya dengan nilai babak awal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label htmlFor="switch-ranking-publish" className="cursor-pointer font-semibold text-base">
+                    Publikasikan Peringkat
+                  </Label>
+                  {rankingPublished ? (
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-xs"
+                    >
+                      Dipublikasikan
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-muted text-muted-foreground text-xs">
+                      Nonaktif
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Peserta melihat peringkat, nama tim, institusi, dan total nilai rata-rata. Identitas dan nilai per
+                  juri tidak ditampilkan.
+                </p>
+              </div>
+              <Switch
+                id="switch-ranking-publish"
+                checked={rankingPublished}
+                onCheckedChange={(checked) => setRankingTarget(checked)}
+                disabled={isPending || !rankingAvailable}
+                className="mt-1"
+              />
+            </div>
+            {!rankingAvailable && (
+              <p className="flex items-start gap-1.5 border-t pt-3 text-muted-foreground text-xs">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Pengaturan ini belum tersedia. Hubungi pengelola sistem.
+              </p>
+            )}
+            {rankingAvailable && !finalResultsReleased && (
+              <p className="flex items-start gap-1.5 border-t pt-3 text-amber-600 text-xs dark:text-amber-400">
+                <FlaskConical className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  Hasil babak final belum dirilis. Jika dipublikasikan sekarang, peringkat tampil sebagai{" "}
+                  <strong>peringkat sementara</strong> (mode uji).
+                </span>
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={rankingTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRankingTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {rankingTarget ? "Publikasikan Peringkat?" : "Tarik Publikasi Peringkat?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2 text-muted-foreground text-sm">
+                {rankingTarget ? (
+                  <>
+                    <p>
+                      Seluruh tim peserta akan melihat peringkat semua tim beserta total nilai rata-ratanya di halaman
+                      Hasil Penilaian.
+                    </p>
+                    {!finalResultsReleased && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-amber-700 text-xs dark:text-amber-400">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                        <span>
+                          <strong>Mode uji:</strong> hasil final belum dirilis. Rata-rata nilai final yang sudah masuk
+                          akan terlihat oleh peserta sebagai peringkat sementara. Gunakan hanya untuk pengujian.
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p>Peringkat akan disembunyikan kembali dari seluruh tim peserta.</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRankingConfirm}
+              disabled={isPending}
+              className={rankingTarget ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+            >
+              {rankingTarget ? "Ya, publikasikan" : "Ya, tarik publikasi"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(confirm)}

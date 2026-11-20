@@ -40,7 +40,7 @@ Rules for AI agents. Project context: `AI.md`. File locations: `docs/documentati
 - Expose via `SECURITY DEFINER` functions only: empty `search_path`, team derived from `auth.uid()`, no team id param, no team SELECT policy on score tables.
 - Return aggregates and anonymous comments only. Nothing identifying a judge (id, name, ordering, timestamps).
 - Function self-checks: active team role, results released, caller owns team.
-- Never expose other teams' data, rank, or per-judge raw scores.
+- Never expose other teams' data, rank, or per-judge raw scores. Sole exception (committee request): `get_public_ranking()`, gated by `competition_settings.ranking_published`, returns rank, team name, institution and aggregate score for every team. Never extend it to ids, codes, emails, criteria, comments or judge data.
 
 **Grants/functions**
 

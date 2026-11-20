@@ -45,19 +45,22 @@ function stageProgress(
 export default async function ResultsSettingsPage() {
   const supabase = await createClient();
 
-  const [settingsRes, judgesRes, teamsRes, submissionsRes, prelimRes, finalRes, recusalsRes] = await Promise.all([
-    supabase
-      .from("competition_settings")
-      .select("preliminary_results_released, final_results_released")
-      .eq("id", true)
-      .maybeSingle(),
-    supabase.from("profiles").select("id, judge_stage").eq("role", "judge").eq("is_active", true),
-    supabase.from("teams").select("id, is_finalist, is_disqualified"),
-    supabase.from("submissions").select("team_id, status"),
-    supabase.from("preliminary_scores").select("judge_id, team_id, status"),
-    supabase.from("final_scores").select("judge_id, team_id, status"),
-    supabase.from("judge_recusals").select("judge_id, team_id, stage"),
-  ]);
+  const [settingsRes, rankingRes, judgesRes, teamsRes, submissionsRes, prelimRes, finalRes, recusalsRes] =
+    await Promise.all([
+      supabase
+        .from("competition_settings")
+        .select("preliminary_results_released, final_results_released")
+        .eq("id", true)
+        .maybeSingle(),
+      // Separate query so the page still loads before 20261121000000_public_ranking is applied.
+      supabase.from("competition_settings").select("ranking_published").eq("id", true).maybeSingle(),
+      supabase.from("profiles").select("id, judge_stage").eq("role", "judge").eq("is_active", true),
+      supabase.from("teams").select("id, is_finalist, is_disqualified"),
+      supabase.from("submissions").select("team_id, status"),
+      supabase.from("preliminary_scores").select("judge_id, team_id, status"),
+      supabase.from("final_scores").select("judge_id, team_id, status"),
+      supabase.from("judge_recusals").select("judge_id, team_id, stage"),
+    ]);
 
   if (settingsRes.error) return <SettingsLoadError />;
 
@@ -77,6 +80,8 @@ export default async function ResultsSettingsPage() {
     <ResultsReleaseClient
       preliminaryResultsReleased={Boolean(settingsRes.data?.preliminary_results_released)}
       finalResultsReleased={Boolean(settingsRes.data?.final_results_released)}
+      rankingPublished={Boolean(rankingRes.data?.ranking_published)}
+      rankingAvailable={!rankingRes.error}
       judgingStats={judgingStats}
     />
   );
