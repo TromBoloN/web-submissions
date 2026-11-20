@@ -8,7 +8,8 @@ export default async function TeamPage() {
   const supabase = await createClient();
 
   const [teamRes, settingsRes, noticeRes] = await Promise.all([
-    supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
+    // Own submission embedded (1:1, RLS applies) so it doesn't wait on a second round trip.
+    supabase.from("teams").select("*, submissions(*)").eq("profile_id", profile.id).maybeSingle(),
     supabase
       .from("competition_settings")
       .select(
@@ -30,12 +31,10 @@ export default async function TeamPage() {
     );
   }
 
-  const team = teamRes.data;
+  const { submissions: submission, ...team } = teamRes.data;
   const serverNowIso = new Date().toISOString();
   const deadlineIso = settingsRes.data?.submission_closes_at ?? null;
   const initialClosed = deadlineIso ? new Date(serverNowIso) >= new Date(deadlineIso) : false;
-
-  const { data: submission } = await supabase.from("submissions").select("*").eq("team_id", team.id).maybeSingle();
 
   const finalistNotice = noticeRes.data && noticeRes.data.length > 0 ? noticeRes.data[0] : null;
 

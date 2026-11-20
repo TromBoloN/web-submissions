@@ -18,12 +18,16 @@ export default async function TeamHasilPage() {
   await requireRole("team");
   const supabase = await createClient();
 
-  // 1. Check release flags in competition_settings
-  const { data: settings, error: settingsError } = await supabase
-    .from("competition_settings")
-    .select("preliminary_results_released, final_results_released")
-    .eq("id", true)
-    .maybeSingle();
+  // 1. Release flags and results in parallel. get_my_results() enforces the release check itself,
+  //    so firing it early exposes nothing; the redirect below still happens before anything renders.
+  const [{ data: settings, error: settingsError }, { data: rawResults, error }] = await Promise.all([
+    supabase
+      .from("competition_settings")
+      .select("preliminary_results_released, final_results_released")
+      .eq("id", true)
+      .maybeSingle(),
+    supabase.rpc("get_my_results"),
+  ]);
 
   const isAnyReleased =
     !settingsError && Boolean(settings?.preliminary_results_released || settings?.final_results_released);
@@ -31,9 +35,6 @@ export default async function TeamHasilPage() {
   if (!isAnyReleased) {
     redirect("/team");
   }
-
-  // 2. Fetch results from RPC
-  const { data: rawResults, error } = await supabase.rpc("get_my_results");
 
   // Handle function error with friendly generic message
   if (error || !rawResults) {

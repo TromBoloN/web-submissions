@@ -17,16 +17,19 @@ export default async function TeamPeringkatPage() {
   await requireRole("team");
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: rankingSetting, error: rankingSettingError }] = await Promise.all([
-    supabase.from("competition_settings").select("final_results_released").eq("id", true).maybeSingle(),
-    supabase.from("competition_settings").select("ranking_published").eq("id", true).maybeSingle(),
-  ]);
+  // get_public_ranking() is gated by ranking_published inside the function, so it can run in parallel
+  // with the settings read; the redirect below still happens before anything renders.
+  const [{ data: settings }, { data: rankingSetting, error: rankingSettingError }, { data, error }] = await Promise.all(
+    [
+      supabase.from("competition_settings").select("final_results_released").eq("id", true).maybeSingle(),
+      supabase.from("competition_settings").select("ranking_published").eq("id", true).maybeSingle(),
+      supabase.rpc("get_public_ranking"),
+    ],
+  );
 
   if (rankingSettingError || !rankingSetting?.ranking_published) {
     redirect("/team");
   }
-
-  const { data, error } = await supabase.rpc("get_public_ranking");
 
   if (error) {
     return (

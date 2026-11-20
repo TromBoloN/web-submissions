@@ -40,8 +40,58 @@ export default async function JudgeScoringPage({ params }: PageProps) {
     redirect("/judge");
   }
 
-  // Retrieve authorized team list for this judge and stage
-  const teamList = await getJudgeTeamList(tahap);
+  const supabase = await createClient();
+
+  // Everything below depends only on the session judge, tahap and teamId, so load it in one parallel batch.
+  // RLS scopes every read; the authorization redirects below still run before anything renders.
+  const prelimScoreQuery =
+    tahap === "preliminary"
+      ? supabase
+          .from("preliminary_scores")
+          .select(
+            "functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, total_weighted_score, feedback, private_note, status, updated_at, locked_at",
+          )
+          .eq("judge_id", profile.id)
+          .eq("team_id", teamId)
+          .maybeSingle()
+      : null;
+  const finalScoreQuery =
+    tahap === "final"
+      ? supabase
+          .from("final_scores")
+          .select(
+            "functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, presentation_qa_score, total_weighted_score, feedback, private_note, status, updated_at, locked_at",
+          )
+          .eq("judge_id", profile.id)
+          .eq("team_id", teamId)
+          .maybeSingle()
+      : null;
+
+  const [teamList, { data: submission }, { data: settings }, { data: recusal }, prelimScoreRes, finalScoreRes] =
+    await Promise.all([
+      // Authorized team list for this judge and stage
+      getJudgeTeamList(tahap),
+      supabase
+        .from("submissions")
+        .select("status, github_url, live_demo_url, video_url, notes_for_judges")
+        .eq("team_id", teamId)
+        .maybeSingle(),
+      supabase
+        .from("competition_settings")
+        .select("preliminary_results_released, final_results_released")
+        .eq("id", true)
+        .maybeSingle(),
+      supabase
+        .from("judge_recusals")
+        .select("reason, created_at")
+        .eq("judge_id", profile.id)
+        .eq("team_id", teamId)
+        .eq("stage", tahap)
+        .maybeSingle(),
+      prelimScoreQuery,
+      finalScoreQuery,
+    ]);
+
   const currentIndex = teamList.findIndex((t) => t.id === teamId);
 
   // If the team is not in the authorized list (disqualified, draft, non-finalist, or wrong stage), redirect
@@ -50,29 +100,6 @@ export default async function JudgeScoringPage({ params }: PageProps) {
   }
 
   const currentTeamItem = teamList[currentIndex];
-
-  const supabase = await createClient();
-
-  // Load submission, stage settings, and the judge's recusal for this team
-  const [{ data: submission }, { data: settings }, { data: recusal }] = await Promise.all([
-    supabase
-      .from("submissions")
-      .select("status, github_url, live_demo_url, video_url, notes_for_judges")
-      .eq("team_id", teamId)
-      .maybeSingle(),
-    supabase
-      .from("competition_settings")
-      .select("preliminary_results_released, final_results_released")
-      .eq("id", true)
-      .maybeSingle(),
-    supabase
-      .from("judge_recusals")
-      .select("reason, created_at")
-      .eq("judge_id", profile.id)
-      .eq("team_id", teamId)
-      .eq("stage", tahap)
-      .maybeSingle(),
-  ]);
 
   if (submission?.status !== "submitted") {
     redirect("/judge");
@@ -99,14 +126,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
   // Load judge's existing score for this team (if any)
   let initialScore = null;
   if (tahap === "preliminary") {
-    const { data: prelimScore } = await supabase
-      .from("preliminary_scores")
-      .select(
-        "functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, total_weighted_score, feedback, private_note, status, updated_at, locked_at",
-      )
-      .eq("judge_id", profile.id)
-      .eq("team_id", teamId)
-      .maybeSingle();
+    const prelimScore = prelimScoreRes?.data;
 
     if (prelimScore) {
       initialScore = {
@@ -124,14 +144,7 @@ export default async function JudgeScoringPage({ params }: PageProps) {
       };
     }
   } else {
-    const { data: finalScore } = await supabase
-      .from("final_scores")
-      .select(
-        "functionality_score, case_study_fit_score, ui_ux_score, code_quality_score, documentation_score, presentation_qa_score, total_weighted_score, feedback, private_note, status, updated_at, locked_at",
-      )
-      .eq("judge_id", profile.id)
-      .eq("team_id", teamId)
-      .maybeSingle();
+    const finalScore = finalScoreRes?.data;
 
     if (finalScore) {
       initialScore = {

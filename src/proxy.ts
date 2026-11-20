@@ -31,14 +31,16 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() refreshes the session like getUser(), but verifies the JWT locally when the project uses
+  // asymmetric signing keys (no Auth round trip per navigation); with legacy HS256 keys it falls back to getUser().
+  // This is only the login redirect: pages still run requireRole() (getUser + active profile) and RLS guards data.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const isSignedIn = Boolean(claimsData?.claims.sub);
   const pathname = request.nextUrl.pathname;
   const isLoginPage = pathname === "/login";
   const isShowcasePage = pathname === "/karya" || pathname.startsWith("/karya/");
 
-  if (!user && !isLoginPage && !isShowcasePage) {
+  if (!isSignedIn && !isLoginPage && !isShowcasePage) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     return NextResponse.redirect(loginUrl);

@@ -8,7 +8,12 @@ export default async function TeamKaryaPage() {
   const supabase = await createClient();
 
   const [teamRes, settingsRes, noticeRes] = await Promise.all([
-    supabase.from("teams").select("*").eq("profile_id", profile.id).maybeSingle(),
+    // Own submission embedded (1:1, RLS applies) so it doesn't wait on a second round trip.
+    supabase
+      .from("teams")
+      .select("*, submissions(status, github_url, live_demo_url, video_url)")
+      .eq("profile_id", profile.id)
+      .maybeSingle(),
     supabase
       .from("competition_settings")
       .select("showcase_published_at, showcase_finalists_published_at")
@@ -29,12 +34,7 @@ export default async function TeamKaryaPage() {
     );
   }
 
-  const team = teamRes.data;
-  const { data: submission } = await supabase
-    .from("submissions")
-    .select("status, github_url, live_demo_url, video_url")
-    .eq("team_id", team.id)
-    .maybeSingle();
+  const { submissions: submission, ...team } = teamRes.data;
 
   return (
     <KaryaClient

@@ -11,27 +11,24 @@ export default async function TeamCaseStudyPage() {
   const [caseStudyRes, settingsRes, teamRes] = await Promise.all([
     supabase.from("case_study").select("title, content_md, updated_at").eq("id", true).maybeSingle(),
     supabase.from("competition_settings").select("submission_closes_at, juknis_url").eq("id", true).maybeSingle(),
-    supabase.from("teams").select("id").eq("profile_id", profile.id).maybeSingle(),
+    // Own submission only (RLS, embedded 1:1), to tick the deliverables checklist. Failure just leaves it unticked.
+    supabase
+      .from("teams")
+      .select("submissions(status, github_url, live_demo_url, video_url)")
+      .eq("profile_id", profile.id)
+      .maybeSingle(),
   ]);
   const caseStudy = caseStudyRes.data;
 
-  // Own submission only (RLS), to tick the deliverables checklist. Failure just leaves it unticked.
-  let submission: CaseStudySubmission | null = null;
-  if (teamRes.data) {
-    const { data } = await supabase
-      .from("submissions")
-      .select("status, github_url, live_demo_url, video_url")
-      .eq("team_id", teamRes.data.id)
-      .maybeSingle();
-    if (data) {
-      submission = {
-        status: data.status,
-        githubUrl: data.github_url,
-        liveDemoUrl: data.live_demo_url,
-        videoUrl: data.video_url,
-      };
-    }
-  }
+  const ownSubmission = teamRes.data?.submissions ?? null;
+  const submission: CaseStudySubmission | null = ownSubmission
+    ? {
+        status: ownSubmission.status,
+        githubUrl: ownSubmission.github_url,
+        liveDemoUrl: ownSubmission.live_demo_url,
+        videoUrl: ownSubmission.video_url,
+      }
+    : null;
 
   let releaseAt: string | null = null;
   // Jika baris disembunyikan oleh RLS (sebelum release_at), ambil HANYA release_at dengan adminClient
