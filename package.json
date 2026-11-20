@@ -26,7 +26,9 @@
     "whatsapp": "node --env-file=.env scripts/whatsapp-links.mjs"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{js,ts,jsx,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -48,7 +50,7 @@
     "geist": "^1.8.1",
     "input-otp": "^1.5.0",
     "lucide-react": "^1.59.0",
-    "next": "^16.4.2",
+    "next": "^16.4.6",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",
