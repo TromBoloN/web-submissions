@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -16,7 +18,11 @@ export function getDashboardPath(role: UserRole) {
   return roleDashboards[role];
 }
 
-export async function getCurrentProfile(): Promise<Profile | null> {
+/**
+ * Memoized per server request with React `cache()`: the layout and page share one auth check + profile query.
+ * Nothing persists across requests, so there is no stale data.
+ */
+export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,7 +39,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   }
 
   return profile;
-}
+});
 
 export async function requireRole(roles: UserRole | UserRole[]) {
   const profile = await getCurrentProfile();

@@ -81,7 +81,7 @@ Galeri shows a lock + "18 NOV" badge until the gallery is published, then "Baru"
 
 ```
 src/proxy.ts                         session refresh, login redirect; /login and /karya are public
-src/lib/auth.ts                      getCurrentProfile, requireRole, getDashboardPath
+src/lib/auth.ts                      getCurrentProfile (React cache(), per request), requireRole, getDashboardPath
 src/lib/auth-actions.ts              signIn, signOut, changePassword
 src/lib/deadline.ts                  WITA conversion, exclusive-bound handling, +1 minute rule
 src/lib/audit.ts                     server-only audit event writer (logAuditEvent)
@@ -102,6 +102,7 @@ src/app/(main)/admin/_components/team-detail/   TeamDetailSheet + teamRowProps (
 src/components/theme-toggle.tsx      shared two-state light/dark toggle (header; floating on /karya)
 src/components/showcase-card.tsx     shared public/team showcase card
 src/components/showcase-gallery.tsx  public showcase gallery, vault, and timeline
+src/components/page-loading-skeleton.tsx  generic route fallback for (main)/admin, judge, team loading.tsx
 src/components/                      also change-password-form, markdown-content, logout-button, rubric-bars
 src/components/ui/                   shadcn/ui, generated: do not edit
 src/app/globals.css                  theme tokens, Guardian tokens and utilities (see DESIGN-SYSTEM.md)
