@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  TEAM_ROW_CLASS,
+  TeamDetailSheet,
+  teamRowProps,
+} from "@/app/(main)/admin/_components/team-detail/team-detail-sheet";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -547,6 +552,7 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
   const [page, setPage] = useState(1);
   const [editingRow, setEditingRow] = useState<SubmissionRow | null>(null);
   const [detailRow, setDetailRow] = useState<SubmissionRow | null>(null);
+  const [detailTeamId, setDetailTeamId] = useState<string | null>(null);
   const [historyRow, setHistoryRow] = useState<SubmissionRow | null>(null);
   const [recheckingId, setRecheckingId] = useState<string | null>(null);
 
@@ -697,6 +703,7 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
               className="cursor-pointer gap-1 border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
               onClick={() => setDetailRow(row.original)}
               title={`${summary.label}. Klik untuk detail.`}
+              data-row-ignore
             >
               <AlertTriangle className="size-3" />
               {summary.label}
@@ -710,6 +717,7 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
               className="cursor-pointer gap-1 border-emerald-500/30 bg-emerald-500/10 text-[11px] text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
               onClick={() => setDetailRow(row.original)}
               title="Semua tautan aman. Klik untuk detail."
+              data-row-ignore
             >
               <CheckCircle2 className="size-3" />
               Semua aman
@@ -723,6 +731,7 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
               className="cursor-pointer gap-1 text-[11px] hover:bg-muted"
               onClick={() => setDetailRow(row.original)}
               title="Perlu verifikasi manual. Klik untuk detail."
+              data-row-ignore
             >
               <HelpCircle className="size-3" />
               Diperiksa
@@ -735,6 +744,7 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
             className="cursor-pointer border-dashed text-[11px] text-muted-foreground hover:bg-muted"
             onClick={() => setDetailRow(row.original)}
             title="Belum diperiksa. Klik untuk detail atau periksa ulang."
+            data-row-ignore
           >
             Belum diperiksa
           </Badge>
@@ -963,7 +973,11 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className={TEAM_ROW_CLASS}
+                  {...teamRowProps(row.original.team_id, setDetailTeamId)}
+                >
                   {row.getAllCells().map((cell) => (
                     <TableCell key={cell.id} className={cell.column.id === "actions" ? "text-right" : undefined}>
                       <table.FlexRender cell={cell} />
@@ -1032,6 +1046,13 @@ export function SubmissionsClient({ rows, history }: SubmissionsClientProps) {
           }}
         />
       )}
+
+      <TeamDetailSheet
+        teamId={detailTeamId}
+        onOpenChange={(open) => {
+          if (!open) setDetailTeamId(null);
+        }}
+      />
     </div>
   );
 }

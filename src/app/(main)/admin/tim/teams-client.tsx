@@ -8,6 +8,11 @@ import { type ColumnDef, tableFeatures, useTable } from "@tanstack/react-table";
 import { AlertTriangle, CheckCircle2, MoreVertical, ShieldAlert, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  TEAM_ROW_CLASS,
+  TeamDetailSheet,
+  teamRowProps,
+} from "@/app/(main)/admin/_components/team-detail/team-detail-sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -251,6 +256,8 @@ export function TeamsClient({ rows, finalistCount }: TeamsClientProps) {
     targetDisqualified: boolean;
   } | null>(null);
 
+  const [detailTeamId, setDetailTeamId] = useState<string | null>(null);
+
   const filteredRows = useMemo(() => {
     return rows.filter((team) => {
       const q = search.trim().toLowerCase();
@@ -437,7 +444,7 @@ export function TeamsClient({ rows, finalistCount }: TeamsClientProps) {
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={TEAM_ROW_CLASS} {...teamRowProps(row.original.id, setDetailTeamId)}>
                   {row.getAllCells().map((cell) => (
                     <TableCell key={cell.id} className={cell.column.id === "actions" ? "text-right" : undefined}>
                       <table.FlexRender cell={cell} />
@@ -476,6 +483,13 @@ export function TeamsClient({ rows, finalistCount }: TeamsClientProps) {
           if (!open) setConfirmDisqualified(null);
         }}
         onConfirmed={() => router.refresh()}
+      />
+
+      <TeamDetailSheet
+        teamId={detailTeamId}
+        onOpenChange={(open) => {
+          if (!open) setDetailTeamId(null);
+        }}
       />
     </div>
   );

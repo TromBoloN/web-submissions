@@ -96,7 +96,8 @@ src/lib/data-table-features.ts       TanStack Table v9 helpers
 src/lib/supabase/client.ts           browser client
 src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
-src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased, galleryState)
+src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased, galleryState, rankingPublished)
+src/app/(main)/admin/_components/team-detail/   TeamDetailSheet + teamRowProps (click a row on Tim, Submission, Peringkat); getTeamDetail admin-only action
 src/components/theme-toggle.tsx      shared two-state light/dark toggle (header; floating on /karya)
 src/components/showcase-card.tsx     shared public/team showcase card
 src/components/showcase-gallery.tsx  public showcase gallery, vault, and timeline

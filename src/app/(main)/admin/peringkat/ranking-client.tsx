@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { cn } from "cn";
 import {
   AlertTriangle,
   Award,
@@ -21,6 +22,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  TEAM_ROW_CLASS,
+  TeamDetailSheet,
+  teamRowProps,
+} from "@/app/(main)/admin/_components/team-detail/team-detail-sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -164,6 +170,7 @@ export function RankingClient({
     team_name: string;
     tahap: "preliminary" | "final";
   } | null>(null);
+  const [detailTeamId, setDetailTeamId] = useState<string | null>(null);
 
   // Check if judges_count differs across teams
   const prelimJudgesCounts = useMemo(
@@ -430,7 +437,11 @@ export function RankingClient({
                     const isTop5 = row.rank !== null && row.rank <= 5;
 
                     return (
-                      <TableRow key={row.team_id} className={isTop5 ? "bg-primary/[0.03] font-medium" : undefined}>
+                      <TableRow
+                        key={row.team_id}
+                        className={cn(TEAM_ROW_CLASS, isTop5 && "bg-primary/[0.03] font-medium")}
+                        {...teamRowProps(row.team_id, setDetailTeamId)}
+                      >
                         <TableCell>
                           <PrelimRankBadge rank={row.rank} isTop5={isTop5} />
                         </TableCell>
@@ -530,7 +541,11 @@ export function RankingClient({
                   </TableRow>
                 ) : (
                   finalRanking.map((row) => (
-                    <TableRow key={row.team_id}>
+                    <TableRow
+                      key={row.team_id}
+                      className={TEAM_ROW_CLASS}
+                      {...teamRowProps(row.team_id, setDetailTeamId)}
+                    >
                       <TableCell>
                         <FinalRankBadge rank={row.rank} />
                       </TableCell>
@@ -803,6 +818,13 @@ export function RankingClient({
           </div>
         </DialogContent>
       </Dialog>
+
+      <TeamDetailSheet
+        teamId={detailTeamId}
+        onOpenChange={(open) => {
+          if (!open) setDetailTeamId(null);
+        }}
+      />
     </div>
   );
 }
