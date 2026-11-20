@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/types/database";
 
 import { publishFinalistNotice, unpublishFinalistNotice, updateFinalistNotice } from "./actions";
+import { PresentationOrder } from "./presentation-order";
 
 type FinalistNotice = Database["public"]["Tables"]["finalist_notice"]["Row"];
 
@@ -234,6 +235,8 @@ export function FinalisClient({ notice, finalists }: FinalisClientProps) {
           )}
         </CardContent>
       </Card>
+
+      <PresentationOrder finalists={finalists} />
 
       {/* Card 2: Form Pesan Pengumuman */}
       <form onSubmit={handleSaveNotice}>
