@@ -27,7 +27,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Submissions and CSV | /admin/submission | `(main)/admin/submission` (+ `export/route.ts`) | `submissions` |
 | Teams | /admin/tim | `(main)/admin/tim` | `teams` |
 | Judge queue | /judge | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals` |
-| Judge scoring | /judge/nilai/[tahap]/[teamId] | `(main)/judge/nilai/[tahap]/[teamId]` | `preliminary_scores`, `final_scores`, `judge_recusals` |
+| Judge scoring | /judge/nilai/[tahap]/[teamId] | `(main)/judge/nilai/[tahap]/[teamId]` (`preliminary-review.tsx`: final-stage "Nilai Babak Awal" panel) | `preliminary_scores`, `final_scores`, `judge_recusals`, `get_preliminary_scores_for_final()` (RPC) |
 | Team dashboard | /team | `(main)/team` (files beside `page.tsx`, see below) | own `teams`, own `submissions`, `competition_settings`, `get_my_finalist_notice()` |
 | Team showcase editor | /team/karya | `(main)/team/karya` | own `teams`, own `submissions`, `save_showcase_details()`, storage bucket `web-showcase` |
 | Team results | /team/hasil | `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`) | `get_my_results()` (RPC) |

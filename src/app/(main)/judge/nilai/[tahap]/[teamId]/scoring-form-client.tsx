@@ -49,6 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { calcWeightedTotal, getRubricForStage, type ScoringStage } from "@/lib/rubric";
 
 import { cancelRecusal, createRecusal, lockScore, replaceScoreFeedback, saveScore } from "../../actions";
+import { PreliminaryReview, type PreliminaryReviewScore } from "./preliminary-review";
 
 interface TeamData {
   id: string;
@@ -96,6 +97,8 @@ interface ScoringFormClientProps {
   initialRecusal?: { reason: string; created_at: string } | null;
   isStageReleased?: boolean;
   navigation?: JudgeScoringNavigation;
+  /** Final stage only; null hides the panel. */
+  preliminaryReview?: PreliminaryReviewScore[] | null;
 }
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -161,6 +164,7 @@ export function ScoringFormClient({
   initialRecusal = null,
   isStageReleased = false,
   navigation,
+  preliminaryReview = null,
 }: ScoringFormClientProps) {
   const rubric = useMemo(() => getRubricForStage(tahap), [tahap]);
 
@@ -664,6 +668,8 @@ export function ScoringFormClient({
           </CardContent>
         </Card>
       )}
+
+      {preliminaryReview && <PreliminaryReview scores={preliminaryReview} />}
 
       {/* Recusal information, replaces the scoring form */}
       {isRecused && (

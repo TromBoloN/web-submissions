@@ -50,6 +50,7 @@ All are `SECURITY DEFINER` with an empty `search_path` unless noted, and check a
 | `judge_can_view_team()`, `judge_can_score_preliminary()`, `judge_can_score_final()` | internal / policies | Judge assignment and stage checks |
 | `get_my_results()` | authenticated (team) | Released, anonymized aggregates and feedback for the caller's own team |
 | `get_public_ranking()` | authenticated (team, admin) | Only when `ranking_published`: every submitted, non-disqualified team's rank, name, institution, aggregate score and its stage, plus `is_own_team`. Finalists first by final average, then the rest by preliminary average. Committee-approved exception to the no-rank rule |
+| `get_preliminary_scores_for_final(p_team_id)` | authenticated (final/`both` judge) | Only after `preliminary_results_released`, for a non-disqualified submitted finalist the caller is not recused from: final-status preliminary scores (criteria, weighted total, `feedback`) with judges anonymized as a per-team label. Never judge ids, names, timestamps, `private_note` or drafts |
 | `get_my_finalist_notice()` | authenticated (team) | Finalist or non-finalist message once published; nothing for disqualified teams |
 | `set_showcase_consent()`, `save_showcase_details()` | authenticated (team) | Team edits its own showcase while unlocked |
 | `publish_showcase_phase_one()`, `publish_showcase_phase_two()`, `publish_showcase_winners()` | authenticated (admin check inside) | Gallery publication stages |
@@ -62,6 +63,10 @@ Anon access is only ever granted on functions that return public fields. `anon` 
 ## Pending migrations
 
 Written, **not applied** at the time of writing. Check `src/types/database.ts` for `competition_stages`: if it is missing, they have not been applied.
+
+### `20261121010000_final_judges_view_preliminary.sql`
+
+Independent of the others; app code is merged and tolerates the migration being missing (the panel stays hidden). Adds `get_preliminary_scores_for_final(p_team_id)` (see the functions table). Shown on `/judge/nilai/final/[teamId]` as "Nilai Babak Awal". Types for it were added to `src/types/database.ts` by hand; regenerating after applying replaces them with the same shape.
 
 ### `20261121000000_public_ranking.sql`
 
@@ -114,6 +119,7 @@ Scores are bounded from 0 to 100. Totals are generated numeric values, displayed
 - Team and judge identifiers come from the authenticated session, never from client-provided IDs.
 - Teams receive results only through `get_my_results()`, which checks active ownership and release state inside the function.
 - Results expose aggregates and anonymous comments, not judge IDs, names, timestamps, rank, or per-judge raw scores.
+- Judge-to-judge exception (committee request): final judges see anonymized per-judge preliminary scores and comments through `get_preliminary_scores_for_final()` only, never `private_note` or identity.
 - Release triggers block score inserts, updates, and deletes after a stage is released.
 - Finalist-only data (final venue and meeting link) is not stored on tables every role can read.
 - Admin CSV routes independently return 401 for unauthenticated requests and 403 for non-admin users; exports use BOM, formula-neutralized cells, and `no-store`.

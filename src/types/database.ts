@@ -618,6 +618,19 @@ export type Database = {
         Args: never;
         Returns: Json;
       };
+      get_preliminary_scores_for_final: {
+        Args: { p_team_id: string };
+        Returns: {
+          case_study_fit_score: number | null;
+          code_quality_score: number | null;
+          documentation_score: number | null;
+          feedback: string | null;
+          functionality_score: number | null;
+          judge_label: number;
+          total_weighted_score: number | null;
+          ui_ux_score: number | null;
+        }[];
+      };
       get_public_ranking: {
         Args: never;
         Returns: {
