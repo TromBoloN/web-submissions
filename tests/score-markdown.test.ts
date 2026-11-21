@@ -40,6 +40,29 @@ describe("buildScoreMarkdown", () => {
     expect(md).toContain("> Bagus.\n> Perbaiki README.");
   });
 
+  it("lists sanctions with the pre-sanction average", () => {
+    const md = buildScoreMarkdown({
+      stage: "preliminary",
+      generatedAt: "x",
+      formatDate: (s) => s,
+      teams: [
+        {
+          rank: 1,
+          team_code: "T02",
+          team_name: "Gamma",
+          avg_score: 5,
+          raw_avg_score: 8.5,
+          sanctions: [{ criterion: "ui_ux_score", points: 10, reason: "Plagiat aset | tanpa izin" }],
+          judges: [],
+        },
+      ],
+    });
+
+    expect(md).toContain("Rata-rata skor berbobot: **5** (sebelum sanksi: 8.5)");
+    expect(md).toContain("### Sanksi Panitia");
+    expect(md).toContain("| UI/UX | −10 | Plagiat aset \\| tanpa izin |");
+  });
+
   it("notes when there are no final scores", () => {
     const md = buildScoreMarkdown({ stage: "final", generatedAt: "x", formatDate: (s) => s, teams: [] });
     expect(md).toContain("Belum ada nilai final");

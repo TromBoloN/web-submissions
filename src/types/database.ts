@@ -395,6 +395,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      score_sanctions: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          criterion: string;
+          id: string;
+          points: number;
+          reason: string;
+          stage: string;
+          team_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          criterion: string;
+          id?: string;
+          points: number;
+          reason: string;
+          stage: string;
+          team_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          criterion?: string;
+          id?: string;
+          points?: number;
+          reason?: string;
+          stage?: string;
+          team_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "score_sanctions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "score_sanctions_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       submission_history: {
         Row: {
           changed_at: string;
@@ -585,6 +633,8 @@ export type Database = {
           avg_score: number | null;
           judges_count: number | null;
           rank: number | null;
+          raw_avg_score: number | null;
+          sanction_deduction: number | null;
           team_code: string | null;
           team_id: string | null;
           team_name: string | null;
@@ -596,6 +646,8 @@ export type Database = {
           avg_score: number | null;
           judges_count: number | null;
           rank: number | null;
+          raw_avg_score: number | null;
+          sanction_deduction: number | null;
           team_code: string | null;
           team_id: string | null;
           team_name: string | null;
@@ -684,6 +736,10 @@ export type Database = {
       publish_showcase_phase_one: { Args: never; Returns: boolean };
       publish_showcase_phase_two: { Args: never; Returns: boolean };
       publish_showcase_winners: { Args: never; Returns: boolean };
+      score_sanction_deduction: {
+        Args: { p_stage: string; p_team_id: string };
+        Returns: number;
+      };
       save_showcase_details: {
         Args: {
           p_consent: boolean;

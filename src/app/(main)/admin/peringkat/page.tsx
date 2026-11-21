@@ -11,6 +11,7 @@ import {
   RankingClient,
   type RankingRow,
 } from "./ranking-client";
+import type { ScoreSanctionDetail } from "./sanction-panel";
 
 export const metadata: Metadata = {
   title: `Peringkat | ${APP_CONFIG.name}`,
@@ -32,6 +33,7 @@ export default async function AdminPeringkatPage() {
     finalScoresRes,
     recusalsRes,
     noticeRes,
+    sanctionsRes,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -63,6 +65,11 @@ export default async function AdminPeringkatPage() {
       .select("judge_id, team_id, stage, reason, created_at")
       .order("created_at", { ascending: true }),
     supabase.from("finalist_notice").select("is_published").eq("id", true).maybeSingle(),
+    // Errors only when migration 20261122000000_score_sanctions is not applied yet: sanctions are then disabled.
+    supabase
+      .from("score_sanctions")
+      .select("id, team_id, stage, criterion, points, reason, created_at")
+      .order("created_at", { ascending: true }),
   ]);
 
   if (
@@ -217,7 +224,25 @@ export default async function AdminPeringkatPage() {
     });
   }
 
-  // Format ranking rows
+  // Sanctions per team and stage (admin-only through RLS)
+  const sanctionsAvailable = !sanctionsRes.error;
+  const prelimSanctions: Record<string, ScoreSanctionDetail[]> = {};
+  const finalSanctions: Record<string, ScoreSanctionDetail[]> = {};
+  for (const s of sanctionsRes.data ?? []) {
+    const target = s.stage === "final" ? finalSanctions : prelimSanctions;
+    if (!target[s.team_id]) {
+      target[s.team_id] = [];
+    }
+    target[s.team_id].push({
+      id: s.id,
+      criterion: s.criterion,
+      points: Number(s.points),
+      reason: s.reason,
+      created_at: s.created_at,
+    });
+  }
+
+  // Format ranking rows (avg_score is after sanctions)
   const prelimRanking: RankingRow[] = (prelimRankingRes.data ?? []).map((r) => ({
     rank: r.rank,
     team_id: r.team_id ?? "",
@@ -225,6 +250,7 @@ export default async function AdminPeringkatPage() {
     team_name: r.team_name ?? "-",
     judges_count: r.judges_count ?? 0,
     avg_score: r.avg_score,
+    sanction_deduction: r.sanction_deduction ?? 0,
   }));
 
   const finalRanking: RankingRow[] = (finalRankingRes.data ?? []).map((r) => ({
@@ -234,6 +260,7 @@ export default async function AdminPeringkatPage() {
     team_name: r.team_name ?? "-",
     judges_count: r.judges_count ?? 0,
     avg_score: r.avg_score,
+    sanction_deduction: r.sanction_deduction ?? 0,
   }));
 
   return (
@@ -245,6 +272,9 @@ export default async function AdminPeringkatPage() {
       finalBreakdown={finalBreakdown}
       prelimRecusals={prelimRecusals}
       finalRecusals={finalRecusals}
+      prelimSanctions={prelimSanctions}
+      finalSanctions={finalSanctions}
+      sanctionsAvailable={sanctionsAvailable}
       currentFinalists={teams
         .filter((t) => t.is_finalist)
         .map((t) => ({ team_id: t.id, team_code: t.team_code, team_name: t.team_name }))}

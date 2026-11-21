@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { logAuditEvent } from "@/lib/audit";
 import { getCurrentProfile } from "@/lib/auth";
+import { getRubricForStage } from "@/lib/rubric";
 import { createClient } from "@/lib/supabase/server";
 
 export type SetTopFinalistsResult = { ok: true; added: number; removed: number } | { ok: false; message: string };
@@ -118,4 +119,118 @@ export async function setTopFinalists(input: { expectedTeamIds: string[] }): Pro
   }
 
   return { ok: true, added: toAdd.length, removed: toRemove.length };
+}
+
+// ---------------------------------------------------------------------------
+// Score sanctions: deduct points from one criterion of a team's stage average.
+// The database clamps each criterion at 0; reasons are shown to the team.
+// ---------------------------------------------------------------------------
+
+export type SanctionActionResult = { ok: true } | { ok: false; message: string };
+
+const SANCTION_PATHS = ["/admin", "/admin/peringkat", "/team/hasil", "/team/peringkat"];
+
+const addSanctionSchema = z
+  .object({
+    teamId: z.string().uuid(),
+    stage: z.enum(["preliminary", "final"]),
+    criterion: z.string(),
+    // Stored as NUMERIC(5,2): round to two decimals, then require at least 0.01.
+    points: z.coerce
+      .number()
+      .max(100)
+      .transform((v) => Math.round(v * 100) / 100)
+      .pipe(z.number().positive()),
+    reason: z.string().trim().min(5).max(1000),
+  })
+  .refine((v) => getRubricForStage(v.stage).some((c) => c.column === v.criterion), { path: ["criterion"] });
+
+export async function addScoreSanction(input: {
+  teamId: string;
+  stage: "preliminary" | "final";
+  criterion: string;
+  points: number;
+  reason: string;
+}): Promise<SanctionActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = addSanctionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Data sanksi tidak valid. Poin 0,01–100 dan alasan 5–1000 karakter wajib diisi.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { teamId, stage, criterion, points, reason } = parsed.data;
+
+  const { data, error } = await supabase
+    .from("score_sanctions")
+    .insert({ team_id: teamId, stage, criterion, points, reason, created_by: caller.id })
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("Failed to add score sanction", error);
+    return { ok: false, message: "Gagal menyimpan sanksi. Coba lagi." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "score_sanction_added",
+    targetType: "team",
+    targetId: teamId,
+    metadata: { sanction_id: data.id, stage, criterion, points, reason },
+  });
+
+  for (const path of SANCTION_PATHS) revalidatePath(path);
+  return { ok: true };
+}
+
+const removeSanctionSchema = z.object({ sanctionId: z.string().uuid() });
+
+export async function removeScoreSanction(input: { sanctionId: string }): Promise<SanctionActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { ok: false, message: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = removeSanctionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Sanksi tidak valid. Muat ulang halaman lalu coba lagi." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("score_sanctions")
+    .delete()
+    .eq("id", parsed.data.sanctionId)
+    .select("team_id, stage, criterion, points, reason");
+
+  if (error || !data || data.length === 0) {
+    console.error("Failed to remove score sanction", error);
+    return { ok: false, message: "Gagal menghapus sanksi. Muat ulang halaman lalu coba lagi." };
+  }
+
+  const removed = data[0];
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "score_sanction_removed",
+    targetType: "team",
+    targetId: removed.team_id,
+    metadata: {
+      sanction_id: parsed.data.sanctionId,
+      stage: removed.stage,
+      criterion: removed.criterion,
+      points: removed.points,
+      reason: removed.reason,
+    },
+  });
+
+  for (const path of SANCTION_PATHS) revalidatePath(path);
+  return { ok: true };
 }

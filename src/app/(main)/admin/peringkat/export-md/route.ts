@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const isPrelim = tahap === "preliminary";
 
-  const [scoresRes, rankingRes, teamsRes, judgesRes] = await Promise.all([
+  const [scoresRes, rankingRes, teamsRes, judgesRes, sanctionsRes] = await Promise.all([
     isPrelim
       ? supabase
           .from("preliminary_scores")
@@ -43,6 +43,12 @@ export async function GET(request: NextRequest) {
       : supabase.from("final_ranking").select("*").order("rank", { ascending: true }),
     supabase.from("teams").select("id, team_code, team_name").order("team_code", { ascending: true }),
     supabase.from("profiles").select("id, full_name").eq("role", "judge"),
+    // Errors only before migration 20261122000000_score_sanctions; the export then just omits sanctions.
+    supabase
+      .from("score_sanctions")
+      .select("team_id, criterion, points, reason")
+      .eq("stage", tahap)
+      .order("created_at", { ascending: true }),
   ]);
 
   if (scoresRes.error || rankingRes.error || teamsRes.error || judgesRes.error) {
@@ -73,7 +79,14 @@ export async function GET(request: NextRequest) {
     list.sort((a, b) => a.judge_name.localeCompare(b.judge_name, "id"));
   }
 
-  // Order teams by ranking view; append any scored team missing from it.
+  const sanctionsByTeam = new Map<string, NonNullable<ScoreMarkdownTeam["sanctions"]>>();
+  for (const s of sanctionsRes.error ? [] : (sanctionsRes.data ?? [])) {
+    const list = sanctionsByTeam.get(s.team_id) ?? [];
+    list.push({ criterion: s.criterion, points: Number(s.points), reason: s.reason });
+    sanctionsByTeam.set(s.team_id, list);
+  }
+
+  // Order teams by ranking view (scores after sanctions); append any scored team missing from it.
   const teams: ScoreMarkdownTeam[] = [];
   const seen = new Set<string>();
   for (const r of rankingRes.data ?? []) {
@@ -84,6 +97,8 @@ export async function GET(request: NextRequest) {
       team_code: r.team_code ?? "-",
       team_name: r.team_name ?? "-",
       avg_score: r.avg_score,
+      raw_avg_score: r.raw_avg_score,
+      sanctions: sanctionsByTeam.get(r.team_id) ?? [],
       judges: scoresByTeam.get(r.team_id) ?? [],
     });
   }

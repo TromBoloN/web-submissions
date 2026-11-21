@@ -8,11 +8,21 @@ export interface ScoreMarkdownJudgeScore {
   updated_at: string;
 }
 
+export interface ScoreMarkdownSanction {
+  criterion: string;
+  points: number;
+  reason: string;
+}
+
 export interface ScoreMarkdownTeam {
   rank: number | null;
   team_code: string;
   team_name: string;
+  /** After sanctions. */
   avg_score: number | null;
+  /** Before sanctions; only shown when it differs from avg_score. */
+  raw_avg_score?: number | null;
+  sanctions?: ScoreMarkdownSanction[];
   judges: ScoreMarkdownJudgeScore[];
 }
 
@@ -84,7 +94,22 @@ export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: Sc
     out.push("---", "");
     const rankPrefix = t.rank ? `#${t.rank} · ` : "";
     out.push(`## ${rankPrefix}${oneLine(t.team_code)} — ${oneLine(t.team_name)}`, "");
-    out.push(`Rata-rata skor berbobot: **${fmt(t.avg_score)}**`, "");
+    const sanctions = t.sanctions ?? [];
+    const hasRaw = sanctions.length > 0 && t.raw_avg_score !== undefined && t.raw_avg_score !== null;
+    out.push(
+      `Rata-rata skor berbobot: **${fmt(t.avg_score)}**${hasRaw ? ` (sebelum sanksi: ${fmt(t.raw_avg_score)})` : ""}`,
+      "",
+    );
+
+    if (sanctions.length > 0) {
+      out.push("### Sanksi Panitia", "");
+      out.push("| Kriteria | Pengurangan | Alasan |", "| --- | ---: | --- |");
+      for (const s of sanctions) {
+        const label = rubric.find((c) => c.column === s.criterion)?.label ?? s.criterion;
+        out.push(`| ${cell(label)} | −${fmt(s.points)} | ${cell(s.reason)} |`);
+      }
+      out.push("");
+    }
 
     if (t.judges.length === 0) {
       out.push("_Belum ada nilai final dari juri._", "");

@@ -47,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FINAL_RUBRIC, PRELIMINARY_RUBRIC } from "@/lib/rubric";
 
 import { setTopFinalists } from "./actions";
+import { SanctionPanel, type ScoreSanctionDetail } from "./sanction-panel";
 
 export interface JudgeProgress {
   judge_id: string;
@@ -65,7 +66,10 @@ export interface RankingRow {
   team_code: string;
   team_name: string;
   judges_count: number;
+  /** After sanctions. */
   avg_score: number | null;
+  /** Weighted points removed by sanctions (0 when none). */
+  sanction_deduction: number;
 }
 
 export interface JudgeScoreDetail {
@@ -99,8 +103,29 @@ interface RankingClientProps {
   finalBreakdown: Record<string, JudgeScoreDetail[]>;
   prelimRecusals: Record<string, JudgeRecusalDetail[]>;
   finalRecusals: Record<string, JudgeRecusalDetail[]>;
+  prelimSanctions: Record<string, ScoreSanctionDetail[]>;
+  finalSanctions: Record<string, ScoreSanctionDetail[]>;
+  sanctionsAvailable: boolean;
   currentFinalists: { team_id: string; team_code: string; team_name: string }[];
   finalistNoticePublished: boolean;
+}
+
+/** Score cell: average after sanctions, with a marker when a sanction applies. */
+function SanctionedScore({ row }: { row: RankingRow }) {
+  return (
+    <span className="inline-flex items-center justify-end gap-1.5">
+      {row.sanction_deduction > 0 && (
+        <Badge
+          variant="destructive"
+          className="h-4 px-1.5 py-0 font-mono text-[10px]"
+          title={`Dikurangi sanksi ${Number(row.sanction_deduction).toFixed(2)} poin berbobot`}
+        >
+          −{Number(row.sanction_deduction).toFixed(2)}
+        </Badge>
+      )}
+      {row.avg_score !== null ? Number(row.avg_score).toFixed(2) : "-"}
+    </span>
+  );
 }
 
 function formatWitaDateTime(iso: string | null | undefined): string {
@@ -161,6 +186,9 @@ export function RankingClient({
   finalBreakdown,
   prelimRecusals,
   finalRecusals,
+  prelimSanctions,
+  finalSanctions,
+  sanctionsAvailable,
   currentFinalists,
   finalistNoticePublished,
 }: RankingClientProps) {
@@ -242,6 +270,28 @@ export function RankingClient({
     const source = selectedTeam.tahap === "preliminary" ? prelimRecusals : finalRecusals;
     return source[selectedTeam.team_id] ?? [];
   }, [selectedTeam, prelimRecusals, finalRecusals]);
+
+  const currentSanctions = useMemo(() => {
+    if (!selectedTeam) return [];
+    const source = selectedTeam.tahap === "preliminary" ? prelimSanctions : finalSanctions;
+    return source[selectedTeam.team_id] ?? [];
+  }, [selectedTeam, prelimSanctions, finalSanctions]);
+
+  // Judges' average per criterion over final-status scores (what sanctions are applied to).
+  const currentCriterionAverages = useMemo(() => {
+    const averages: Record<string, number | null> = {};
+    if (!selectedTeam) return averages;
+    const rubric = selectedTeam.tahap === "final" ? FINAL_RUBRIC : PRELIMINARY_RUBRIC;
+    const finals = currentBreakdown.filter((s) => s.status === "final");
+    for (const crit of rubric) {
+      const values = finals
+        .map((s) => s[crit.column as keyof JudgeScoreDetail])
+        .filter((v): v is number => typeof v === "number" || (typeof v === "string" && v !== ""))
+        .map(Number);
+      averages[crit.column] = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+    }
+    return averages;
+  }, [selectedTeam, currentBreakdown]);
 
   const currentDraftCount = useMemo(
     () => currentBreakdown.filter((s) => s.status === "draft").length,
@@ -458,7 +508,7 @@ export function RankingClient({
                         </TableCell>
                         <TableCell className="text-center font-mono text-xs">{row.judges_count}</TableCell>
                         <TableCell className="text-right font-mono font-semibold">
-                          {row.avg_score !== null ? Number(row.avg_score).toFixed(2) : "-"}
+                          <SanctionedScore row={row} />
                         </TableCell>
                         <TableCell className="text-center">
                           <Button
@@ -553,7 +603,7 @@ export function RankingClient({
                       <TableCell className="font-medium">{row.team_name}</TableCell>
                       <TableCell className="text-center font-mono text-xs">{row.judges_count}</TableCell>
                       <TableCell className="text-right font-mono font-semibold">
-                        {row.avg_score !== null ? Number(row.avg_score).toFixed(2) : "-"}
+                        <SanctionedScore row={row} />
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
@@ -683,6 +733,16 @@ export function RankingClient({
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
+            {selectedTeam && (
+              <SanctionPanel
+                key={`${selectedTeam.team_id}-${selectedTeam.tahap}`}
+                teamId={selectedTeam.team_id}
+                stage={selectedTeam.tahap}
+                sanctions={currentSanctions}
+                criterionAverages={currentCriterionAverages}
+                available={sanctionsAvailable}
+              />
+            )}
             {currentBreakdown.length === 0 && currentRecusals.length === 0 ? (
               <p className="text-center text-muted-foreground text-sm py-8">
                 Belum ada juri yang memasukkan nilai atau recusal untuk tim ini pada tahap ini.

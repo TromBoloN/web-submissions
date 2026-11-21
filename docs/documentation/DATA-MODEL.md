@@ -34,6 +34,7 @@ Single-row tables (`id BOOLEAN PRIMARY KEY CHECK (id)`): `competition_settings`,
 | `finalist_notice` | Finalist and non-finalist messages, `is_published`, `published_at`. Admin-only; teams read via `get_my_finalist_notice()`. |
 | `preliminary_scores`, `final_scores` | One score per judge/team pair, generated weighted total, feedback, draft/final status. |
 | `judge_recusals` | Judge/team/stage conflicts excluded from assignments and progress. |
+| `score_sanctions` | Admin sanctions: points deducted from one criterion of a team's stage average, with a reason shown to the team. Admin-only RLS (select/insert/delete, no update). Pending migration `20261122000000`. |
 | `audit_logs` | Sensitive admin/judging actions, written server-side by `logAuditEvent()` with the service role; admin-only SELECT. |
 | `preliminary_ranking`, `final_ranking` | Aggregate ranking views (`security_invoker`). |
 
@@ -63,6 +64,10 @@ Anon access is only ever granted on functions that return public fields. `anon` 
 ## Pending migrations
 
 Written, **not applied** at the time of writing. Check `src/types/database.ts` for `competition_stages`: if it is missing, they have not been applied.
+
+### `20261122000000_score_sanctions.sql`
+
+Apply after `20261121000000` (it redefines `get_public_ranking()`). App code tolerates it being missing (sanction controls disabled, exports omit sanctions). Adds `score_sanctions` and `score_sanction_deduction()`, redefines `preliminary_ranking`/`final_ranking` (two columns appended), `get_my_results()` and `get_public_ranking()`; see **Scoring**. Also makes `get_my_results()` count only final-status scores (it previously included drafts). Types were added to `src/types/database.ts` by hand; regenerating replaces them with the same shape.
 
 ### `20261121010000_final_judges_view_preliminary.sql`
 
@@ -110,7 +115,9 @@ The current rubric is defined in both the generated score columns and [rubric.ts
 | Dokumentasi | 10% | 10% |
 | Presentasi dan Q&A | - | 20% |
 
-Scores are bounded from 0 to 100. Totals are generated numeric values, displayed with two decimals. Rubric weights are intentionally **not** editable from settings; changing them after scoring starts would change finished scores.
+Scores are bounded from 0 to 100. Totals are generated numeric values, displayed with two decimals.
+
+**Sanctions** (`score_sanctions`, migration `20261122000000`): an admin deducts points from one criterion of a team's stage. They apply to the team's **criterion average over final-status judge scores**, never to individual judge scores: `adjusted = max(0, average − Σ points)`, so a criterion bottoms out at exactly 0 and the total cannot go below 0. `score_sanction_deduction(team, stage)` returns the weighted points removed; the ranking views (`avg_score`, `rank`, plus `raw_avg_score`, `sanction_deduction`), `get_my_results()` (adjusted `average`/`total`, plus `raw_average`, `deduction`, `raw_total` and the team's `sanctions` with criterion, points and reason) and `get_public_ranking()` all use it. Teams without sanctions get identical numbers. Sanctions can be added or removed at any time (also after release); each change writes `score_sanction_added`/`score_sanction_removed` to `audit_logs`. The weights in the helper must match the generated columns and `rubric.ts`. Rubric weights are intentionally **not** editable from settings; changing them after scoring starts would change finished scores.
 
 ## Security invariants
 

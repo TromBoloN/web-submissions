@@ -17,13 +17,13 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Screen | URL | Folder (under `src/app/`) | Data |
 | --- | --- | --- | --- |
 | Login | /login | `(auth)/login`, `(auth)/_components` | Auth, `get_public_contact_whatsapp()`, link to gallery |
-| Public gallery | /karya (`?karya=<slug>` opens one project) | `karya` (`page.tsx`, `karya-client.tsx`, `karya-card.tsx` shared card + editor previews, `karya-spotlight.tsx` "Sorotan" carousel, `karya-visitor.ts` Simpan/Dilihat in localStorage, `karya-utils.ts` slugs, video embeds, Karya serupa, calendar reminder, `karya-hero.tsx`, `karya-logo.tsx`, `karya-constants.ts`) | `get_public_showcase()`, `get_public_showcase_winners()` (anon RPCs) |
+| Public gallery | /karya (`?karya=<slug>` opens one project) | `karya` (`page.tsx`, `karya-client.tsx`, `karya-card.tsx` shared card + editor previews, `karya-spotlight.tsx` "Sorotan" carousel, `karya-visitor.ts` Simpan/Dilihat in localStorage, `karya-utils.ts` slugs, video embeds, Karya serupa, calendar reminder, `karya-logo.tsx`, `karya-constants.ts`) | `get_public_showcase()`, `get_public_showcase_winners()` (anon RPCs) |
 | Admin dashboard | /admin | `(main)/admin` (`page.tsx`, `dashboard-client.tsx`, `dashboard-countdown.tsx`) | counts, deadline, submissions, judging, ranking, audit |
 | Accounts | /admin/akun | `(main)/admin/akun` | `profiles` + Auth (service role) |
 | Audit | /admin/audit | `(main)/admin/audit/page.tsx` | `audit_logs` + `profiles` |
 | Finalists | /admin/finalis | `(main)/admin/finalis` | `teams.is_finalist`, ranking views, `finalist_notice` |
 | Settings | /admin/pengaturan/… | `(main)/admin/pengaturan` (see [Admin settings](./ADMIN-SETTINGS.md)) | `competition_settings`, `case_study`, scores (progress) |
-| Ranking, CSV, score.md, set top-5 finalists | /admin/peringkat | `(main)/admin/peringkat` (+ `actions.ts`, `export/route.ts`, `export-md/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals` |
+| Ranking, CSV, score.md, set top-5 finalists, score sanctions | /admin/peringkat | `(main)/admin/peringkat` (+ `actions.ts`, `sanction-panel.tsx` in the team detail dialog, `export/route.ts`, `export-md/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals`, `score_sanctions` |
 | Submissions and CSV | /admin/submission | `(main)/admin/submission` (+ `export/route.ts`) | `submissions` |
 | Teams | /admin/tim | `(main)/admin/tim` | `teams` |
 | Judge queue | /judge | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals` |
@@ -93,7 +93,6 @@ src/lib/link-check.ts                server-side URL validation, SSRF guard (DNS
 src/lib/identity.ts                  judge username <-> internal email (@juri.mitweek.invalid)
 src/lib/contact.ts                   WhatsApp number normalization and wa.me URLs
 src/lib/user-display.ts              names, initials, role labels
-src/lib/data-table-features.ts       TanStack Table v9 helpers
 src/lib/supabase/client.ts           browser client
 src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
@@ -101,9 +100,8 @@ src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resul
 src/app/(main)/admin/_components/team-detail/   TeamDetailSheet + teamRowProps (click a row on Tim, Submission, Peringkat); getTeamDetail admin-only action
 src/components/theme-toggle.tsx      shared two-state light/dark toggle (header; floating on /karya)
 src/components/showcase-card.tsx     shared public/team showcase card
-src/components/showcase-gallery.tsx  public showcase gallery, vault, and timeline
 src/components/page-loading-skeleton.tsx  generic route fallback for (main)/admin, judge, team loading.tsx
-src/components/                      also change-password-form, markdown-content, logout-button, rubric-bars
+src/components/                      also change-password-form, markdown-content, rubric-bars
 src/components/ui/                   shadcn/ui, generated: do not edit
 src/app/globals.css                  theme tokens, Guardian tokens and utilities (see DESIGN-SYSTEM.md)
 src/types/database.ts                generated Supabase types (UTF-8)
@@ -113,8 +111,6 @@ supabase/config.toml                 local Docker Supabase config (npm run local
 ```
 
 UI preferences and theming internals (`lib/preferences`, `stores/preferences`, `server/server-actions.ts`, `styles/presets`, `scripts/theme-boot.tsx`, `generate-theme-presets.ts`) are unrelated to feature work. Do not touch them. The only consumer-facing piece is `ThemeToggle`.
-
-Possibly unused starter code (verify imports before relying on or deleting): `data/users.ts`, `components/calendar`, `components/date-range-picker.tsx`, `components/simple-icon.tsx`, `lib/highlighter.tsx`, `hooks/use-highlighted-code.ts`.
 
 ## Database
 
