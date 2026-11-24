@@ -14,7 +14,9 @@
 --      raw_avg_score and sanction_deduction are appended for the admin.
 --      get_public_showcase_winners() reads final_ranking and follows automatically.
 --   4. get_my_results(): criterion averages and totals after sanctions, plus the team's
---      own sanctions (criterion, points, reason; no admin identity or timestamps).
+--      own sanctions (criterion, points, reason; no admin identity or timestamps). The
+--      pre-sanction averages/total and the effective deduction are NOT returned to teams
+--      (owner request: a sanctioned team does not see how much its overall score dropped).
 --      Also fixes a pre-existing gap: only final-status scores are counted (drafts were
 --      included before), matching the ranking views.
 --   5. get_public_ranking(): aggregate score after sanctions.
@@ -327,9 +329,7 @@ BEGIN
           SELECT jsonb_agg(
                    jsonb_build_object(
                      'key', c.key,
-                     'average', ROUND(GREATEST(c.avg_val - COALESCE((v_points ->> c.key)::numeric, 0), 0), 2),
-                     'raw_average', ROUND(c.avg_val, 2),
-                     'deduction', ROUND(LEAST(COALESCE((v_points ->> c.key)::numeric, 0), c.avg_val), 2)
+                     'average', ROUND(GREATEST(c.avg_val - COALESCE((v_points ->> c.key)::numeric, 0), 0), 2)
                    ) ORDER BY c.ord)
             FROM (
               VALUES
@@ -341,7 +341,6 @@ BEGIN
             ) AS c (ord, key, avg_val)
         ),
         'total', ROUND(GREATEST(v_raw_total - public.score_sanction_deduction(v_team.id, 'preliminary'), 0), 2),
-        'raw_total', ROUND(v_raw_total, 2),
         'comments', COALESCE(v_comments, '[]'::jsonb),
         'sanctions', COALESCE(v_sanctions, '[]'::jsonb)
       );
@@ -350,7 +349,6 @@ BEGIN
         'judge_count', 0,
         'criteria', '[]'::jsonb,
         'total', NULL,
-        'raw_total', NULL,
         'comments', '[]'::jsonb,
         'sanctions', '[]'::jsonb
       );
@@ -406,9 +404,7 @@ BEGIN
           SELECT jsonb_agg(
                    jsonb_build_object(
                      'key', c.key,
-                     'average', ROUND(GREATEST(c.avg_val - COALESCE((v_points ->> c.key)::numeric, 0), 0), 2),
-                     'raw_average', ROUND(c.avg_val, 2),
-                     'deduction', ROUND(LEAST(COALESCE((v_points ->> c.key)::numeric, 0), c.avg_val), 2)
+                     'average', ROUND(GREATEST(c.avg_val - COALESCE((v_points ->> c.key)::numeric, 0), 0), 2)
                    ) ORDER BY c.ord)
             FROM (
               VALUES
@@ -421,7 +417,6 @@ BEGIN
             ) AS c (ord, key, avg_val)
         ),
         'total', ROUND(GREATEST(v_raw_total - public.score_sanction_deduction(v_team.id, 'final'), 0), 2),
-        'raw_total', ROUND(v_raw_total, 2),
         'comments', COALESCE(v_comments, '[]'::jsonb),
         'sanctions', COALESCE(v_sanctions, '[]'::jsonb)
       );
@@ -430,7 +425,6 @@ BEGIN
         'judge_count', 0,
         'criteria', '[]'::jsonb,
         'total', NULL,
-        'raw_total', NULL,
         'comments', '[]'::jsonb,
         'sanctions', '[]'::jsonb
       );

@@ -8,7 +8,7 @@ import { FlaskConical } from "lucide-react";
 export type RankingRow = {
   rank: number;
   team_name: string;
-  /** Only for ranks 1-5 and the caller's own team (masked to null by get_public_ranking). */
+  /** Every team's institution (null-tolerant in the UI in case it is ever empty). */
   institution: string | null;
   stage: string;
   score: number | null;
@@ -16,6 +16,7 @@ export type RankingRow = {
 };
 
 export const MY_ROW_ID = "peringkat-tim-saya";
+export const HERO_ID = "peringkat-hero";
 
 const scoreFormatter = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -64,7 +65,7 @@ export function OwnChip() {
   );
 }
 
-export type HexTone = "mint" | "accent" | "card";
+export type HexTone = "mint" | "accent" | "card" | "gold" | "silver" | "bronze";
 
 export function RankHex({ label, tone, className }: { label: string; tone: HexTone; className?: string }) {
   return (
@@ -76,6 +77,9 @@ export function RankHex({ label, tone, className }: { label: string; tone: HexTo
           tone === "mint" && "bg-mint text-ink dark:text-ink-foreground",
           tone === "accent" && "bg-guardian-accent text-white",
           tone === "card" && "bg-card text-ink",
+          tone === "gold" && "bg-medal-gold text-ink dark:text-ink-foreground",
+          tone === "silver" && "bg-medal-silver text-ink dark:text-ink-foreground",
+          tone === "bronze" && "bg-medal-bronze text-ink dark:text-ink-foreground",
         )}
       >
         {label}
@@ -104,10 +108,16 @@ export function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
+/** Scrolls to the team's own row/card, focuses it, and pulses a highlight ring around it. */
 export function jumpToMyRow() {
   const el = document.getElementById(MY_ROW_ID);
   if (!el) return;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
   el.focus({ preventScroll: true });
+  // Restart the pulse if it is already running; the class removes itself when the animation ends.
+  el.classList.remove("highlight-pulse");
+  void el.offsetWidth;
+  el.classList.add("highlight-pulse");
+  el.addEventListener("animationend", () => el.classList.remove("highlight-pulse"), { once: true });
 }

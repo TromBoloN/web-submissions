@@ -9,6 +9,7 @@ import { CelebrationLayer } from "./celebration-layer";
 import {
   Eyebrow,
   formatScore,
+  HERO_ID,
   jumpToMyRow,
   ProvisionalPill,
   type RankingRow,
@@ -115,6 +116,7 @@ function OwnHero({
   return (
     <section
       aria-label="Posisi tim"
+      id={HERO_ID}
       className="surface-loud guardian-hero-mesh rank-fade-in relative overflow-hidden p-5 sm:p-7"
     >
       <CelebrationLayer tier={tier} active={revealDone} />
@@ -130,11 +132,12 @@ function OwnHero({
           </p>
 
           <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-            <div className="relative">
+            {/* #1 reserves room above the number for the crown (always, so nothing shifts when it pops in). */}
+            <div className={cn("relative", tier === "gold" && "pt-10 sm:pt-11")}>
               {tier === "gold" && revealDone && (
                 <Crown
                   aria-hidden="true"
-                  className="team-pop absolute -top-7 left-1 size-8 fill-medal-gold text-ink sm:-top-8 sm:size-9"
+                  className="team-pop absolute top-0 left-1 size-8 fill-medal-gold text-ink sm:size-9"
                   style={{ animationDelay: `${STAMP_DELAY_MS - 200}ms` }}
                 />
               )}

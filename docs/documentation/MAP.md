@@ -31,7 +31,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Team dashboard | /team | `(main)/team` (files beside `page.tsx`, see below) | own `teams`, own `submissions`, `competition_settings`, `get_my_finalist_notice()` |
 | Team showcase editor | /team/karya | `(main)/team/karya` | own `teams`, own `submissions`, `save_showcase_details()`, storage bucket `web-showcase` |
 | Team results | /team/hasil | `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`) | `get_my_results()` (RPC) |
-| Team ranking (only when `ranking_published`) | /team/peringkat | `(main)/team/peringkat` (`page.tsx`, `peringkat-client.tsx` orchestrator, `ranking-hero.tsx` tiered hero, `celebration-layer.tsx` effects, `ranking-tier.ts` tiers + cookie names, `ranking-shared.tsx` shared bits, `use-count-up.ts`, `loading.tsx`) | `get_public_ranking()` (RPC) |
+| Team ranking (only when `ranking_published`) | /team/peringkat | `(main)/team/peringkat` (`page.tsx`, `peringkat-client.tsx` orchestrator, `ranking-hero.tsx` tiered hero, `ranking-podium.tsx` top 3, `ranking-list.tsx` rest, `sticky-own-bar.tsx`, `celebration-layer.tsx` effects, `ranking-tier.ts` tiers + cookie names, `ranking-shared.tsx` shared bits, `use-count-up.ts`, `loading.tsx`) | `get_public_ranking()` (RPC) |
 | Case study | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus` (view lives in `team/studi-kasus`) | `case_study`; team page also reads own `submissions` |
 | Change password | `/<role>/kata-sandi` | `(main)/<role>/kata-sandi` | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized | /unauthorized | `(main)/unauthorized` | none |

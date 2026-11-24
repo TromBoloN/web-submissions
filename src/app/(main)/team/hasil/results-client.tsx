@@ -11,12 +11,8 @@ import { FINAL_RUBRIC, PRELIMINARY_RUBRIC, type RubricCriterion } from "@/lib/ru
 
 export type CriterionResult = {
   key: string;
-  /** After committee sanctions (never below 0). */
+  /** After committee sanctions (never below 0). Pre-sanction values are never sent to teams. */
   average: number | null;
-  /** Judges' average before sanctions. Absent before migration 20261122000000. */
-  raw_average?: number | null;
-  /** Points actually removed from this criterion (capped at the judges' average). */
-  deduction?: number | null;
 };
 
 export type SanctionResult = {
@@ -30,7 +26,6 @@ export type StageResult = {
   criteria: CriterionResult[];
   /** After committee sanctions. */
   total: number | null;
-  raw_total?: number | null;
   comments: string[];
   sanctions?: SanctionResult[];
 };
@@ -116,10 +111,6 @@ function StageResultsView({
   const insight = getInsight(stageData.criteria, rubricMap);
   const sanctions = stageData.sanctions ?? [];
   const hasSanctions = sanctions.length > 0;
-  const totalDeduction =
-    hasSanctions && stageData.raw_total != null && stageData.total !== null
-      ? Math.max(stageData.raw_total - stageData.total, 0)
-      : null;
   const rubricBars: RubricBarItem[] = stageData.criteria.map((item) => {
     const criterion = rubricMap.get(item.key);
     return {
@@ -150,16 +141,6 @@ function StageResultsView({
                   ? "Rata-rata total berbobot dari seluruh dewan juri, setelah sanksi panitia."
                   : "Rata-rata total berbobot dari seluruh dewan juri."}
               </p>
-              {hasSanctions && totalDeduction !== null && (
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                  <span className="text-muted-foreground">
-                    Sebelum sanksi: <span className="tabular-nums">{formatScore(stageData.raw_total)}</span>
-                  </span>
-                  <Badge variant="destructive" className="tabular-nums">
-                    Sanksi −{formatScore(totalDeduction)}
-                  </Badge>
-                </p>
-              )}
               {insight && (
                 <p className="rounded-lg bg-background/70 px-3 py-2 text-foreground text-sm">
                   <Sparkles aria-hidden="true" className="mr-1.5 inline size-4 text-primary" />
@@ -215,11 +196,6 @@ function StageResultsView({
                       <TableCell className="min-w-32 text-right">
                         <div className="space-y-1.5">
                           <span className="block text-sm tabular-nums">{formatScore(item.average)}</span>
-                          {(item.deduction ?? 0) > 0 && (
-                            <span className="block text-destructive text-xs tabular-nums">
-                              {formatScore(item.raw_average)} − {formatScore(item.deduction)} sanksi
-                            </span>
-                          )}
                           <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                             <div
                               className="h-full rounded-full bg-primary"

@@ -63,6 +63,12 @@ Admin screens stay mostly calm. Use loud styling only for the active state of na
 | `.rank-number--gold/--silver/--bronze/--mint` | Medal hard shadow on the big rank number |
 | `.rank-fade-in` | 0.5s fade/rise entrance for the ranking hero |
 | `.rank-bar-fill` + `.rank-bar-grow` | Bar fill sized by `--to` (0–1) that grows from the left; correct without JS |
+| `.medal-ring` (+ `--spin`), `.podium-rise`, `.podium-step`, `.podium-step-numeral`, `.podium-spotlight` | Ranking podium: dashed medal ring (`--ring`), 3-2-1 entrance (`--delay`), stepped bases with outlined numerals, spotlight on the team's own card |
+| `.stagger-list[data-reveal]` | List rows fade in once when scrolled into view (`--i` per row); hidden only while `pending`, never without JS |
+| `.highlight-pulse` | Ring pulse around the team's own row after "Lihat posisi di daftar" |
+| `.rank-sticky-in` | Entrance for the sticky "Anda #N" bar |
+
+Note: `.surface-loud` is unlayered CSS, so Tailwind utilities cannot override its border or background; use an inline style (e.g. the podium's medal top border).
 | `.guardian-hero-mesh`, `.guardian-card`, `.guardian-btn-*` | Older `/karya` classes; prefer the classes above for new work |
 | `.receipt-print` | Marks the receipt; `@media print` hides everything else on the page |
 

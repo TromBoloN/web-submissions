@@ -2857,13 +2857,147 @@ html {
   }
 }
 
+/* Podium: dashed medal ring around the place hex (colour via --ring); #1 spins. */
+.medal-ring {
+  position: absolute;
+  inset: -9px;
+  border: 2px dashed var(--ring, var(--ink));
+  border-radius: 9999px;
+}
+
+.medal-ring--spin {
+  animation: rank-ring-spin 14s linear infinite;
+}
+
+@keyframes rank-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Podium cards rise from their steps: 3rd, then 2nd, then 1st (delay via --delay). */
+.podium-rise {
+  animation: podium-rise 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) var(--delay, 0s) both;
+}
+
+@keyframes podium-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Podium step under each card, with a big outlined place numeral. */
+.podium-step {
+  border: 2px solid var(--ink);
+  border-bottom-width: 0;
+  border-radius: 0.75rem 0.75rem 0 0;
+  box-shadow: var(--shadow-hard-sm);
+}
+
+.podium-step-numeral {
+  font-family: var(--font-display);
+  font-weight: 900;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--ink);
+}
+
+/* Spotlight beam over the team's own podium card. */
+.podium-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--safe) 30%, transparent) 0%, transparent 55%);
+  animation: rank-glow-soft 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes rank-glow-soft {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Ranking list rows fade in once, staggered (delay via --i), after the list scrolls into view.
+   Rows are only hidden while data-reveal="pending", i.e. never without JS. */
+.stagger-list[data-reveal="pending"] > li {
+  opacity: 0;
+}
+
+.stagger-list[data-reveal="shown"] > li {
+  animation: rank-fade-in 0.45s ease-out calc(min(var(--i, 0), 14) * 40ms) both;
+}
+
+/* Pulse ring after "Lihat posisi di daftar" (added/removed by jumpToMyRow). */
+.highlight-pulse {
+  position: relative;
+}
+
+.highlight-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 3px solid var(--safe);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: highlight-pulse 0.9s ease-out 2;
+}
+
+@keyframes highlight-pulse {
+  from {
+    opacity: 1;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+/* Sticky "Anda #N" bar: slides up when it appears. */
+.rank-sticky-in {
+  animation: rank-sticky-in 0.3s ease-out both;
+}
+
+@keyframes rank-sticky-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rank-rays,
   .rank-sheen,
   .rank-glow,
   .rank-circuit path,
-  .rank-fade-in {
+  .rank-fade-in,
+  .medal-ring--spin,
+  .podium-rise,
+  .podium-spotlight,
+  .stagger-list[data-reveal="shown"] > li,
+  .highlight-pulse::after,
+  .rank-sticky-in {
     animation: none !important;
+  }
+
+  .stagger-list[data-reveal="pending"] > li {
+    opacity: 1;
+  }
+
+  .highlight-pulse::after {
+    opacity: 0;
   }
 
   .rank-circuit path {

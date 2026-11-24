@@ -50,7 +50,7 @@ All are `SECURITY DEFINER` with an empty `search_path` unless noted, and check a
 | `submission_open()`, `team_can_submit()` | internal / policies | Deadline and ownership checks for submissions |
 | `judge_can_view_team()`, `judge_can_score_preliminary()`, `judge_can_score_final()` | internal / policies | Judge assignment and stage checks |
 | `get_my_results()` | authenticated (team) | Released, anonymized aggregates and feedback for the caller's own team |
-| `get_public_ranking()` | authenticated (team, admin) | Only when `ranking_published`: every submitted, non-disqualified team's rank, name, aggregate score and its stage, plus `is_own_team`. `institution` is returned only for scored ranks 1–5 and the caller's own team, otherwise `NULL` (migration `20261124000000`). Finalists first by final average, then the rest by preliminary average. Committee-approved exception to the no-rank rule |
+| `get_public_ranking()` | authenticated (team, admin) | Only when `ranking_published`: every submitted, non-disqualified team's rank, name, institution, aggregate score and its stage, plus `is_own_team`. Finalists first by final average, then the rest by preliminary average. Committee-approved exception to the no-rank rule |
 | `get_preliminary_scores_for_final(p_team_id)` | authenticated (final/`both` judge) | Only after `preliminary_results_released`, for a non-disqualified submitted finalist the caller is not recused from: final-status preliminary scores (criteria, weighted total, `feedback`) with judges anonymized as a per-team label. Never judge ids, names, timestamps, `private_note` or drafts |
 | `get_my_finalist_notice()` | authenticated (team) | Finalist or non-finalist message once published; nothing for disqualified teams |
 | `set_showcase_consent()`, `save_showcase_details()` | authenticated (team) | Team edits its own showcase while unlocked |
@@ -64,10 +64,6 @@ Anon access is only ever granted on functions that return public fields. `anon` 
 ## Pending migrations
 
 Written, **not applied** at the time of writing. Check `src/types/database.ts` for `competition_stages`: if it is missing, they have not been applied.
-
-### `20261124000000_public_ranking_institution_top5.sql`
-
-Apply after `20261122000000`. Redefines `get_public_ranking()` with identical ranking and sanction logic, but masks `institution` to `NULL` except for scored ranks 1–5 and the caller's own team. App code handles `NULL` (nothing rendered). Before it is applied, the app still works but shows every institution.
 
 ### `20261122000000_score_sanctions.sql`
 
@@ -121,7 +117,7 @@ The current rubric is defined in both the generated score columns and [rubric.ts
 
 Scores are bounded from 0 to 100. Totals are generated numeric values, displayed with two decimals.
 
-**Sanctions** (`score_sanctions`, migration `20261122000000`): an admin deducts points from one criterion of a team's stage. They apply to the team's **criterion average over final-status judge scores**, never to individual judge scores: `adjusted = max(0, average − Σ points)`, so a criterion bottoms out at exactly 0 and the total cannot go below 0. `score_sanction_deduction(team, stage)` returns the weighted points removed; the ranking views (`avg_score`, `rank`, plus `raw_avg_score`, `sanction_deduction`), `get_my_results()` (adjusted `average`/`total`, plus `raw_average`, `deduction`, `raw_total` and the team's `sanctions` with criterion, points and reason) and `get_public_ranking()` all use it. Teams without sanctions get identical numbers. Sanctions can be added or removed at any time (also after release); each change writes `score_sanction_added`/`score_sanction_removed` to `audit_logs`. The weights in the helper must match the generated columns and `rubric.ts`. Rubric weights are intentionally **not** editable from settings; changing them after scoring starts would change finished scores.
+**Sanctions** (`score_sanctions`, migration `20261122000000`): an admin deducts points from one criterion of a team's stage. They apply to the team's **criterion average over final-status judge scores**, never to individual judge scores: `adjusted = max(0, average − Σ points)`, so a criterion bottoms out at exactly 0 and the total cannot go below 0. `score_sanction_deduction(team, stage)` returns the weighted points removed; the ranking views (`avg_score`, `rank`, plus `raw_avg_score`, `sanction_deduction`), `get_my_results()` (adjusted `average`/`total` and the team's `sanctions` with criterion, points and reason; pre-sanction values and the effective deduction are deliberately **not** returned to teams, so a sanctioned team cannot see how much its overall score dropped) and `get_public_ranking()` all use it. Teams without sanctions get identical numbers. Sanctions can be added or removed at any time (also after release); each change writes `score_sanction_added`/`score_sanction_removed` to `audit_logs`. The weights in the helper must match the generated columns and `rubric.ts`. Rubric weights are intentionally **not** editable from settings; changing them after scoring starts would change finished scores.
 
 ## Security invariants
 
