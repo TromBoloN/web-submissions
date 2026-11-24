@@ -28,6 +28,7 @@ From [AGENTS.md](../../AGENTS.md):
 | `--hero-fg`, `--hero-fg-muted` | `text-hero-fg`, `text-hero-fg-muted` | navy / muted navy | near-white / slate | Text on `guardian-hero-mesh` backgrounds |
 | `--hero` | `bg-hero` | dark navy | dark navy | "Dark card" (showcase card on the team dashboard) with `text-white` |
 | `--shadow-hard-sm/-/-lg` | `shadow-brutal-sm`, `shadow-brutal`, `shadow-brutal-lg` | 2/4/6px offset in ink | 2/4/6px offset in black | Hard offset shadows |
+| `--medal-gold/-silver/-bronze` (+ `-soft`) | `bg-medal-gold`, `fill-medal-gold`, `bg-medal-silver-soft`, ... | `#e2ab12` / `#9aa6bd` / `#c0743a` (soft: pale fills) | `#f5c84c` / `#c5cfdf` / `#df9a62` (soft: dark fills) | Ranking places 1/2/3 only (hero, podium, stamps, sidebar medal). Guardian extension: always pair with ink borders/text, never as text on light surfaces |
 
 Text on mint: use `text-ink dark:text-ink-foreground` (navy in light mode, near-black in dark mode). Do **not** use `text-ink` alone on mint in dark mode, because dark `--ink` is light blue.
 
@@ -57,6 +58,11 @@ Admin screens stay mostly calm. Use loud styling only for the active state of na
 | `.team-stamp` | Rotated rubber stamp with a one-off "stamp-in" animation ("TERKIRIM" on the receipt) |
 | `.team-scan` | Slow scanning shimmer bar ("Juri sedang menilai") |
 | `.team-pop` | One-off pop-in for celebratory icons |
+| `.team-stamp--gold/--silver/--bronze/--mint` | Medal/mint variants of `.team-stamp`: ink text on a soft fill |
+| `.rank-layer` + `.rank-rays`, `.rank-confetti`, `.rank-spark`, `.rank-ember`, `.rank-sheen`, `.rank-glow`, `.rank-circuit`, `.rank-grain` | Ranking hero effect layer (`celebration-layer.tsx`): absolute, `pointer-events-none`, paused off-screen via `data-paused`. Particles are `.rank-piece` with inline `--x/--s/--c/--dur/--delay/--drift` |
+| `.rank-number--gold/--silver/--bronze/--mint` | Medal hard shadow on the big rank number |
+| `.rank-fade-in` | 0.5s fade/rise entrance for the ranking hero |
+| `.rank-bar-fill` + `.rank-bar-grow` | Bar fill sized by `--to` (0–1) that grows from the left; correct without JS |
 | `.guardian-hero-mesh`, `.guardian-card`, `.guardian-btn-*` | Older `/karya` classes; prefer the classes above for new work |
 | `.receipt-print` | Marks the receipt; `@media print` hides everything else on the page |
 

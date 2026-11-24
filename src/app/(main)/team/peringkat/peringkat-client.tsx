@@ -1,195 +1,21 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { cn } from "cn";
-import { Crosshair, FlaskConical, Medal, Trophy } from "lucide-react";
+import { FlaskConical, Medal, Trophy } from "lucide-react";
 
-export type RankingRow = {
-  rank: number;
-  team_name: string;
-  /** Only for ranks 1-5 and the caller's own team (masked to null by get_public_ranking). */
-  institution: string | null;
-  stage: string;
-  score: number | null;
-  is_own_team: boolean;
-};
+import { RankingHero } from "./ranking-hero";
+import {
+  formatScore,
+  MY_ROW_ID,
+  OwnChip,
+  RankHex,
+  type RankingRow,
+  rankLabel,
+  ScoreBar,
+  SectionLabel,
+} from "./ranking-shared";
 
-const MY_ROW_ID = "peringkat-tim-saya";
-
-const scoreFormatter = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-function formatScore(score: number | null): string {
-  if (score === null || Number.isNaN(Number(score))) return "-";
-  return scoreFormatter.format(Number(score));
-}
-
-/** A team without a score yet (finalist before final scores exist) has no meaningful position. */
-function rankLabel(row: RankingRow): string {
-  return row.score === null ? "–" : String(row.rank);
-}
-
-function stageLabel(stage: string): string {
-  return stage === "final" ? "Babak final" : "Babak awal";
-}
-
-function Eyebrow({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-card px-3 py-1 font-bold font-mono text-[11px] text-ink uppercase tracking-wider shadow-brutal-sm">
-      <span className="size-2 rounded-full bg-mint" aria-hidden="true" />
-      {children}
-    </span>
-  );
-}
-
-function ProvisionalPill() {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-amber-300 px-3 py-1 font-bold font-mono text-[11px] text-ink uppercase tracking-wider shadow-brutal-sm dark:bg-amber-400 dark:text-ink-foreground">
-      <FlaskConical className="size-3" aria-hidden="true" />
-      Sementara
-    </span>
-  );
-}
-
-function OwnChip() {
-  return (
-    <span className="inline-flex shrink-0 items-center rounded-full border-2 border-ink bg-mint px-2 py-0.5 font-bold font-mono text-[11px] text-ink uppercase tracking-wider dark:text-ink-foreground">
-      Tim Anda
-    </span>
-  );
-}
-
-type HexTone = "mint" | "accent" | "card";
-
-function RankHex({ label, tone, className }: { label: string; tone: HexTone; className?: string }) {
-  return (
-    <span className={cn("relative inline-grid shrink-0 place-items-center", className)} aria-hidden="true">
-      <span className="hex absolute inset-0 bg-ink" />
-      <span
-        className={cn(
-          "hex absolute inset-[3px] grid place-items-center font-display font-extrabold tabular-nums",
-          tone === "mint" && "bg-mint text-ink dark:text-ink-foreground",
-          tone === "accent" && "bg-guardian-accent text-white",
-          tone === "card" && "bg-card text-ink",
-        )}
-      >
-        {label}
-      </span>
-    </span>
-  );
-}
-
-function ScoreBar({ score }: { score: number | null }) {
-  const width = score === null ? 0 : Math.min(Math.max(Number(score), 0), 100);
-  return (
-    <span className="block h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
-      <span className="block h-full rounded-full bg-guardian-accent" style={{ width: `${width}%` }} />
-    </span>
-  );
-}
-
-function jumpToMyRow() {
-  const el = document.getElementById(MY_ROW_ID);
-  if (!el) return;
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
-  el.focus({ preventScroll: true });
-}
-
-function Hero({ own, total, provisional }: { own: RankingRow | undefined; total: number; provisional: boolean }) {
-  if (!own) {
-    return (
-      <section aria-label="Posisi tim" className="surface-loud guardian-hero-mesh overflow-hidden p-5 sm:p-7">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Eyebrow>Peringkat akhir</Eyebrow>
-            {provisional && <ProvisionalPill />}
-          </div>
-          <h1 className="team-hero-title">Peringkat</h1>
-          <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
-            Tim Anda tidak tercantum dalam peringkat karena belum mengirim submission atau tidak memenuhi syarat
-            penilaian. Berikut urutan seluruh tim peserta.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  const hasScore = own.score !== null;
-  const teamsBehind = hasScore ? rowsBehind(own.rank, total) : 0;
-  const topPercent = hasScore ? Math.max(1, Math.ceil((own.rank / total) * 100)) : null;
-  const beatPercent = total > 1 ? (teamsBehind / (total - 1)) * 100 : 100;
-
-  return (
-    <section aria-label="Posisi tim" className="surface-loud guardian-hero-mesh overflow-hidden p-5 sm:p-7">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Eyebrow>Peringkat akhir</Eyebrow>
-            {provisional && <ProvisionalPill />}
-          </div>
-          <p className="font-bold font-mono text-[11px] text-hero-fg uppercase tracking-wider">
-            Tim Anda berada di peringkat
-          </p>
-          <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-            <h1 className="team-pop font-display font-extrabold text-7xl text-hero-fg tabular-nums leading-none sm:text-8xl">
-              <span className="sr-only">Peringkat </span>
-              {hasScore ? `#${own.rank}` : "Finalis"}
-            </h1>
-            <span className="pb-1.5 font-display font-semibold text-hero-fg-muted text-lg sm:text-xl">
-              dari {total} tim
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p className="break-words font-display font-bold text-hero-fg text-lg sm:text-xl">{own.team_name}</p>
-            {own.institution && <p className="break-words text-hero-fg-muted text-sm">{own.institution}</p>}
-          </div>
-          <button
-            type="button"
-            onClick={jumpToMyRow}
-            className="btn-loud press inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 font-semibold text-ink text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Crosshair className="size-4" aria-hidden="true" />
-            Lihat posisi di daftar
-          </button>
-        </div>
-
-        <div className="grid w-full grid-cols-2 gap-3 lg:w-80 lg:shrink-0">
-          <div className="rounded-xl border-2 border-ink bg-card p-3 shadow-brutal-sm">
-            <p className="font-bold font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Nilai</p>
-            <p className="font-display font-extrabold text-2xl text-ink tabular-nums">{formatScore(own.score)}</p>
-            <p className="text-muted-foreground text-xs">{stageLabel(own.stage)}</p>
-          </div>
-          <div className="rounded-xl border-2 border-ink bg-card p-3 shadow-brutal-sm">
-            <p className="font-bold font-mono text-[11px] text-foreground/75 uppercase tracking-wider">Posisi</p>
-            <p className="font-display font-extrabold text-2xl text-ink tabular-nums">
-              {topPercent === null ? "-" : `Top ${topPercent}%`}
-            </p>
-            <p className="text-muted-foreground text-xs">dari seluruh tim</p>
-          </div>
-          {hasScore && total > 1 && (
-            <div className="col-span-2 rounded-xl border-2 border-ink bg-card p-3 shadow-brutal-sm">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-bold font-mono text-[11px] text-foreground/75 uppercase tracking-wider">
-                  Unggul dari
-                </p>
-                <p className="font-display font-bold text-ink text-sm tabular-nums">{teamsBehind} tim</p>
-              </div>
-              <span className="block h-3 overflow-hidden rounded-full border-2 border-ink bg-muted" aria-hidden="true">
-                <span className="block h-full bg-mint" style={{ width: `${beatPercent}%` }} />
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** Teams strictly below this rank (ties do not count as beaten). */
-function rowsBehind(rank: number, total: number): number {
-  return Math.max(0, total - rank);
-}
+export type { RankingRow } from "./ranking-shared";
 
 const PODIUM_STYLE = [
   { tone: "mint" as const, icon: Trophy, order: "sm:order-2", lift: "sm:pb-8 sm:pt-6", title: "Juara 1" },
@@ -234,17 +60,6 @@ function Podium({ rows }: { rows: RankingRow[] }) {
         })}
       </ol>
     </section>
-  );
-}
-
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <h2 className="shrink-0 font-bold font-mono text-[11px] text-foreground/75 uppercase tracking-wider">
-        {children}
-      </h2>
-      <span className="h-px flex-1 bg-border" aria-hidden="true" />
-    </div>
   );
 }
 
@@ -301,7 +116,7 @@ export function PeringkatClient({ rows, provisional }: { rows: RankingRow[]; pro
 
   return (
     <div className="space-y-8">
-      <Hero own={own} total={rows.length} provisional={provisional} />
+      <RankingHero own={own} rows={rows} provisional={provisional} />
 
       {provisional && (
         <p className="surface-calm flex items-start gap-2 p-3 text-muted-foreground text-xs">

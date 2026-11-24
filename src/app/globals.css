@@ -59,6 +59,13 @@
   --color-ink-foreground: var(--ink-foreground);
   --color-mint: var(--safe);
   --color-guardian-accent: var(--guardian-accent);
+  /* Medal tokens (Guardian extension for ranking places 1/2/3). */
+  --color-medal-gold: var(--medal-gold);
+  --color-medal-gold-soft: var(--medal-gold-soft);
+  --color-medal-silver: var(--medal-silver);
+  --color-medal-silver-soft: var(--medal-silver-soft);
+  --color-medal-bronze: var(--medal-bronze);
+  --color-medal-bronze-soft: var(--medal-bronze-soft);
   --color-hero-fg: var(--hero-fg);
   --color-hero-fg-muted: var(--hero-fg-muted);
   --shadow-brutal-sm: var(--shadow-hard-sm);
@@ -109,6 +116,12 @@
   --safe: #00e676;
   --link: #3fa9d9;
   --guardian-accent: #5b3fd6;
+  --medal-gold: #e2ab12;
+  --medal-gold-soft: #fdf0c4;
+  --medal-silver: #9aa6bd;
+  --medal-silver-soft: #e8edf5;
+  --medal-bronze: #c0743a;
+  --medal-bronze-soft: #f6dfca;
   --shadow-hard: 4px 4px 0 var(--ink);
   --shadow-hard-lg: 6px 6px 0 var(--ink);
   --shadow-hard-sm: 2px 2px 0 var(--ink);
@@ -196,6 +209,12 @@
   --safe: #2fbf71;
   --link: #62bdf0;
   --guardian-accent: #7d72eb;
+  --medal-gold: #f5c84c;
+  --medal-gold-soft: #3a3017;
+  --medal-silver: #c5cfdf;
+  --medal-silver-soft: #2a3143;
+  --medal-bronze: #df9a62;
+  --medal-bronze-soft: #3c2a1e;
   --shadow-hard: 4px 4px 0 #000000;
   --shadow-hard-lg: 6px 6px 0 #000000;
   --shadow-hard-sm: 2px 2px 0 #000000;
@@ -2565,6 +2584,298 @@ html {
   .hex-pulse {
     animation: none;
     opacity: 0;
+  }
+}
+
+/* ==========================================================================
+   Peringkat celebration (team /team/peringkat). Only transform/opacity animate.
+   Particle positions come from inline CSS variables set by celebration-layer.tsx.
+   ========================================================================== */
+
+/* Full-bleed effect layer behind the hero content. */
+.rank-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
+}
+
+.rank-layer[data-paused="true"] *,
+.rank-layer[data-paused="true"] *::before {
+  animation-play-state: paused !important;
+}
+
+/* #1: slowly rotating sunburst. */
+.rank-rays {
+  position: absolute;
+  top: 50%;
+  left: var(--rays-x, 18%);
+  width: 180cqmax;
+  height: 180cqmax;
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in oklab, var(--medal-gold) 30%, transparent) 0deg 7deg,
+    transparent 7deg 22deg
+  );
+  mask-image: radial-gradient(circle, black 0%, transparent 55%);
+  transform: translate(-50%, -50%);
+  animation: rank-spin 48s linear infinite;
+}
+
+@keyframes rank-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Shared particle piece; colour, size and timing via --c, --s, --dur, --delay, --x, --drift. */
+.rank-piece {
+  position: absolute;
+  left: var(--x);
+  width: var(--s, 10px);
+  height: var(--s, 10px);
+  background: var(--c);
+  opacity: 0;
+}
+
+/* #1: falling hex confetti. */
+.rank-confetti {
+  top: -6%;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+  animation: rank-fall var(--dur, 7s) linear var(--delay, 0s) infinite;
+}
+
+@keyframes rank-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift, 0px), calc(100cqh + 40px)) rotate(var(--rot, 540deg));
+  }
+}
+
+/* #2 sparks, #3 embers, finalist motes: rising pieces. */
+.rank-spark {
+  bottom: -12px;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+  animation: rank-rise var(--dur, 6s) ease-in var(--delay, 0s) infinite;
+}
+
+.rank-ember {
+  bottom: -12px;
+  border-radius: 9999px;
+  box-shadow: 0 0 10px 2px color-mix(in oklab, var(--c) 60%, transparent);
+  animation: rank-rise var(--dur, 6s) ease-out var(--delay, 0s) infinite;
+}
+
+@keyframes rank-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+  15% {
+    opacity: 0.95;
+  }
+  60% {
+    opacity: 0.6;
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift, 0px), calc(-100cqh - 30px)) scale(0.35);
+  }
+}
+
+/* #2: diagonal light band sweeping across the card. */
+.rank-sheen {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -45%;
+  width: 35%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in oklab, var(--medal-silver) 45%, transparent),
+    transparent
+  );
+  transform: rotate(12deg);
+  animation: rank-sheen 5s ease-in-out 0.6s infinite;
+}
+
+@keyframes rank-sheen {
+  0% {
+    transform: translateX(0) rotate(12deg);
+  }
+  55%,
+  100% {
+    transform: translateX(480%) rotate(12deg);
+  }
+}
+
+/* #3 and accents: soft pulsing radial glow (colour via --glow). */
+.rank-glow {
+  position: absolute;
+  top: 50%;
+  left: var(--glow-x, 18%);
+  width: 90cqmin;
+  height: 90cqmin;
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in oklab, var(--glow) 55%, transparent) 0%, transparent 65%);
+  transform: translate(-50%, -50%);
+  animation: rank-glow 3.4s ease-in-out infinite alternate;
+}
+
+@keyframes rank-glow {
+  from {
+    opacity: 0.45;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  to {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+/* Finalist: circuit traces drawing in (paths use pathLength="1"). */
+.rank-circuit path {
+  fill: none;
+  stroke: color-mix(in oklab, var(--safe) 70%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rank-draw 1.8s ease-out var(--delay, 0s) forwards;
+}
+
+@keyframes rank-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Top 10 / top 25%: quiet dotted grain. */
+.rank-grain {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in oklab, var(--ink) 12%, transparent) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+/* Hard-shadow colour on the big rank number. */
+.rank-number--gold {
+  text-shadow: 4px 4px 0 var(--medal-gold);
+}
+
+.rank-number--silver {
+  text-shadow: 4px 4px 0 var(--medal-silver);
+}
+
+.rank-number--bronze {
+  text-shadow: 4px 4px 0 var(--medal-bronze);
+}
+
+.rank-number--mint {
+  text-shadow: 4px 4px 0 var(--safe);
+}
+
+/* Medal/mint stamp variants of .team-stamp: ink text on a soft medal fill for contrast. */
+.team-stamp--gold,
+.team-stamp--silver,
+.team-stamp--bronze,
+.team-stamp--mint {
+  color: var(--ink);
+  box-shadow: var(--shadow-hard-sm);
+}
+
+.team-stamp--gold {
+  border-color: var(--medal-gold);
+  background-color: var(--medal-gold-soft);
+}
+
+.team-stamp--silver {
+  border-color: var(--medal-silver);
+  background-color: var(--medal-silver-soft);
+}
+
+.team-stamp--bronze {
+  border-color: var(--medal-bronze);
+  background-color: var(--medal-bronze-soft);
+}
+
+.team-stamp--mint {
+  border-color: var(--safe);
+  background-color: color-mix(in oklab, var(--safe) 18%, var(--card));
+}
+
+/* Gentle entrance for the hero (hides the first-frame count-up reset). */
+.rank-fade-in {
+  animation: rank-fade-in 0.5s ease-out both;
+}
+
+@keyframes rank-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Score bars that grow from the left (transform only). Final size via --to (0..1); works without JS. */
+.rank-bar-fill {
+  transform: scaleX(var(--to, 1));
+  transform-origin: left center;
+}
+
+.rank-bar-grow {
+  animation: rank-bar-grow 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) var(--delay, 0.2s) both;
+}
+
+@keyframes rank-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--to, 1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-rays,
+  .rank-sheen,
+  .rank-glow,
+  .rank-circuit path,
+  .rank-fade-in {
+    animation: none !important;
+  }
+
+  .rank-circuit path {
+    stroke-dashoffset: 0;
+  }
+
+  .rank-piece {
+    display: none;
+  }
+
+  .rank-bar-grow {
+    animation: none !important;
   }
 }
 
