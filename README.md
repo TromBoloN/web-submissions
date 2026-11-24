@@ -269,6 +269,7 @@ Full guide with troubleshooting: [Setup](docs/documentation/SETUP.md).
 | `npm run backup` / `npm run restore` | JSON backup to `private-output/` / restore from it (see [Operations](docs/documentation/OPERATIONS.md)) |
 | `npm run seed` / `npm run seed:clear` | Seed or clear demo accounts (`@seed.mitweek.test`). ⚠️ **Never against production.** |
 | `npm run seed:showcase` | Demo showcase data: `-- seed`, `-- seed --publish`, `-- clear` |
+| `npm run seed:finalists` | **Local Docker stack only** (`.env.docker.local`, localhost): current top 5 → finalists + 2 final judges (`juri.final1/2@seed.mitweek.test`). `-- seed`, `-- seed --notice --scores`, `-- clear` |
 | `npm run onboard` | Import registered teams: dry run by default; `-- --commit` creates accounts and writes credentials to `private-output/` |
 | `npm run whatsapp` | Local helper page for sending team portal credentials via WhatsApp (newest `private-output/credentials-*.csv`) |
 

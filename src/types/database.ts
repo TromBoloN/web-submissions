@@ -686,7 +686,7 @@ export type Database = {
       get_public_ranking: {
         Args: never;
         Returns: {
-          institution: string;
+          institution: string | null;
           is_own_team: boolean;
           rank: number;
           score: number | null;

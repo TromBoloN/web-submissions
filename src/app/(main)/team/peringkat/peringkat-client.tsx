@@ -8,7 +8,8 @@ import { Crosshair, FlaskConical, Medal, Trophy } from "lucide-react";
 export type RankingRow = {
   rank: number;
   team_name: string;
-  institution: string;
+  /** Only for ranks 1-5 and the caller's own team (masked to null by get_public_ranking). */
+  institution: string | null;
   stage: string;
   score: number | null;
   is_own_team: boolean;
@@ -141,7 +142,7 @@ function Hero({ own, total, provisional }: { own: RankingRow | undefined; total:
           </div>
           <div className="min-w-0">
             <p className="break-words font-display font-bold text-hero-fg text-lg sm:text-xl">{own.team_name}</p>
-            <p className="break-words text-hero-fg-muted text-sm">{own.institution}</p>
+            {own.institution && <p className="break-words text-hero-fg-muted text-sm">{own.institution}</p>}
           </div>
           <button
             type="button"
@@ -222,7 +223,7 @@ function Podium({ rows }: { rows: RankingRow[] }) {
                 {style.title}
               </span>
               <p className="w-full break-words font-display font-bold text-base leading-tight">{row.team_name}</p>
-              <p className="w-full break-words text-muted-foreground text-xs">{row.institution}</p>
+              {row.institution && <p className="w-full break-words text-muted-foreground text-xs">{row.institution}</p>}
               <p className="font-display font-extrabold text-2xl text-ink tabular-nums">{formatScore(row.score)}</p>
               <div className="w-full max-w-40">
                 <ScoreBar score={row.score} />
@@ -277,7 +278,7 @@ function RankList({ title, rows }: { title: string; rows: RankingRow[] }) {
                 <p className="min-w-0 break-words font-semibold text-sm">{row.team_name}</p>
                 {row.is_own_team && <OwnChip />}
               </div>
-              <p className="break-words text-muted-foreground text-xs">{row.institution}</p>
+              {row.institution && <p className="break-words text-muted-foreground text-xs">{row.institution}</p>}
             </div>
             <div className="w-20 shrink-0 space-y-1 text-right sm:w-32">
               <p className="font-display font-bold text-sm tabular-nums sm:text-base">{formatScore(row.score)}</p>

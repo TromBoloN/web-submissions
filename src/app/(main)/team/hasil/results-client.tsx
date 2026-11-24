@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Info, MessageSquareQuote, Sparkles } from "lucide-react";
+import { Award, Gavel, Info, MessageSquareQuote, Sparkles } from "lucide-react";
 
 import { type RubricBarItem, RubricBars } from "@/components/rubric-bars";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +11,28 @@ import { FINAL_RUBRIC, PRELIMINARY_RUBRIC, type RubricCriterion } from "@/lib/ru
 
 export type CriterionResult = {
   key: string;
+  /** After committee sanctions (never below 0). */
   average: number | null;
+  /** Judges' average before sanctions. Absent before migration 20261122000000. */
+  raw_average?: number | null;
+  /** Points actually removed from this criterion (capped at the judges' average). */
+  deduction?: number | null;
+};
+
+export type SanctionResult = {
+  criterion: string;
+  points: number;
+  reason: string;
 };
 
 export type StageResult = {
   judge_count: number;
   criteria: CriterionResult[];
+  /** After committee sanctions. */
   total: number | null;
+  raw_total?: number | null;
   comments: string[];
+  sanctions?: SanctionResult[];
 };
 
 export type TeamResultsData = {
@@ -100,6 +114,12 @@ function StageResultsView({
   const rubricList: readonly RubricCriterion[] = stage === "preliminary" ? PRELIMINARY_RUBRIC : FINAL_RUBRIC;
   const rubricMap = new Map(rubricList.map((c) => [c.column, c]));
   const insight = getInsight(stageData.criteria, rubricMap);
+  const sanctions = stageData.sanctions ?? [];
+  const hasSanctions = sanctions.length > 0;
+  const totalDeduction =
+    hasSanctions && stageData.raw_total != null && stageData.total !== null
+      ? Math.max(stageData.raw_total - stageData.total, 0)
+      : null;
   const rubricBars: RubricBarItem[] = stageData.criteria.map((item) => {
     const criterion = rubricMap.get(item.key);
     return {
@@ -125,7 +145,21 @@ function StageResultsView({
           <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
             <ScoreGauge score={stageData.total} />
             <div className="min-w-0 space-y-3">
-              <p className="text-muted-foreground text-sm">Rata-rata total berbobot dari seluruh dewan juri.</p>
+              <p className="text-muted-foreground text-sm">
+                {hasSanctions
+                  ? "Rata-rata total berbobot dari seluruh dewan juri, setelah sanksi panitia."
+                  : "Rata-rata total berbobot dari seluruh dewan juri."}
+              </p>
+              {hasSanctions && totalDeduction !== null && (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                  <span className="text-muted-foreground">
+                    Sebelum sanksi: <span className="tabular-nums">{formatScore(stageData.raw_total)}</span>
+                  </span>
+                  <Badge variant="destructive" className="tabular-nums">
+                    Sanksi −{formatScore(totalDeduction)}
+                  </Badge>
+                </p>
+              )}
               {insight && (
                 <p className="rounded-lg bg-background/70 px-3 py-2 text-foreground text-sm">
                   <Sparkles aria-hidden="true" className="mr-1.5 inline size-4 text-primary" />
@@ -181,6 +215,11 @@ function StageResultsView({
                       <TableCell className="min-w-32 text-right">
                         <div className="space-y-1.5">
                           <span className="block text-sm tabular-nums">{formatScore(item.average)}</span>
+                          {(item.deduction ?? 0) > 0 && (
+                            <span className="block text-destructive text-xs tabular-nums">
+                              {formatScore(item.raw_average)} − {formatScore(item.deduction)} sanksi
+                            </span>
+                          )}
                           <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                             <div
                               className="h-full rounded-full bg-primary"
@@ -218,10 +257,48 @@ function StageResultsView({
 
           <p className="text-muted-foreground text-xs italic leading-normal">
             * Kontribusi dihitung dari (Nilai Rata-rata × Bobot / 100). Total nilai yang ditampilkan berasal langsung
-            dari agregat resmi skor berbobot juri pada basis data.
+            dari agregat resmi skor berbobot juri pada basis data
+            {hasSanctions ? ", setelah pengurangan sanksi panitia." : "."}
           </p>
         </CardContent>
       </Card>
+
+      {/* 2b. Committee sanctions (only when present) */}
+      {hasSanctions && (
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Gavel aria-hidden="true" className="size-4 text-destructive" />
+              Sanksi Panitia
+            </CardTitle>
+            <CardDescription>
+              Pengurangan nilai oleh panitia pada kriteria tertentu. Poin dikurangkan dari nilai rata-rata kriteria
+              tersebut, dengan nilai terendah 0.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {sanctions.map((s) => (
+                <li
+                  // Sanctions carry no id on purpose (nothing internal reaches teams); content is unique enough.
+                  key={`${s.criterion}|${s.points}|${s.reason}`}
+                  className="space-y-1.5 rounded-lg border bg-destructive/5 p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="destructive" className="tabular-nums">
+                      −{formatScore(s.points)}
+                    </Badge>
+                    <span className="font-medium text-foreground text-sm">
+                      {rubricMap.get(s.criterion)?.label ?? s.criterion}
+                    </span>
+                  </div>
+                  <p className="whitespace-pre-wrap break-words text-foreground text-sm leading-relaxed">{s.reason}</p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 3. Comments List Card */}
       <Card>

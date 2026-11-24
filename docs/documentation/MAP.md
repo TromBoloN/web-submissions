@@ -106,7 +106,7 @@ src/components/ui/                   shadcn/ui, generated: do not edit
 src/app/globals.css                  theme tokens, Guardian tokens and utilities (see DESIGN-SYSTEM.md)
 src/types/database.ts                generated Supabase types (UTF-8)
 src/scripts/seed.mjs                 npm run seed / seed:clear (never against production)
-scripts/                             backup, restore, local-stack (local Docker Supabase), seed-showcase, import-registrations, whatsapp-links
+scripts/                             backup, restore, local-stack (local Docker Supabase), seed-showcase, seed-finalists (local stack only: top 5 -> finalists + final judges), import-registrations, whatsapp-links
 supabase/config.toml                 local Docker Supabase config (npm run local:*)
 ```
 
