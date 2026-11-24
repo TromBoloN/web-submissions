@@ -14,9 +14,9 @@
 --      raw_avg_score and sanction_deduction are appended for the admin.
 --      get_public_showcase_winners() reads final_ranking and follows automatically.
 --   4. get_my_results(): criterion averages and totals after sanctions, plus the team's
---      own sanctions (criterion and reason only; no points, admin identity or timestamps).
---      Pre-sanction averages/total, the effective deduction and the sanction points are NOT
---      returned to teams (owner request: a sanctioned team only sees its score after sanctions).
+--      own sanctions (criterion, the points as entered, reason; no admin identity or timestamps).
+--      Pre-sanction averages/total and the effective (capped) deduction are NOT returned to teams
+--      (owner request: a sanctioned team sees the sanctioned points but not its pre-sanction score).
 --      Also fixes a pre-existing gap: only final-status scores are counted (drafts were
 --      included before), matching the ranking views.
 --   5. get_public_ranking(): aggregate score after sanctions.
@@ -315,7 +315,7 @@ BEGIN
     ) AS g;
 
     SELECT COALESCE(
-      jsonb_agg(jsonb_build_object('criterion', s.criterion, 'reason', s.reason) ORDER BY s.created_at),
+      jsonb_agg(jsonb_build_object('criterion', s.criterion, 'points', s.points, 'reason', s.reason) ORDER BY s.created_at),
       '[]'::jsonb
     )
     INTO v_sanctions
@@ -390,7 +390,7 @@ BEGIN
     ) AS g;
 
     SELECT COALESCE(
-      jsonb_agg(jsonb_build_object('criterion', s.criterion, 'reason', s.reason) ORDER BY s.created_at),
+      jsonb_agg(jsonb_build_object('criterion', s.criterion, 'points', s.points, 'reason', s.reason) ORDER BY s.created_at),
       '[]'::jsonb
     )
     INTO v_sanctions
