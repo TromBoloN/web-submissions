@@ -17,7 +17,6 @@ export type CriterionResult = {
 
 export type SanctionResult = {
   criterion: string;
-  points: number;
   reason: string;
 };
 
@@ -248,22 +247,20 @@ function StageResultsView({
               Sanksi Panitia
             </CardTitle>
             <CardDescription>
-              Pengurangan nilai oleh panitia pada kriteria tertentu. Poin dikurangkan dari nilai rata-rata kriteria
-              tersebut, dengan nilai terendah 0.
+              Panitia memberikan sanksi pengurangan nilai pada kriteria berikut. Nilai yang ditampilkan di halaman ini
+              sudah memperhitungkan sanksi tersebut.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
               {sanctions.map((s) => (
                 <li
-                  // Sanctions carry no id on purpose (nothing internal reaches teams); content is unique enough.
-                  key={`${s.criterion}|${s.points}|${s.reason}`}
+                  // Sanctions carry no id or points on purpose (nothing internal reaches teams).
+                  key={`${s.criterion}|${s.reason}`}
                   className="space-y-1.5 rounded-lg border bg-destructive/5 p-4"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="destructive" className="tabular-nums">
-                      −{formatScore(s.points)}
-                    </Badge>
+                    <Badge variant="destructive">Sanksi</Badge>
                     <span className="font-medium text-foreground text-sm">
                       {rubricMap.get(s.criterion)?.label ?? s.criterion}
                     </span>

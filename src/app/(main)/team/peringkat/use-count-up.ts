@@ -9,6 +9,16 @@ interface CountUpOptions {
   delayMs?: number;
   /** Start only when true (e.g. after the reveal intro). */
   enabled?: boolean;
+  /**
+   * First render shows `from` instead of `target`. Only for components that are never server-rendered
+   * (e.g. mounted mid-animation), otherwise the no-JS view would show the start value.
+   */
+  startAtFrom?: boolean;
+  /**
+   * While not enabled, sit at `from` instead of `target` (set after mount only, so the server/no-JS view
+   * still shows the final value). Used under the reveal curtain so the count starts cleanly when it opens.
+   */
+  holdAtFrom?: boolean;
 }
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
@@ -20,13 +30,24 @@ const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
  */
 export function useCountUp(
   target: number,
-  { from = 0, durationMs = 1200, delayMs = 0, enabled = true }: CountUpOptions = {},
+  {
+    from = 0,
+    durationMs = 1200,
+    delayMs = 0,
+    enabled = true,
+    startAtFrom = false,
+    holdAtFrom = false,
+  }: CountUpOptions = {},
 ) {
-  const [value, setValue] = useState(target);
+  const [value, setValue] = useState(startAtFrom ? from : target);
 
   useEffect(() => {
-    if (!enabled || from === target || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (from === target || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setValue(target);
+      return;
+    }
+    if (!enabled) {
+      setValue(holdAtFrom ? from : target);
       return;
     }
 
@@ -48,7 +69,7 @@ export function useCountUp(
 
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target, from, durationMs, delayMs, enabled]);
+  }, [target, from, durationMs, delayMs, enabled, holdAtFrom]);
 
   return value;
 }

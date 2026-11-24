@@ -67,6 +67,8 @@ Admin screens stay mostly calm. Use loud styling only for the active state of na
 | `.stagger-list[data-reveal]` | List rows fade in once when scrolled into view (`--i` per row); hidden only while `pending`, never without JS |
 | `.highlight-pulse` | Ring pulse around the team's own row after "Lihat posisi di daftar" |
 | `.rank-sticky-in` | Entrance for the sticky "Anda #N" bar |
+| `.nav-celebrate`, `.nav-medal-twinkle` | Sidebar "Peringkat" row: mint shimmer + icon wiggle while the ranking is unseen; twinkling gold medal marker afterwards (icon tile is `.nav-icon`) |
+| `.reveal-root[data-phase]`, `.reveal-half--top/--bottom`, `.reveal-content`, `.reveal-type` | Ranking reveal intro curtain: server-rendered, halves split on `data-phase="open"`, typed label; closes itself after 8s without JS |
 
 Note: `.surface-loud` is unlayered CSS, so Tailwind utilities cannot override its border or background; use an inline style (e.g. the podium's medal top border).
 | `.guardian-hero-mesh`, `.guardian-card`, `.guardian-btn-*` | Older `/karya` classes; prefer the classes above for new work |

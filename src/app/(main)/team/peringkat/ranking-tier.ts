@@ -15,6 +15,20 @@ export type ReleaseKey = "final" | "provisional";
 export const SEEN_COOKIE = "mitweek_peringkat_seen";
 export const MEDAL_COOKIE = "mitweek_peringkat_medal";
 
+/**
+ * TESTING ONLY: when true, the reveal intro plays on every page load (the seen cookie is ignored for
+ * the intro). The sidebar still uses the cookie. Set to false before the real release.
+ */
+export const REVEAL_TEST_MODE: boolean = false;
+
+export function releaseKeyFor(finalResultsReleased: boolean): ReleaseKey {
+  return finalResultsReleased ? "final" : "provisional";
+}
+
+export function parseMedalCookie(value: string | undefined): "gold" | "silver" | "bronze" | "finalist" | null {
+  return value === "gold" || value === "silver" || value === "bronze" || value === "finalist" ? value : null;
+}
+
 export function rankTier(row: { rank: number; score: number | null; stage: string }, total: number): RankTier {
   if (row.score === null) return row.stage === "final" ? "finalist" : "base";
   if (row.rank === 1) return "gold";

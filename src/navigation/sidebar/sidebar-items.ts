@@ -49,6 +49,19 @@ interface NavItemBase {
   newTab?: boolean;
   /** Also active on sub-pages (url + "/..."). Off by default so "/admin" doesn't match everything. */
   matchPrefix?: boolean;
+  /** Team ranking item only: shimmer while the new ranking is unseen. */
+  celebrate?: boolean;
+  /** Team ranking item only: medal marker once the team has seen a medal/finalist result. */
+  medal?: RankingMedal;
+}
+
+export type RankingMedal = "gold" | "silver" | "bronze" | "finalist";
+
+/** Ranking nav decoration, decided on the server from presentation-only cookies (no DB). */
+export interface RankingNavState {
+  /** The current ranking release has not been opened yet in this browser. */
+  fresh: boolean;
+  medal: RankingMedal | null;
 }
 
 export interface NavMainLinkItem extends NavItemBase {
@@ -81,6 +94,7 @@ export function getSidebarItems(
   resultsReleased?: boolean,
   galleryState: GalleryNavState = "open",
   rankingPublished?: boolean,
+  rankingNav?: RankingNavState,
 ): NavGroup[] {
   if (role === "admin") {
     return [
@@ -120,7 +134,15 @@ export function getSidebarItems(
     roleItems.push({ id: "results", title: "Hasil Penilaian", url: "/team/hasil", icon: Award });
   }
   if (role === "team" && rankingPublished === true) {
-    roleItems.push({ id: "ranking", title: "Peringkat", url: "/team/peringkat", icon: ListOrdered });
+    roleItems.push({
+      id: "ranking",
+      title: "Peringkat",
+      url: "/team/peringkat",
+      icon: ListOrdered,
+      ...(rankingNav?.fresh
+        ? { celebrate: true, badge: "new" as const, badgeLabel: "Rilis" }
+        : { medal: rankingNav?.medal ?? undefined }),
+    });
   }
 
   const exploreItems: NavMainItem[] = [

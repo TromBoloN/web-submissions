@@ -2961,6 +2961,374 @@ html {
   }
 }
 
+/* Sidebar "Peringkat" row while the new ranking is unseen: mint shimmer sweep + icon wiggle. */
+.nav-celebrate {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-celebrate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklab, var(--safe) 40%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: nav-shimmer 2.8s ease-in-out infinite;
+}
+
+@keyframes nav-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  55%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.nav-celebrate .nav-icon svg {
+  transform-origin: 50% 70%;
+  animation: nav-wiggle 2.8s ease-in-out infinite;
+}
+
+@keyframes nav-wiggle {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  66% {
+    transform: rotate(-14deg);
+  }
+  73% {
+    transform: rotate(12deg);
+  }
+  80% {
+    transform: rotate(-7deg);
+  }
+  87% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Gold medal marker in the sidebar: gentle twinkle. */
+.nav-medal-twinkle {
+  animation: nav-twinkle 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes nav-twinkle {
+  from {
+    opacity: 0.75;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* Reveal intro (reveal-intro.tsx). Server-rendered, so the first painted frame is the curtain. */
+.reveal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  /* No-JS safety: close by itself after 8s. JS sets data-js and drives the sequence instead. */
+  animation: reveal-autoclose 0.4s ease-out 8s forwards;
+}
+
+.reveal-root[data-js] {
+  animation: none;
+}
+
+@keyframes reveal-autoclose {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.reveal-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background-color: var(--hero);
+  transition: transform 0.65s cubic-bezier(0.7, 0, 0.3, 1);
+}
+
+.reveal-half--top {
+  top: 0;
+}
+
+.reveal-half--bottom {
+  bottom: 0;
+}
+
+/* Mint edge on each half: invisible until the curtain opens, then it rides apart with the halves. */
+.reveal-half::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--safe);
+  opacity: 0;
+}
+
+.reveal-half--top::after {
+  bottom: 0;
+}
+
+.reveal-half--bottom::after {
+  top: 0;
+}
+
+.reveal-root[data-phase="open"] .reveal-half::after {
+  opacity: 1;
+}
+
+/* The seam: appears when the rank lands and draws outward from the centre; it hands over to the
+   half edges above the moment the curtain opens. */
+.reveal-seam {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  margin-top: -1.5px;
+  background-color: var(--safe);
+  box-shadow: 0 0 18px 2px color-mix(in oklab, var(--safe) 55%, transparent);
+  transform: scaleX(0);
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+.reveal-root[data-phase="hold"] .reveal-seam {
+  transform: scaleX(1);
+}
+
+.reveal-root[data-phase="open"] .reveal-seam {
+  transform: scaleX(1);
+  opacity: 0;
+}
+
+.reveal-root[data-phase="open"] .reveal-half--top {
+  transform: translateY(-101%);
+}
+
+.reveal-root[data-phase="open"] .reveal-half--bottom {
+  transform: translateY(101%);
+}
+
+.reveal-content {
+  position: relative;
+  transition: opacity 0.25s ease-out;
+}
+
+.reveal-root[data-phase="open"] .reveal-content {
+  opacity: 0;
+}
+
+/* "PENGUMUMAN PERINGKAT" typing in, letter by letter. */
+.reveal-type {
+  clip-path: inset(0 100% 0 0);
+  animation: reveal-type 0.7s steps(20, end) 0.15s forwards;
+}
+
+@keyframes reveal-type {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Reveal: medal glow that swells during the drumroll (colour via --glow). */
+.reveal-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140vmin;
+  height: 140vmin;
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in oklab, var(--glow) 55%, transparent) 0%, transparent 60%);
+  transform: translate(-50%, -50%) scale(0.2);
+  opacity: 0;
+  transition:
+    transform 1.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 1.6s ease-out;
+  pointer-events: none;
+}
+
+.reveal-root[data-phase="drum"] .reveal-glow {
+  transform: translate(-50%, -50%) scale(0.55);
+  opacity: 0.55;
+}
+
+.reveal-root:is([data-phase="roll"], [data-phase="land"], [data-phase="hold"]) .reveal-glow {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0.9;
+}
+
+/* Fade-up for secondary lines (delay via --delay). */
+.reveal-rise {
+  animation: rank-fade-in 0.6s ease-out var(--delay, 0s) both;
+}
+
+/* Drumroll: heartbeat ring + bouncing dots. */
+.reveal-heartbeat {
+  animation: reveal-heartbeat 0.8s ease-in-out infinite;
+}
+
+@keyframes reveal-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  25% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  45% {
+    transform: scale(1.04);
+    opacity: 0.8;
+  }
+}
+
+.reveal-dot {
+  animation: reveal-dot 0.9s ease-in-out var(--delay, 0s) infinite;
+}
+
+@keyframes reveal-dot {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+/* Slot-machine digits: each new value drops in, blurring while fast (blur set inline per tick). */
+.reveal-tick {
+  animation: reveal-tick 0.12s ease-out both;
+}
+
+@keyframes reveal-tick {
+  from {
+    transform: translateY(-30%);
+    opacity: 0.3;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Landing: number slams in, the content shakes, shockwave rings expand. */
+.reveal-slam {
+  animation: reveal-slam 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes reveal-slam {
+  0% {
+    transform: scale(1.9);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(0.92);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.reveal-shake {
+  animation: reveal-shake 0.45s ease-out 0.1s both;
+}
+
+@keyframes reveal-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-6px, 3px);
+  }
+  40% {
+    transform: translate(5px, -4px);
+  }
+  60% {
+    transform: translate(-3px, 2px);
+  }
+  80% {
+    transform: translate(2px, -1px);
+  }
+}
+
+.reveal-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40vmin;
+  height: 40vmin;
+  margin: -20vmin 0 0 -20vmin;
+  border: 4px solid var(--ring, var(--safe));
+  border-radius: 9999px;
+  opacity: 0;
+  pointer-events: none;
+  animation: reveal-ring 1.1s cubic-bezier(0.1, 0.7, 0.3, 1) var(--delay, 0s) both;
+}
+
+@keyframes reveal-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+/* Confetti burst from the centre (target offset via --tx/--ty, colour --c, size --s). */
+.reveal-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--s, 12px);
+  height: var(--s, 12px);
+  background: var(--c);
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+  pointer-events: none;
+  animation: reveal-spark 1.6s cubic-bezier(0.1, 0.8, 0.3, 1) var(--delay, 0s) both;
+}
+
+@keyframes reveal-spark {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty) + 80px)) scale(1) rotate(var(--rot, 400deg));
+  }
+}
+
 /* Sticky "Anda #N" bar: slides up when it appears. */
 .rank-sticky-in {
   animation: rank-sticky-in 0.3s ease-out both;
@@ -2988,8 +3356,40 @@ html {
   .podium-spotlight,
   .stagger-list[data-reveal="shown"] > li,
   .highlight-pulse::after,
-  .rank-sticky-in {
+  .rank-sticky-in,
+  .nav-celebrate::after,
+  .nav-celebrate .nav-icon svg,
+  .nav-medal-twinkle,
+  .reveal-type,
+  .reveal-rise,
+  .reveal-heartbeat,
+  .reveal-dot,
+  .reveal-tick,
+  .reveal-slam,
+  .reveal-shake {
     animation: none !important;
+  }
+
+  .reveal-ring,
+  .reveal-spark {
+    display: none;
+  }
+
+  .reveal-glow {
+    transition: none;
+  }
+
+  .nav-celebrate::after {
+    display: none;
+  }
+
+  .reveal-type {
+    clip-path: none;
+  }
+
+  .reveal-half,
+  .reveal-content {
+    transition: none;
   }
 
   .stagger-list[data-reveal="pending"] > li {

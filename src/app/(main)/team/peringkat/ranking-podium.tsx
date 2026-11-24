@@ -87,14 +87,16 @@ function PodiumCard({ row, medal, lead }: { row: RankingRow; medal: MedalKind; l
       >
         {row.is_own_team && <span className="podium-spotlight" aria-hidden="true" />}
 
-        <div className="relative mt-1 grid place-items-center">
-          {medal === "gold" && (
-            <Crown
-              aria-hidden="true"
-              className="team-pop absolute -top-9 size-7 fill-medal-gold text-ink"
-              style={{ animationDelay: `${layout.delayMs + 500}ms` }}
-            />
-          )}
+        {/* In normal flow (not absolute) so the card's rounded border never clips it. */}
+        {medal === "gold" && (
+          <Crown
+            aria-hidden="true"
+            className="team-pop relative -mb-1 size-7 shrink-0 fill-medal-gold text-ink"
+            style={{ animationDelay: `${layout.delayMs + 500}ms` }}
+          />
+        )}
+        <div className="relative mt-2 grid place-items-center">
+          {/* The dashed ring extends 9px outside the hex; mt-2 keeps it clear of the crown/top border. */}
           <span
             className={cn("medal-ring", medal === "gold" && "medal-ring--spin")}
             style={{ "--ring": `var(--medal-${medal})` } as CSSProperties}

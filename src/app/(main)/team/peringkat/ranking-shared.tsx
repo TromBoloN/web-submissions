@@ -17,6 +17,9 @@ export type RankingRow = {
 
 export const MY_ROW_ID = "peringkat-tim-saya";
 export const HERO_ID = "peringkat-hero";
+export const HERO_TITLE_ID = "peringkat-hero-title";
+/** Page content wrapper; made `inert` while the reveal intro covers it. */
+export const MAIN_ID = "peringkat-main";
 
 const scoreFormatter = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

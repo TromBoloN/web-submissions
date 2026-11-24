@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { type CurrentUser, getRoleLabel } from "@/lib/user-display";
-import type { GalleryNavState } from "@/navigation/sidebar/sidebar-items";
+import type { GalleryNavState, RankingNavState } from "@/navigation/sidebar/sidebar-items";
 import { getPreference } from "@/server/server-actions";
 
 import { SearchDialog } from "./header/search-dialog";
@@ -22,6 +22,7 @@ export async function DashboardShell({
   user,
   resultsReleased,
   rankingPublished,
+  rankingNav,
   teamCode,
 }: Readonly<{
   children: ReactNode;
@@ -29,6 +30,8 @@ export async function DashboardShell({
   resultsReleased?: boolean;
   /** Team role only: shows the "Peringkat" sidebar item. */
   rankingPublished?: boolean;
+  /** Team role only: shimmer/medal decoration for the "Peringkat" item. */
+  rankingNav?: RankingNavState;
   /** Team role only: shown on the sidebar user chip. */
   teamCode?: string | null;
 }>) {
@@ -64,6 +67,7 @@ export async function DashboardShell({
         juknisUrl={juknisUrl}
         resultsReleased={resultsReleased}
         rankingPublished={rankingPublished}
+        rankingNav={rankingNav}
         galleryState={galleryState}
         teamCode={teamCode}
         variant={variant}

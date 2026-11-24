@@ -1,15 +1,20 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { type CSSProperties, useState } from "react";
 
 import { cn } from "cn";
-import { Crosshair, Crown } from "lucide-react";
+import { Crosshair, Crown, Share2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { APP_CONFIG } from "@/config/app-config";
+import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 import { CelebrationLayer } from "./celebration-layer";
 import {
   Eyebrow,
   formatScore,
   HERO_ID,
+  HERO_TITLE_ID,
   jumpToMyRow,
   ProvisionalPill,
   type RankingRow,
@@ -17,6 +22,7 @@ import {
   stageLabel,
 } from "./ranking-shared";
 import { hasCeremony, type RankTier, rankTier, TIER_ACCENT, TIER_STAMP } from "./ranking-tier";
+import { createShareImage, shareOrDownload } from "./share-card";
 import { useCountUp } from "./use-count-up";
 
 const TIER_MESSAGE: Record<RankTier, string> = {
@@ -57,6 +63,48 @@ function neighbourGap(own: RankingRow, rows: RankingRow[]): string | null {
   const above = sameStage.filter((r) => r.rank < own.rank).at(-1);
   if (!above || above.score === null) return null;
   return `Selisih ${formatScore(above.score - own.score)} poin dari #${above.rank}`;
+}
+
+/** Draws the achievement PNG (share-card.ts) and opens the share sheet, or downloads it. */
+function ShareButton({ own, total, tier }: { own: RankingRow; total: number; tier: RankTier }) {
+  const [busy, setBusy] = useState(false);
+
+  async function handleShare() {
+    setBusy(true);
+    try {
+      const blob = await createShareImage({
+        rank: own.score === null ? null : own.rank,
+        total,
+        teamName: own.team_name,
+        institution: own.institution,
+        scoreText: formatScore(own.score),
+        stageText: stageLabel(own.stage),
+        stamp: TIER_STAMP[tier],
+        accent: TIER_ACCENT[tier],
+        eventName: APP_CONFIG.name,
+        logoSrc: logo.src,
+      });
+      const result = await shareOrDownload(blob, `peringkat-${own.rank}.png`, `Peringkat ${APP_CONFIG.name}`);
+      if (result === "downloaded") toast.success("Gambar pencapaian diunduh.");
+    } catch {
+      toast.error("Gagal membuat gambar pencapaian. Silakan coba lagi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleShare}
+      disabled={busy}
+      aria-busy={busy}
+      className="btn-loud press inline-flex items-center gap-2 rounded-full bg-mint px-4 py-2 font-semibold text-ink text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70 dark:text-ink-foreground"
+    >
+      <Share2 className="size-4" aria-hidden="true" />
+      {busy ? "Menyiapkan gambar…" : "Bagikan pencapaian"}
+    </button>
+  );
 }
 
 function NoRankHero({ provisional }: { provisional: boolean }) {
@@ -109,9 +157,15 @@ function OwnHero({
     from: Math.max(own.rank, Math.min(10, total)),
     durationMs: 1100,
     enabled: revealDone && ceremony && hasScore,
+    holdAtFrom: ceremony && hasScore,
   });
-  const scoreShown = useCountUp(own.score ?? 0, { durationMs: 1400, enabled: revealDone && hasScore });
-  const behindShown = useCountUp(teamsBehind, { durationMs: 1400, enabled: revealDone && hasScore });
+  // Under the reveal curtain the counters wait at 0, so they start cleanly when it opens.
+  const scoreShown = useCountUp(own.score ?? 0, {
+    durationMs: 1400,
+    enabled: revealDone && hasScore,
+    holdAtFrom: true,
+  });
+  const behindShown = useCountUp(teamsBehind, { durationMs: 1400, enabled: revealDone && hasScore, holdAtFrom: true });
 
   return (
     <section
@@ -142,7 +196,10 @@ function OwnHero({
                 />
               )}
               <h1
+                id={HERO_TITLE_ID}
+                tabIndex={-1}
                 className={cn(
+                  "outline-none",
                   "font-display font-extrabold text-7xl text-hero-fg tabular-nums leading-none sm:text-8xl",
                   accent && `rank-number--${accent}`,
                 )}
@@ -173,14 +230,17 @@ function OwnHero({
           </div>
           <p className="max-w-xl font-medium text-hero-fg text-sm">{TIER_MESSAGE[tier]}</p>
 
-          <button
-            type="button"
-            onClick={jumpToMyRow}
-            className="btn-loud press inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 font-semibold text-ink text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Crosshair className="size-4" aria-hidden="true" />
-            Lihat posisi di daftar
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={jumpToMyRow}
+              className="btn-loud press inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 font-semibold text-ink text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Crosshair className="size-4" aria-hidden="true" />
+              Lihat posisi di daftar
+            </button>
+            <ShareButton own={own} total={total} tier={tier} />
+          </div>
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3 lg:w-80 lg:shrink-0">

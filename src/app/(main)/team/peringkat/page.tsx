@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { Metadata } from "next";
@@ -7,6 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 import { PeringkatClient } from "./peringkat-client";
+import { hasCeremony, REVEAL_TEST_MODE, rankTier, releaseKeyFor, SEEN_COOKIE } from "./ranking-tier";
 
 export const metadata: Metadata = {
   title: `Peringkat | ${APP_CONFIG.name}`,
@@ -42,5 +44,22 @@ export default async function TeamPeringkatPage() {
     );
   }
 
-  return <PeringkatClient rows={data ?? []} provisional={!settings?.final_results_released} />;
+  const rows = data ?? [];
+  const releaseKey = releaseKeyFor(Boolean(settings?.final_results_released));
+  const seenThisRelease = (await cookies()).get(SEEN_COOKIE)?.value === releaseKey;
+
+  // Decided on the server so a first-time ceremony visitor's very first paint is the curtain (no rank flash).
+  const own = rows.find((row) => row.is_own_team);
+  const ownTier = own ? rankTier(own, rows.length) : null;
+  const playIntro = ownTier !== null && hasCeremony(ownTier) && (REVEAL_TEST_MODE || !seenThisRelease);
+
+  return (
+    <PeringkatClient
+      rows={rows}
+      provisional={!settings?.final_results_released}
+      playIntro={playIntro}
+      releaseKey={releaseKey}
+      seenThisRelease={seenThisRelease}
+    />
+  );
 }

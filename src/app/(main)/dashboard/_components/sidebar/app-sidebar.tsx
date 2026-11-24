@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
 import type { CurrentUser } from "@/lib/user-display";
-import { type GalleryNavState, getSidebarItems } from "@/navigation/sidebar/sidebar-items";
+import { type GalleryNavState, getSidebarItems, type RankingNavState } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
@@ -28,6 +28,7 @@ export function AppSidebar({
   juknisUrl,
   resultsReleased,
   rankingPublished,
+  rankingNav,
   galleryState,
   teamCode,
   ...props
@@ -36,6 +37,7 @@ export function AppSidebar({
   juknisUrl?: string | null;
   resultsReleased?: boolean;
   rankingPublished?: boolean;
+  rankingNav?: RankingNavState;
   galleryState?: GalleryNavState;
   teamCode?: string | null;
 }) {
@@ -78,7 +80,9 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={getSidebarItems(user.role, juknisUrl, resultsReleased, galleryState, rankingPublished)} />
+        <NavMain
+          items={getSidebarItems(user.role, juknisUrl, resultsReleased, galleryState, rankingPublished, rankingNav)}
+        />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} teamCode={teamCode} />

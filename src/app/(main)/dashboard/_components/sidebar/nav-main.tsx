@@ -33,6 +33,7 @@ import type {
   NavMainItem,
   NavMainLinkItem,
   NavMainParentItem,
+  RankingMedal,
 } from "@/navigation/sidebar/sidebar-items";
 
 import { NavPendingIndicator } from "./nav-pending-indicator";
@@ -163,13 +164,35 @@ const NAV_ROW_CLASS = cn(
   "group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:shadow-none",
 );
 
+/** Ranking medal marker (team "Peringkat" item), from the presentation-only medal cookie. */
+const MEDAL_MARKER: Record<RankingMedal, string> = {
+  gold: "bg-medal-gold",
+  silver: "bg-medal-silver",
+  bronze: "bg-medal-bronze",
+  finalist: "bg-mint",
+};
+
+const MEDAL_TILE: Record<RankingMedal, string> = {
+  gold: "bg-medal-gold-soft",
+  silver: "bg-medal-silver-soft",
+  bronze: "bg-medal-bronze-soft",
+  finalist: "bg-mint/15",
+};
+
+const MEDAL_LABEL: Record<RankingMedal, string> = {
+  gold: "Juara 1",
+  silver: "Juara 2",
+  bronze: "Juara 3",
+  finalist: "Finalis",
+};
+
 function NavLinkItem({ item, isActive, showIconFallback }: NavLinkItemProps) {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         asChild
         aria-disabled={item.disabled}
-        className={NAV_ROW_CLASS}
+        className={cn(NAV_ROW_CLASS, item.celebrate && "nav-celebrate")}
         tooltip={item.title}
         isActive={isActive}
       >
@@ -183,11 +206,24 @@ function NavLinkItem({ item, isActive, showIconFallback }: NavLinkItemProps) {
           <NavPendingIndicator />
           <NavLinkIcon item={item} showFallback={showIconFallback} isActive={isActive} />
           <span className="truncate">{item.title}</span>
-          {isActive && !item.badge && (
+          {item.medal ? (
             <span
-              className="hex ml-auto size-2.5 shrink-0 bg-mint group-data-[collapsible=icon]:hidden"
-              aria-hidden="true"
+              className={cn(
+                "hex ml-auto size-3 shrink-0 group-data-[collapsible=icon]:hidden",
+                MEDAL_MARKER[item.medal],
+                item.medal === "gold" && "nav-medal-twinkle",
+              )}
+              role="img"
+              aria-label={MEDAL_LABEL[item.medal]}
             />
+          ) : (
+            isActive &&
+            !item.badge && (
+              <span
+                className="hex ml-auto size-2.5 shrink-0 bg-mint group-data-[collapsible=icon]:hidden"
+                aria-hidden="true"
+              />
+            )
           )}
         </Link>
       </SidebarMenuButton>
@@ -203,8 +239,9 @@ function NavLinkIcon({ item, showFallback, isActive }: NavLinkIconProps & { isAc
     return (
       <span
         className={cn(
-          "grid size-7 shrink-0 place-items-center rounded-md border-2 bg-card text-ink",
+          "nav-icon grid size-7 shrink-0 place-items-center rounded-md border-2 bg-card text-ink",
           isActive ? "border-ink" : "border-ink/30",
+          item.medal && MEDAL_TILE[item.medal],
           "group-data-[collapsible=icon]:size-4 group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent",
         )}
       >
