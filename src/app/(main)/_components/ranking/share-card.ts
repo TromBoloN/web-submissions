@@ -1,4 +1,4 @@
-// Draws the team's achievement as a 1080×1920 PNG (story format) with Canvas 2D: no dependencies.
+// Draws the team's achievement (and the judge appreciation card) as a 1080×1920 PNG (story format) with Canvas 2D: no dependencies.
 // Colours are read from the CSS tokens at runtime, so the image follows the current light/dark theme.
 
 export interface ShareCardInput {
@@ -87,7 +87,20 @@ function setSpacing(ctx: CanvasRenderingContext2D, px: number) {
   if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${px}px`;
 }
 
-export async function createShareImage(input: ShareCardInput): Promise<Blob> {
+interface CardCanvas {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  ink: string;
+  fg: string;
+  fgMuted: string;
+  from: string;
+  mint: string;
+  display: string;
+  mono: string;
+}
+
+/** Canvas with the Guardian hero background (gradient + dotted grain), shared by every card. */
+async function startCard(): Promise<CardCanvas> {
   await document.fonts.ready;
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -96,16 +109,8 @@ export async function createShareImage(input: ShareCardInput): Promise<Blob> {
   if (!ctx) throw new Error("canvas");
 
   const ink = token("--ink");
-  const fg = token("--hero-fg");
-  const fgMuted = token("--hero-fg-muted");
   const from = token("--hero-from");
   const to = token("--hero-to");
-  const mint = token("--safe");
-  const accentColor = input.accent === "mint" || !input.accent ? mint : token(`--medal-${input.accent}`);
-  const accentSoft =
-    input.accent && input.accent !== "mint" ? token(`--medal-${input.accent}-soft`) : token("--hero-from");
-  const display = fontFamily("--font-display");
-  const mono = fontFamily("--font-mono");
 
   // Background: Guardian hero mesh + dotted grain.
   const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -123,6 +128,52 @@ export async function createShareImage(input: ShareCardInput): Promise<Blob> {
     }
   }
   ctx.globalAlpha = 1;
+
+  return {
+    canvas,
+    ctx,
+    ink,
+    fg: token("--hero-fg"),
+    fgMuted: token("--hero-fg-muted"),
+    from,
+    mint: token("--safe"),
+    display: fontFamily("--font-display"),
+    mono: fontFamily("--font-mono"),
+  };
+}
+
+/** Ink frame + logo on top of the background; leaves text centred on the alphabetic baseline. */
+async function drawFrameAndLogo({ ctx, ink }: CardCanvas, logoSrc: string) {
+  // Frame.
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = ink;
+  roundRect(ctx, 40, 40, W - 96, H - 96, 56);
+  ctx.stroke();
+
+  // Logo (already a hex with transparent padding).
+  try {
+    const logo = await loadImage(logoSrc);
+    ctx.drawImage(logo, W / 2 - 150, 90, 300, 300);
+  } catch {
+    // The card still works without the logo.
+  }
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+}
+
+function toPng(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("toBlob"))), "image/png");
+  });
+}
+
+export async function createShareImage(input: ShareCardInput): Promise<Blob> {
+  const card = await startCard();
+  const { canvas, ctx, ink, fg, fgMuted, from, mint, display, mono } = card;
+  const accentColor = input.accent === "mint" || !input.accent ? mint : token(`--medal-${input.accent}`);
+  const accentSoft =
+    input.accent && input.accent !== "mint" ? token(`--medal-${input.accent}-soft`) : token("--hero-from");
 
   // Medal glow (+ sunburst for #1) behind the rank.
   if (input.accent) {
@@ -153,22 +204,7 @@ export async function createShareImage(input: ShareCardInput): Promise<Blob> {
     ctx.globalAlpha = 1;
   }
 
-  // Frame.
-  ctx.lineWidth = 10;
-  ctx.strokeStyle = ink;
-  roundRect(ctx, 40, 40, W - 96, H - 96, 56);
-  ctx.stroke();
-
-  // Logo (already a hex with transparent padding).
-  try {
-    const logo = await loadImage(input.logoSrc);
-    ctx.drawImage(logo, W / 2 - 150, 90, 300, 300);
-  } catch {
-    // The card still works without the logo.
-  }
-
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
+  await drawFrameAndLogo(card, input.logoSrc);
 
   // Eyebrow.
   ctx.fillStyle = ink;
@@ -256,9 +292,80 @@ export async function createShareImage(input: ShareCardInput): Promise<Blob> {
   ctx.fillText(`${input.eventName.toUpperCase()} · WEB DEVELOPMENT`, W / 2, H - 110);
   setSpacing(ctx, 0);
 
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("toBlob"))), "image/png");
-  });
+  return toPng(canvas);
+}
+
+export interface JudgeCardInput {
+  judgeName: string;
+  stageText: string;
+  teamsJudged: number;
+  eventName: string;
+  logoSrc: string;
+}
+
+/** Judge appreciation card, same backdrop as the team card. Only the judge's own name and count. */
+export async function createJudgeCardImage(input: JudgeCardInput): Promise<Blob> {
+  const card = await startCard();
+  const { canvas, ctx, ink, fg, fgMuted, from, mint, display, mono } = card;
+
+  const glow = ctx.createRadialGradient(W / 2, 720, 0, W / 2, 720, 520);
+  glow.addColorStop(0, mint);
+  glow.addColorStop(1, "transparent");
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1;
+
+  await drawFrameAndLogo(card, input.logoSrc);
+
+  ctx.fillStyle = ink;
+  ctx.font = `700 34px ${mono}`;
+  setSpacing(ctx, 6);
+  ctx.fillText("APRESIASI DEWAN JURI", W / 2, 460);
+  setSpacing(ctx, 0);
+
+  ctx.font = `800 150px ${display}`;
+  ctx.fillStyle = mint;
+  ctx.fillText("Terima", W / 2 + 12, 650 + 12);
+  ctx.fillText("kasih", W / 2 + 12, 800 + 12);
+  ctx.fillStyle = fg;
+  ctx.fillText("Terima", W / 2, 650);
+  ctx.fillText("kasih", W / 2, 800);
+
+  ctx.font = `800 76px ${display}`;
+  let y = wrapCentered(ctx, input.judgeName, 960, 880, 88, 3);
+  ctx.fillStyle = fgMuted;
+  ctx.font = `500 42px ${display}`;
+  y = wrapCentered(ctx, "atas dedikasi, waktu, dan penilaian yang objektif.", y + 20, 820, 54, 3);
+
+  const panelW = 620;
+  const panelH = 240;
+  const panelX = (W - panelW) / 2;
+  const panelY = Math.max(y + 60, 1420);
+  ctx.fillStyle = ink;
+  roundRect(ctx, panelX + 12, panelY + 12, panelW, panelH, 36);
+  ctx.fill();
+  ctx.fillStyle = from;
+  roundRect(ctx, panelX, panelY, panelW, panelH, 36);
+  ctx.fill();
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = ink;
+  ctx.stroke();
+  ctx.fillStyle = ink;
+  ctx.font = `700 32px ${mono}`;
+  setSpacing(ctx, 6);
+  ctx.fillText(`TIM DINILAI · ${input.stageText.toUpperCase()}`, W / 2, panelY + 70);
+  setSpacing(ctx, 0);
+  ctx.font = `800 120px ${display}`;
+  ctx.fillText(String(input.teamsJudged), W / 2, panelY + 196);
+
+  ctx.fillStyle = fgMuted;
+  ctx.font = `700 34px ${mono}`;
+  setSpacing(ctx, 4);
+  ctx.fillText(`${input.eventName.toUpperCase()} · WEB DEVELOPMENT`, W / 2, H - 110);
+  setSpacing(ctx, 0);
+
+  return toPng(canvas);
 }
 
 /** Opens the native share sheet with the PNG when supported, otherwise downloads it. */

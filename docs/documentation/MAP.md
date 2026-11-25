@@ -26,7 +26,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Ranking, CSV, score.md, set top-5 finalists, score sanctions | /admin/peringkat | `(main)/admin/peringkat` (+ `actions.ts`, `sanction-panel.tsx` in the team detail dialog, `export/route.ts`, `export-md/route.ts`) | `preliminary_ranking`, `final_ranking`, scores, `judge_recusals`, `score_sanctions` |
 | Submissions and CSV | /admin/submission | `(main)/admin/submission` (+ `export/route.ts`) | `submissions` |
 | Teams | /admin/tim | `(main)/admin/tim` | `teams` |
-| Judge queue | /judge | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx`, `queries.ts` | `submissions`, own scores, `judge_recusals` |
+| Judge queue | /judge | `(main)/judge/page.tsx`, `judge-dashboard-client.tsx` (after `final_results_released`: closing hero with own stats + links, queue collapsed under "Riwayat penilaian"), `queries.ts`, `judge-card-button.tsx` (appreciation PNG, also on Rekap; `JUDGE_STAGE_TEXT`) | `submissions`, own scores, `judge_recusals`, `competition_settings` (release + ranking flags) |
 | Judge scoring | /judge/nilai/[tahap]/[teamId] | `(main)/judge/nilai/[tahap]/[teamId]` (`preliminary-review.tsx`: final-stage "Nilai Babak Awal" panel) | `preliminary_scores`, `final_scores`, `judge_recusals`, `get_preliminary_scores_for_final()` (RPC) |
 | Team dashboard | /team | `(main)/team` (files beside `page.tsx`, see below) | own `teams`, own `submissions`, `competition_settings`, `get_my_finalist_notice()` |
 | Team showcase editor | /team/karya | `(main)/team/karya` | own `teams`, own `submissions`, `save_showcase_details()`, storage bucket `web-showcase` |
@@ -99,7 +99,7 @@ src/lib/supabase/client.ts           browser client
 src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
 src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased, galleryState, rankingPublished)
-src/app/(main)/_components/ranking/   published-ranking UI shared by team and judge Peringkat: ranking-podium (top 3), ranking-list (rest), ranking-shared (RankingRow, formatScore, RankHex, ScoreBar, ids), use-count-up, share-card (Canvas 2D PNG + shareOrDownload)
+src/app/(main)/_components/ranking/   published-ranking UI shared by team and judge Peringkat: ranking-podium (top 3), ranking-list (rest), ranking-shared (RankingRow, formatScore, RankHex, ScoreBar, ids), use-count-up, share-card (Canvas 2D PNGs: team achievement `createShareImage`, judge appreciation `createJudgeCardImage`, plus shareOrDownload)
 src/app/(main)/admin/_components/team-detail/   TeamDetailSheet + teamRowProps (click a row on Tim, Submission, Peringkat); getTeamDetail admin-only action
 src/components/theme-toggle.tsx      shared two-state light/dark toggle (header; floating on /karya)
 src/components/showcase-card.tsx     shared public/team showcase card

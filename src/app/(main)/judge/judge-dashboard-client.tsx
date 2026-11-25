@@ -5,7 +5,21 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import { cn } from "cn";
-import { Check, ClipboardCheck, Eye, FileEdit, FileQuestion, Layers, Lock, Search, Trophy, UserX } from "lucide-react";
+import {
+  Check,
+  ClipboardCheck,
+  ClipboardList,
+  Eye,
+  FileEdit,
+  FileQuestion,
+  Gavel,
+  Layers,
+  ListOrdered,
+  Lock,
+  Search,
+  Trophy,
+  UserX,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +31,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Database } from "@/types/database";
 
+import { JUDGE_STAGE_TEXT, JudgeCardButton } from "./judge-card-button";
 import type { JudgeTeamItem } from "./queries";
 
 export type { JudgeTeamItem };
@@ -29,6 +44,9 @@ interface JudgeDashboardClientProps {
   judgeStage: Database["public"]["Enums"]["judge_stage_type"] | null;
   preliminaryTeams: JudgeTeamItem[];
   finalTeams: JudgeTeamItem[];
+  /** Final results released: the competition is over, show the closing header. */
+  competitionOver: boolean;
+  rankingPublished: boolean;
 }
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -47,7 +65,7 @@ function StageBadge({ stage }: { stage: Database["public"]["Enums"]["judge_stage
     return <Badge variant="secondary">Babak Awal & Final</Badge>;
   }
   if (stage === "final") {
-    return <Badge className="bg-amber-600 text-white hover:bg-amber-600">Babak Final</Badge>;
+    return <Badge className="border-ink bg-medal-gold text-ink dark:text-ink-foreground">Babak Final</Badge>;
   }
   return <Badge variant="outline">Babak Awal</Badge>;
 }
@@ -59,7 +77,7 @@ function renderStatusBadge(item: JudgeTeamItem) {
 
   if (item.recusal) {
     return (
-      <Badge variant="outline" className="gap-1 border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+      <Badge variant="outline" className="gap-1 border-brand-sky/50 bg-brand-sky/15 text-foreground">
         <UserX className="size-3" />
         Recusal
       </Badge>
@@ -68,7 +86,10 @@ function renderStatusBadge(item: JudgeTeamItem) {
 
   if (item.is_stage_released && !isFinal) {
     return (
-      <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+      <Badge
+        variant="outline"
+        className="gap-1 border-medal-gold/60 bg-medal-gold-soft text-ink dark:bg-medal-gold/15 dark:text-foreground"
+      >
         <Lock className="size-3" />
         Tidak dinilai (hasil dirilis)
       </Badge>
@@ -77,10 +98,7 @@ function renderStatusBadge(item: JudgeTeamItem) {
 
   if (isLocked || item.is_stage_released) {
     return (
-      <Badge
-        variant="outline"
-        className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-      >
+      <Badge variant="outline" className="gap-1 border-mint/60 bg-mint/15 text-foreground">
         <Lock className="size-3" />
         {item.is_stage_released ? "Terkunci (dirilis)" : "Terkunci"}
       </Badge>
@@ -98,7 +116,7 @@ function renderStatusBadge(item: JudgeTeamItem) {
 
   if (isFinal) {
     return (
-      <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
+      <Badge className="gap-1 border-ink bg-mint text-ink dark:text-ink-foreground">
         <Check className="size-3" />
         Sudah dinilai
       </Badge>
@@ -389,31 +407,97 @@ function StageSection({
   );
 }
 
+function StatTile({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-xl border-2 border-ink bg-card p-3 shadow-brutal-sm">
+      <p className="font-bold font-mono text-[11px] text-foreground/75 uppercase tracking-wider">{label}</p>
+      <p className="font-display font-extrabold text-2xl text-ink tabular-nums">{value}</p>
+      <p className="text-muted-foreground text-xs">{hint}</p>
+    </div>
+  );
+}
+
+const LOUD_LINK =
+  "btn-loud press inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 font-semibold text-ink text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/** Shown once final results are released: thanks, the judge's own totals and where to go next. */
+function ClosingHero({
+  judgeName,
+  stageText,
+  teams,
+  rankingPublished,
+}: {
+  judgeName: string;
+  stageText: string;
+  teams: JudgeTeamItem[];
+  rankingPublished: boolean;
+}) {
+  const scored = teams.filter((t) => t.score?.status === "final");
+  const totals = scored.flatMap((t) => (t.score?.total_weighted_score == null ? [] : [t.score.total_weighted_score]));
+  const average = totals.length > 0 ? (totals.reduce((sum, v) => sum + v, 0) / totals.length).toFixed(2) : "-";
+  const recusals = teams.filter((t) => t.recusal !== null).length;
+
+  return (
+    <section
+      aria-labelledby="judge-closing-title"
+      className="surface-loud guardian-hero-mesh overflow-hidden p-5 sm:p-7"
+    >
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 space-y-3">
+          <p className="inline-flex items-center gap-1.5 font-bold font-mono text-[11px] text-hero-fg uppercase tracking-wider">
+            <Gavel className="size-3.5" aria-hidden="true" />
+            Kompetisi selesai · {stageText}
+          </p>
+          <h1 id="judge-closing-title" className="team-hero-title break-words">
+            Terima kasih, {judgeName}.
+          </h1>
+          <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
+            Seluruh hasil telah dirilis dan nilai Anda tersimpan sebagai arsip. Rekap penilaian tetap dapat dibuka kapan
+            saja.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/judge/rekap" className={LOUD_LINK}>
+              <ClipboardList className="size-4" aria-hidden="true" />
+              Rekap penilaian
+            </Link>
+            {rankingPublished && (
+              <Link href="/judge/peringkat" className={LOUD_LINK}>
+                <ListOrdered className="size-4" aria-hidden="true" />
+                Lihat peringkat
+              </Link>
+            )}
+            <JudgeCardButton judgeName={judgeName} stageText={stageText} teamsJudged={scored.length} />
+          </div>
+        </div>
+
+        <div className="grid w-full grid-cols-2 gap-3 lg:w-80 lg:shrink-0">
+          <StatTile label="Tim dinilai" value={String(scored.length)} hint="nilai terkirim" />
+          <StatTile label="Recusal" value={String(recusals)} hint="tim tidak dinilai" />
+          <div className="col-span-2">
+            <StatTile label="Rata-rata nilai Anda" value={average} hint="total berbobot, seluruh babak" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function JudgeDashboardClient({
   judgeName,
   judgeStage,
   preliminaryTeams,
   finalTeams,
+  competitionOver,
+  rankingPublished,
 }: JudgeDashboardClientProps) {
   const stage = judgeStage ?? "preliminary";
   const prelimCompletedCount = preliminaryTeams.filter((t) => t.score?.status === "final" || t.recusal !== null).length;
   const finalCompletedCount = finalTeams.filter((t) => t.score?.status === "final" || t.recusal !== null).length;
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="font-semibold text-2xl">Penilaian Karya</h1>
-            <StageBadge stage={judgeStage} />
-          </div>
-          <p className="text-muted-foreground">
-            Selamat bertugas, <span className="font-medium text-foreground">{judgeName}</span>. Berikan penilaian secara
-            independen dan objektif.
-          </p>
-        </div>
-      </div>
+  const stageText = JUDGE_STAGE_TEXT[stage];
 
+  const queue = (
+    <>
       {stage === "both" && (
         <Tabs defaultValue="preliminary" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
@@ -464,6 +548,46 @@ export function JudgeDashboardClient({
           teams={preliminaryTeams}
         />
       )}
+    </>
+  );
+
+  if (competitionOver) {
+    return (
+      <div className="space-y-6">
+        <ClosingHero
+          judgeName={judgeName}
+          stageText={stageText}
+          teams={[...preliminaryTeams, ...finalTeams]}
+          rankingPublished={rankingPublished}
+        />
+        <details className="surface-calm p-4 sm:p-5">
+          <summary className="cursor-pointer rounded-md font-semibold text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            Riwayat penilaian
+            <span className="ml-2 font-normal text-muted-foreground text-xs">daftar tim dan status nilai Anda</span>
+          </summary>
+          <div className="mt-4 space-y-4">{queue}</div>
+        </details>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <p className="inline-flex items-center gap-1.5 font-bold font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
+          <Gavel className="size-3.5" aria-hidden="true" />
+          Dewan juri
+        </p>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="font-display font-semibold text-2xl tracking-tight">Penilaian Karya</h1>
+          <StageBadge stage={judgeStage} />
+        </div>
+        <p className="text-muted-foreground">
+          Selamat bertugas, <span className="font-medium text-foreground">{judgeName}</span>. Berikan penilaian secara
+          independen dan objektif.
+        </p>
+      </div>
+      {queue}
     </div>
   );
 }

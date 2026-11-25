@@ -11,6 +11,8 @@ import { formatWitaDateOnly, formatWitaDateTime } from "@/lib/csv";
 import { getRubricForStage, type ScoringStage } from "@/lib/rubric";
 import { buildScoreMarkdown } from "@/lib/score-markdown";
 
+import { JUDGE_STAGE_TEXT, JudgeCardButton } from "../judge-card-button";
+
 export interface RecapScore {
   stage: ScoringStage;
   team_code: string;
@@ -200,6 +202,7 @@ export function RekapClient({
   recusals: RecapRecusal[];
 }) {
   const [active, setActive] = useState<ScoringStage>(stages[0]);
+  const teamsJudged = scores.filter((s) => s.status === "final").length;
   const hasFinalScores = scores.some((s) => s.stage === active && s.status === "final");
 
   return (
@@ -225,6 +228,14 @@ export function RekapClient({
             <Download aria-hidden="true" />
             Unduh .md
           </Button>
+          {teamsJudged > 0 && (
+            <JudgeCardButton
+              judgeName={judgeName}
+              stageText={JUDGE_STAGE_TEXT[stages.length > 1 ? "both" : stages[0]]}
+              teamsJudged={teamsJudged}
+              className="py-1.5"
+            />
+          )}
         </div>
       </div>
 

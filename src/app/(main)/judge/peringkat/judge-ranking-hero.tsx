@@ -15,13 +15,9 @@ import {
 import { APP_CONFIG } from "@/config/app-config";
 import type { Database } from "@/types/database";
 
-type JudgeStage = Database["public"]["Enums"]["judge_stage_type"] | null;
+import { JUDGE_STAGE_TEXT } from "../judge-card-button";
 
-const STAGE_TEXT: Record<NonNullable<JudgeStage>, string> = {
-  preliminary: "Babak awal",
-  final: "Babak final",
-  both: "Babak awal & final",
-};
+type JudgeStage = Database["public"]["Enums"]["judge_stage_type"] | null;
 
 function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -59,7 +55,9 @@ export function JudgeRankingHero({
   const countsKnown = (!judgesPreliminary || scoredPreliminary !== null) && (!judgesFinal || scoredFinal !== null);
   const scoredTotal = (judgesPreliminary ? (scoredPreliminary ?? 0) : 0) + (judgesFinal ? (scoredFinal ?? 0) : 0);
   const scoredHint =
-    stage === "both" && countsKnown ? `Babak awal ${scoredPreliminary} · Final ${scoredFinal}` : STAGE_TEXT[stage];
+    stage === "both" && countsKnown
+      ? `Babak awal ${scoredPreliminary} · Final ${scoredFinal}`
+      : JUDGE_STAGE_TEXT[stage];
 
   const champions = rows.filter((row) => row.rank === 1 && row.score !== null);
   const finalistCount = rows.filter((row) => row.stage === "final").length;
