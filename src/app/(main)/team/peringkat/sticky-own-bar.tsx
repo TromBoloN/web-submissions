@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 
 import { ArrowDown, ArrowUp } from "lucide-react";
 
-import { formatScore, HERO_ID, jumpToMyRow, MY_ROW_ID, type RankingRow } from "./ranking-shared";
+import {
+  formatScore,
+  HERO_ID,
+  jumpToMyRow,
+  MY_ROW_ID,
+  type RankingRow,
+} from "@/app/(main)/_components/ranking/ranking-shared";
 
 /**
  * Bottom bar with the team's own rank, shown only while both the hero and the team's own row/card are

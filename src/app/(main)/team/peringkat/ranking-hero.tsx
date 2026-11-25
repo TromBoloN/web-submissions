@@ -6,10 +6,6 @@ import { cn } from "cn";
 import { Crosshair, Crown, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { APP_CONFIG } from "@/config/app-config";
-import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
-
-import { CelebrationLayer } from "./celebration-layer";
 import {
   Eyebrow,
   formatScore,
@@ -20,10 +16,14 @@ import {
   type RankingRow,
   rowsBehind,
   stageLabel,
-} from "./ranking-shared";
+} from "@/app/(main)/_components/ranking/ranking-shared";
+import { createShareImage, shareOrDownload } from "@/app/(main)/_components/ranking/share-card";
+import { useCountUp } from "@/app/(main)/_components/ranking/use-count-up";
+import { APP_CONFIG } from "@/config/app-config";
+import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
+
+import { CelebrationLayer } from "./celebration-layer";
 import { hasCeremony, type RankTier, rankTier, TIER_ACCENT, TIER_STAMP } from "./ranking-tier";
-import { createShareImage, shareOrDownload } from "./share-card";
-import { useCountUp } from "./use-count-up";
 
 const TIER_MESSAGE: Record<RankTier, string> = {
   gold: "Selamat! Tim Anda meraih juara pertama.",

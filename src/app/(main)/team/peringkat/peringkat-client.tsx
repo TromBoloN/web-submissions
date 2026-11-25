@@ -6,18 +6,18 @@ import { useRouter } from "next/navigation";
 
 import { FlaskConical } from "lucide-react";
 
+import { RankingList } from "@/app/(main)/_components/ranking/ranking-list";
+import { RankingPodium } from "@/app/(main)/_components/ranking/ranking-podium";
+import { HERO_TITLE_ID, MAIN_ID, type RankingRow } from "@/app/(main)/_components/ranking/ranking-shared";
 import { APP_CONFIG } from "@/config/app-config";
 import { deleteClientCookie, setClientCookie } from "@/lib/cookie.client";
 
 import { RankingHero } from "./ranking-hero";
-import { RankingList } from "./ranking-list";
-import { RankingPodium } from "./ranking-podium";
-import { HERO_TITLE_ID, MAIN_ID, type RankingRow } from "./ranking-shared";
 import { MEDAL_COOKIE, MEDAL_TIERS, type ReleaseKey, rankTier, SEEN_COOKIE } from "./ranking-tier";
 import { RevealIntro } from "./reveal-intro";
 import { StickyOwnBar } from "./sticky-own-bar";
 
-export type { RankingRow } from "./ranking-shared";
+export type { RankingRow } from "@/app/(main)/_components/ranking/ranking-shared";
 
 const COOKIE_DAYS = 365;
 

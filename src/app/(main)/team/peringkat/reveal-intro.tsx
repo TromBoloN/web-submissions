@@ -4,7 +4,8 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 
 import { cn } from "cn";
 
-import { MAIN_ID, type RankingRow } from "./ranking-shared";
+import { MAIN_ID, type RankingRow } from "@/app/(main)/_components/ranking/ranking-shared";
+
 import { type RankTier, TIER_ACCENT, TIER_STAMP } from "./ranking-tier";
 
 /**

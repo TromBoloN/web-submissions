@@ -31,7 +31,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Team dashboard | /team | `(main)/team` (files beside `page.tsx`, see below) | own `teams`, own `submissions`, `competition_settings`, `get_my_finalist_notice()` |
 | Team showcase editor | /team/karya | `(main)/team/karya` | own `teams`, own `submissions`, `save_showcase_details()`, storage bucket `web-showcase` |
 | Team results | /team/hasil | `(main)/team/hasil` (`page.tsx`, `results-client.tsx`, `loading.tsx`) | `get_my_results()` (RPC) |
-| Team ranking (only when `ranking_published`) | /team/peringkat | `(main)/team/peringkat` (`page.tsx`, `peringkat-client.tsx` orchestrator, `ranking-hero.tsx` tiered hero, `ranking-podium.tsx` top 3, `ranking-list.tsx` rest, `sticky-own-bar.tsx`, `reveal-intro.tsx` top-10 curtain (once per release via cookie; `REVEAL_TEST_MODE` in `ranking-tier.ts` replays it every load), `share-card.ts` achievement PNG, `celebration-layer.tsx` effects, `ranking-tier.ts` tiers + cookie names, `ranking-shared.tsx` shared bits, `use-count-up.ts`, `loading.tsx`) | `get_public_ranking()` (RPC) |
+| Team ranking (only when `ranking_published`) | /team/peringkat | `(main)/team/peringkat` (`page.tsx`, `peringkat-client.tsx` orchestrator, `ranking-hero.tsx` tiered hero, `sticky-own-bar.tsx`, `reveal-intro.tsx` top-10 curtain (once per release via cookie; `REVEAL_TEST_MODE` in `ranking-tier.ts` replays it every load), `celebration-layer.tsx` effects, `ranking-tier.ts` tiers + cookie names, `loading.tsx`); podium, list and share card are shared, see `(main)/_components/ranking/` | `get_public_ranking()` (RPC) |
 | Case study | /judge/studi-kasus, /team/studi-kasus | `(main)/<role>/studi-kasus` (view lives in `team/studi-kasus`) | `case_study`; team page also reads own `submissions` |
 | Change password | `/<role>/kata-sandi` | `(main)/<role>/kata-sandi` | Auth (shared `components/change-password-form.tsx`) |
 | Unauthorized | /unauthorized | `(main)/unauthorized` | none |
@@ -97,6 +97,7 @@ src/lib/supabase/client.ts           browser client
 src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
 src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased, galleryState, rankingPublished)
+src/app/(main)/_components/ranking/   published-ranking UI shared by team (and judge) Peringkat: ranking-podium (top 3), ranking-list (rest), ranking-shared (RankingRow, formatScore, RankHex, ScoreBar, ids), use-count-up, share-card (Canvas 2D PNG + shareOrDownload)
 src/app/(main)/admin/_components/team-detail/   TeamDetailSheet + teamRowProps (click a row on Tim, Submission, Peringkat); getTeamDetail admin-only action
 src/components/theme-toggle.tsx      shared two-state light/dark toggle (header; floating on /karya)
 src/components/showcase-card.tsx     shared public/team showcase card
