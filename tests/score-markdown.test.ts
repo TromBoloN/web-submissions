@@ -68,4 +68,27 @@ describe("buildScoreMarkdown", () => {
     expect(md).toContain("Belum ada nilai final");
     expect(md).toContain("Presentasi dan Q&A");
   });
+
+  it("omits the ranking summary and averages for a judge's own recap", () => {
+    const md = buildScoreMarkdown({
+      stage: "final",
+      generatedAt: "x",
+      formatDate: (s) => s,
+      ownRecap: true,
+      teams: [
+        {
+          rank: null,
+          team_code: "T02",
+          team_name: "Gamma",
+          avg_score: null,
+          judges: [{ judge_name: "Juri B", scores: {}, total_weighted_score: 7.5, feedback: null, updated_at: "t" }],
+        },
+      ],
+    });
+
+    expect(md).not.toContain("Ringkasan Peringkat");
+    expect(md).not.toContain("Rata-rata");
+    expect(md).toContain("## T02 — Gamma");
+    expect(md).toContain("| **Total berbobot** | **7.5** |");
+  });
 });

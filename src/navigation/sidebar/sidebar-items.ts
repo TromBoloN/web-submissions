@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Award,
   BookOpen,
+  ClipboardCheck,
   ClipboardList,
   Compass,
   FileText,
@@ -130,6 +131,9 @@ export function getSidebarItems(
   const basePath = isJudge ? "/judge" : "/team";
 
   const roleItems: NavMainItem[] = [{ id: "home", title: "Dasbor", url: basePath, icon: LayoutDashboard }];
+  if (isJudge) {
+    roleItems.push({ id: "recap", title: "Rekap Penilaian", url: "/judge/rekap", icon: ClipboardCheck });
+  }
   if (role === "team" && resultsReleased === true) {
     roleItems.push({ id: "results", title: "Hasil Penilaian", url: "/team/hasil", icon: Award });
   }

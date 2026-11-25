@@ -31,6 +31,8 @@ export interface ScoreMarkdownInput {
   generatedAt: string; // already formatted (WITA)
   teams: ScoreMarkdownTeam[];
   formatDate: (iso: string) => string;
+  /** A judge's own recap: no ranking summary and no per-team average (only their own scores are passed). */
+  ownRecap?: boolean;
 }
 
 const STAGE_LABEL: Record<ScoringStage, string> = {
@@ -63,7 +65,7 @@ function quote(text: string): string {
     .join("\n");
 }
 
-export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: ScoreMarkdownInput): string {
+export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate, ownRecap }: ScoreMarkdownInput): string {
   const rubric = getRubricForStage(stage);
   const out: string[] = [];
 
@@ -81,14 +83,16 @@ export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: Sc
     return out.join("\n");
   }
 
-  out.push("## Ringkasan Peringkat", "");
-  out.push("| Peringkat | Tim | Jumlah Juri | Rata-rata |", "| ---: | --- | ---: | ---: |");
-  for (const t of teams) {
-    out.push(
-      `| ${t.rank ?? "-"} | ${cell(t.team_code)} — ${cell(t.team_name)} | ${t.judges.length} | ${fmt(t.avg_score)} |`,
-    );
+  if (!ownRecap) {
+    out.push("## Ringkasan Peringkat", "");
+    out.push("| Peringkat | Tim | Jumlah Juri | Rata-rata |", "| ---: | --- | ---: | ---: |");
+    for (const t of teams) {
+      out.push(
+        `| ${t.rank ?? "-"} | ${cell(t.team_code)} — ${cell(t.team_name)} | ${t.judges.length} | ${fmt(t.avg_score)} |`,
+      );
+    }
+    out.push("");
   }
-  out.push("");
 
   for (const t of teams) {
     out.push("---", "");
@@ -96,10 +100,11 @@ export function buildScoreMarkdown({ stage, generatedAt, teams, formatDate }: Sc
     out.push(`## ${rankPrefix}${oneLine(t.team_code)} — ${oneLine(t.team_name)}`, "");
     const sanctions = t.sanctions ?? [];
     const hasRaw = sanctions.length > 0 && t.raw_avg_score !== undefined && t.raw_avg_score !== null;
-    out.push(
-      `Rata-rata skor berbobot: **${fmt(t.avg_score)}**${hasRaw ? ` (sebelum sanksi: ${fmt(t.raw_avg_score)})` : ""}`,
-      "",
-    );
+    if (!ownRecap)
+      out.push(
+        `Rata-rata skor berbobot: **${fmt(t.avg_score)}**${hasRaw ? ` (sebelum sanksi: ${fmt(t.raw_avg_score)})` : ""}`,
+        "",
+      );
 
     if (sanctions.length > 0) {
       out.push("### Sanksi Panitia", "");
