@@ -133,11 +133,12 @@ export function getSidebarItems(
   if (role === "team" && resultsReleased === true) {
     roleItems.push({ id: "results", title: "Hasil Penilaian", url: "/team/hasil", icon: Award });
   }
-  if (role === "team" && rankingPublished === true) {
+  if (rankingPublished === true) {
+    // Teams and judges; the shimmer/medal decoration (rankingNav) is only passed for teams.
     roleItems.push({
       id: "ranking",
       title: "Peringkat",
-      url: "/team/peringkat",
+      url: `${basePath}/peringkat`,
       icon: ListOrdered,
       ...(rankingNav?.fresh
         ? { celebrate: true, badge: "new" as const, badgeLabel: "Rilis" }

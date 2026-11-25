@@ -28,7 +28,7 @@ export async function DashboardShell({
   children: ReactNode;
   user: CurrentUser;
   resultsReleased?: boolean;
-  /** Team role only: shows the "Peringkat" sidebar item. */
+  /** Team and judge roles: shows the "Peringkat" sidebar item. */
   rankingPublished?: boolean;
   /** Team role only: shimmer/medal decoration for the "Peringkat" item. */
   rankingNav?: RankingNavState;
