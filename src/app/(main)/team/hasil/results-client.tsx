@@ -112,6 +112,11 @@ function StageResultsView({
   const insight = getInsight(stageData.criteria, rubricMap);
   const sanctions = stageData.sanctions ?? [];
   const hasSanctions = sanctions.length > 0;
+  // Sanctioned points per criterion, exactly as entered by the committee (e.g. 100), summed.
+  const sanctionPoints = new Map<string, number>();
+  for (const s of sanctions) {
+    sanctionPoints.set(s.criterion, (sanctionPoints.get(s.criterion) ?? 0) + Number(s.points));
+  }
   const rubricBars: RubricBarItem[] = stageData.criteria.map((item) => {
     const criterion = rubricMap.get(item.key);
     return {
@@ -197,6 +202,11 @@ function StageResultsView({
                       <TableCell className="min-w-32 text-right">
                         <div className="space-y-1.5">
                           <span className="block text-sm tabular-nums">{formatScore(item.average)}</span>
+                          {sanctionPoints.has(item.key) && (
+                            <span className="block text-destructive text-xs tabular-nums">
+                              Sanksi −{formatScore(sanctionPoints.get(item.key) ?? 0)} poin
+                            </span>
+                          )}
                           <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                             <div
                               className="h-full rounded-full bg-primary"
