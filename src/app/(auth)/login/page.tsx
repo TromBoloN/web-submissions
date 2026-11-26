@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 
 import { Card } from "@/components/ui/card";
 import { getCurrentProfile, getDashboardPath } from "@/lib/auth";
-import { getEventInfo } from "@/lib/competition-info.server";
+import { getEventInfo, getSiteContent } from "@/lib/competition-info.server";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 import type { Database } from "@/types/database";
@@ -52,7 +52,11 @@ export default async function LoginPage() {
     redirect(getDashboardPath(profile.role));
   }
 
-  const contactWhatsapp = await loadContactWhatsapp();
+  const [contactWhatsapp, eventInfo, content] = await Promise.all([
+    loadContactWhatsapp(),
+    getEventInfo(),
+    getSiteContent(),
+  ]);
   const formattedContact = formatWhatsAppNumber(contactWhatsapp);
 
   return (
@@ -60,12 +64,12 @@ export default async function LoginPage() {
       <Card className="w-full gap-6 p-6 shadow-sm sm:p-8">
         <div className="flex flex-col items-center text-center">
           <Image src={logo} alt="" className="size-24 object-contain" priority />
-          <h1 className="mt-3 font-semibold text-2xl tracking-tight">{(await getEventInfo()).event_name}</h1>
-          <p className="mt-1 text-muted-foreground text-sm">Portal Pengumpulan Karya Web Development</p>
+          <h1 className="mt-3 font-semibold text-2xl tracking-tight">{eventInfo.event_name}</h1>
+          <p className="mt-1 text-muted-foreground text-sm">Portal Pengumpulan Karya {eventInfo.event_track}</p>
         </div>
         <LoginForm />
         <p className="text-center text-muted-foreground text-xs leading-relaxed">
-          Tim: gunakan email saat mendaftar. Juri: gunakan username dari panitia. Lupa kata sandi?{" "}
+          {content["login.help"]} Lupa kata sandi?{" "}
           {contactWhatsapp ? (
             <a
               href={toWhatsAppUrl(contactWhatsapp)}

@@ -657,6 +657,36 @@ export type Database = {
           },
         ];
       };
+      site_content: {
+        Row: {
+          key: string;
+          updated_at: string;
+          updated_by: string | null;
+          value: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          key: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value: string;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_content_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       submissions: {
         Row: {
           first_submitted_at: string | null;
@@ -913,6 +943,13 @@ export type Database = {
           team_name: string;
           video_url: string;
           winner_rank: number;
+        }[];
+      };
+      get_site_content: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          key: string;
+          value: string;
         }[];
       };
       is_feedback_only_edit: { Args: { p_new: Json; p_old: Json }; Returns: boolean };

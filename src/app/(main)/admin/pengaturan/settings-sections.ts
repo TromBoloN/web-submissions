@@ -1,5 +1,15 @@
 import type { LucideIcon } from "lucide-react";
-import { Award, CalendarClock, CalendarDays, FileText, LayoutGrid, Link2, Megaphone, Sparkles } from "lucide-react";
+import {
+  Award,
+  CalendarClock,
+  CalendarDays,
+  FileText,
+  LayoutGrid,
+  Link2,
+  Megaphone,
+  Sparkles,
+  Type,
+} from "lucide-react";
 
 export type SettingsSection = {
   href: string;
@@ -27,6 +37,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     title: "Jadwal",
     description: "Tanggal setiap tahap kompetisi.",
     icon: CalendarDays,
+  },
+  {
+    href: "/admin/pengaturan/konten",
+    title: "Konten",
+    description: "Teks halaman masuk, portal tim, dan galeri.",
+    icon: Type,
   },
   {
     href: "/admin/pengaturan/pengumpulan",

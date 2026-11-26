@@ -73,6 +73,7 @@ type SubmissionClientProps = {
   resultsReleased: boolean;
   finalResultsReleased: boolean;
   finalPresentation: FinalPresentation | null;
+  checklistItems: string[];
 };
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -253,6 +254,7 @@ export function SubmissionClient({
   resultsReleased,
   finalResultsReleased,
   finalPresentation,
+  checklistItems,
 }: SubmissionClientProps) {
   const schedule = useSchedule();
   const router = useRouter();
@@ -895,7 +897,7 @@ export function SubmissionClient({
             <div className="space-y-6">
               {/* Studi kasus, juknis and gallery live in the sidebar */}
               {idCard}
-              {!isSubmitted && <SubmissionChecklist />}
+              {!isSubmitted && <SubmissionChecklist items={checklistItems} />}
               {showcaseCard}
               {helpCard}
             </div>

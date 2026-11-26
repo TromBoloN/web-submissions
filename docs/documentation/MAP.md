@@ -17,7 +17,7 @@ Documentation library: [index](./README.md), [setup](./SETUP.md), [architecture]
 | Screen | URL | Folder (under `src/app/`) | Data |
 | --- | --- | --- | --- |
 | Login | /login | `(auth)/login`, `(auth)/_components` | Auth, `get_public_contact_whatsapp()`, link to gallery |
-| Public gallery | /karya (`?karya=<slug>` opens one project) | `karya` (`page.tsx`, `karya-client.tsx`, `karya-card.tsx` shared card + editor previews, `karya-spotlight.tsx` "Sorotan" carousel, `karya-visitor.ts` Simpan/Dilihat in localStorage, `karya-utils.ts` slugs, video embeds, Karya serupa, calendar reminder, `karya-logo.tsx`, `karya-constants.ts`) | `get_public_showcase()`, `get_public_showcase_winners()` (anon RPCs) |
+| Public gallery | /karya (`?karya=<slug>` opens one project) | `karya` (`page.tsx`, `karya-client.tsx`, `karya-card.tsx` shared card + editor previews, `karya-spotlight.tsx` "Sorotan" carousel, `karya-visitor.ts` Simpan/Dilihat in localStorage, `karya-utils.ts` slugs, video embeds, Karya serupa, calendar reminder, `karya-logo.tsx`) | `get_public_showcase()`, `get_public_showcase_winners()` (anon RPCs) |
 | Admin dashboard | /admin | `(main)/admin` (`page.tsx`, `dashboard-client.tsx`, `dashboard-countdown.tsx`) | counts, deadline, submissions, judging, ranking, audit |
 | Accounts | /admin/akun | `(main)/admin/akun` | `profiles` + Auth (service role) |
 | Audit | /admin/audit | `(main)/admin/audit/page.tsx` | `audit_logs` + `profiles` |
@@ -113,7 +113,8 @@ scripts/                             backup, restore, local-stack (local Docker 
 supabase/config.toml                 local Docker Supabase config (npm run local:*)
 supabase/schema/full_schema.sql      GENERATED final state of all migrations, idempotent (fresh installs); rebuild: node scripts/build-full-schema.mjs
 src/lib/competition-info.ts          event identity + schedule types, 2026 fallbacks, getStage(), stageState(), stage date labels (pure)
-src/lib/competition-info.server.ts   getEventInfo(), getSchedule(): cached RPC readers with fallback
+src/lib/competition-info.server.ts   getEventInfo(), getSchedule(), getSiteContent(): cached RPC readers with fallback
+src/lib/site-content.ts              Konten registry (CONTENT_FIELDS, defaults), resolveSiteContent(), contentList(), fillPlaceholders()
 src/components/event-info-provider.tsx  root-layout context: useEventInfo() gives client components event_name/track (server code calls getEventInfo())
 ```
 

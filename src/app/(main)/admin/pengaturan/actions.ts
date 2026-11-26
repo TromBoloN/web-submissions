@@ -10,6 +10,7 @@ import { logAuditEvent } from "@/lib/audit";
 import { getCurrentProfile } from "@/lib/auth";
 import { normalizeWhatsAppNumber } from "@/lib/contact";
 import { parseWitaInputToExclusiveCutoff, parseWitaInputToUtcIso } from "@/lib/deadline";
+import { CONTENT_FIELDS, CONTENT_KEYS, type ContentField, type ContentKey, contentList } from "@/lib/site-content";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { success: true; warning?: string } | { success: false; error: string };
@@ -951,5 +952,94 @@ export async function deleteStage(key: string): Promise<ActionResult> {
   });
 
   revalidateSchedule();
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Konten: page copy in site_content (public by design, see the migration).
+
+const contentKeySchema = z.enum(CONTENT_KEYS as [ContentKey, ...ContentKey[]], { message: "Teks tidak dikenal." });
+
+export async function saveSiteContent(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = z
+    .object({ key: contentKeySchema, value: z.string() })
+    .safeParse({ key: formData.get("key"), value: formData.get("value") ?? "" });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data teks tidak valid." };
+  }
+
+  const { key } = parsed.data;
+  const field: ContentField = CONTENT_FIELDS[key];
+  let value = parsed.data.value.trim();
+  if (field.kind === "list") value = contentList(value).join("\n");
+  if (field.kind === "text") value = value.replace(/\s+/g, " ");
+  if (!value) {
+    return {
+      success: false,
+      error: "Teks tidak boleh kosong. Pakai “Kembalikan ke bawaan” untuk memakai teks bawaan.",
+    };
+  }
+  if (value.length > field.max) {
+    return { success: false, error: `${field.label} maksimal ${field.max} karakter.` };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("site_content")
+    .upsert({ key, value }, { onConflict: "key" })
+    .select("key");
+
+  if (error) {
+    console.error("Failed to save site content", error);
+    return { success: false, error: "Gagal menyimpan teks. Coba lagi." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Teks gagal disimpan." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "site_content_updated",
+    targetType: "site_content",
+    metadata: { key },
+  });
+  // Copy appears on /login, /karya and the team portal.
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** Deletes the saved row so the page falls back to the built-in default. */
+export async function resetSiteContent(key: string): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = contentKeySchema.safeParse(key);
+  if (!parsed.success) return { success: false, error: "Teks tidak dikenal." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("site_content").delete().eq("key", parsed.data).select("key");
+
+  if (error) {
+    console.error("Failed to reset site content", error);
+    return { success: false, error: "Gagal mengembalikan teks bawaan. Coba lagi." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Teks ini sudah memakai versi bawaan." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "site_content_reset",
+    targetType: "site_content",
+    metadata: { key: parsed.data },
+  });
+  revalidatePath("/", "layout");
   return { success: true };
 }

@@ -105,6 +105,8 @@ export function KaryaClient({
   spotlightNames,
   initialKarya,
   initialQuery,
+  tagline,
+  intro,
 }: {
   initialState: "locked" | "open" | "win";
   cards: KaryaItem[];
@@ -116,6 +118,9 @@ export function KaryaClient({
   initialKarya: string | null;
   /** ?q= from the address bar, so a search can be shared. */
   initialQuery: string;
+  /** Pengaturan → Konten. */
+  tagline: string;
+  intro: string;
 }) {
   const { event_name, event_track, finalist_count } = useEventInfo();
   const schedule = useSchedule();
@@ -761,16 +766,14 @@ export function KaryaClient({
                   className="mt-4 font-extrabold text-xl tracking-tight sm:text-3xl rise"
                   style={{ "--e": ".9s" } as React.CSSProperties}
                 >
-                  Kenalan sama para penjaga digital.
+                  {tagline}
                 </p>
                 <div className="hx">
                   <p
                     className="muted mt-4 max-w-xl text-base leading-relaxed sm:text-lg rise"
                     style={{ "--e": "1.1s" } as React.CSSProperties}
                   >
-                    Ruang pameran karya peserta {event_track} Competition, salah satu kompetisi di {event_name}.
-                    Jelajahi ide, eksperimen, dan solusi nyata dari teman-temanmu yang menjaga ruang digital kita tetap
-                    aman, inklusif, dan bersahabat.
+                    {intro}
                   </p>
                 </div>
               </div>
@@ -796,7 +799,7 @@ export function KaryaClient({
                   <span className="pill mono">Galeri karya · {event_track} Competition</span>
                   <h1 className="slim-ttl mt-3">GUARDIANS</h1>
                   <p className="muted mt-1 text-sm sm:text-base">
-                    Kenalan sama para penjaga digital · {allVisible.length} karya
+                    {tagline.replace(/[.!]+$/, "")} · {allVisible.length} karya
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

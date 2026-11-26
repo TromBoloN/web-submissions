@@ -15,6 +15,7 @@ src/app/(main)/admin/pengaturan/
   settings-load-error.tsx  generic load-error box
   identitas/     page.tsx + identity-client.tsx          event name/track, finalist count, gallery badge days, final logistics
   jadwal/        page.tsx + schedule-client.tsx          competition_stages: edit each stage, add/delete custom stages
+  konten/        page.tsx + content-client.tsx           site_content: page copy from the src/lib/site-content.ts registry
   pengumpulan/   page.tsx + deadline-client.tsx          submission deadline
   hasil/         page.tsx + results-release-client.tsx   results release + judging progress
   galeri/        page.tsx + showcase-client.tsx          gallery stage 1 / stage 2 publishing
@@ -32,6 +33,7 @@ The admin role is enforced by `src/app/(main)/admin/layout.tsx` (`requireRole("a
 | Ringkasan | `/admin/pengaturan` | `competition_settings`, `case_study` | none |
 | Identitas & Final | `/identitas` | `event_name`, `event_track`, `finalist_count`, `gallery_new_badge_days`; `final_presentation` | `updateEventIdentity` (revalidates every page), `updateFinalPresentation` (`logistics_published` hides venue and link from finalists and judges). Both write audit events; the final's venue/link values are not logged |
 | Jadwal | `/jadwal` | `competition_stages` | `saveStage` (no key = create a custom stage with a generated `custom_*` key; otherwise update), `deleteStage` (custom stages only; RLS and the trigger also protect system stages). Dates are WITA calendar days; status override forces upcoming/current/done. All write audit events and revalidate every page |
+| Konten | `/konten` | `site_content` | `saveSiteContent` (key must be in `CONTENT_FIELDS`; trimmed, lists normalized to one item per line, max length per field), `resetSiteContent` (deletes the row so the default shows). Both write audit events (key only) and revalidate every page. Everything here is public via `get_site_content()` |
 | Pengumpulan | `/pengumpulan` | `submission_closes_at`, `updated_at` | `updateCompetitionDeadline` |
 | Rilis Hasil | `/hasil` | release flags, `ranking_published`, judges, teams, submissions, scores, recusals | `updateResultsRelease`, `updateRankingPublication` (confirmation dialogs; ranking before final release = test mode, teams see "Peringkat sementara") |
 | Galeri | `/galeri` | showcase timestamps, consenting teams + finalists, link checks, finalist cards | `publishShowcasePhase("gallery")`, `publishShowcaseWinners`, `unpublishShowcasePhase`, `saveFinalistShowcase` |
@@ -52,9 +54,13 @@ Judging progress on Rilis Hasil uses the same eligibility rules as `/admin/perin
 
 Responsive conventions used throughout: inputs `w-full sm:max-w-md`, footers `flex-col-reverse … sm:flex-row`, stat grids `grid-cols-2 sm:grid-cols-4`, button rows `flex-wrap`, primary buttons `w-full sm:w-auto`. Form errors use `role="alert"`; hints are linked with `aria-describedby`.
 
+## Adding editable text
+
+Add an entry to `CONTENT_FIELDS` in `src/lib/site-content.ts` (group, label, hint, kind, max, default = the current text), then read it with `getSiteContent()` on the server and pass it down. No migration needed: keys are free-form in the table and checked against the registry by the action. Never add private text: the table is public.
+
 ## Planned sections
 
-Candidates: a content store for checklist items, FAQ, rules and gallery copy, and a read-only phase preview ("what a team sees in each phase"). See the "Open decisions" section of [AI.md](../../AI.md).
+Candidate: a read-only phase preview ("what a team sees in each phase"). See the "Open decisions" section of [AI.md](../../AI.md).
 
 ## Links into settings from elsewhere
 

@@ -2,7 +2,8 @@ import { cache } from "react";
 
 import type { Metadata } from "next";
 
-import { getEventInfo } from "@/lib/competition-info.server";
+import { getEventInfo, getSiteContent } from "@/lib/competition-info.server";
+import { fillPlaceholders } from "@/lib/site-content";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -162,6 +163,8 @@ export default async function PublicKaryaPage({ searchParams }: { searchParams: 
     .slice(0, SPOTLIGHT_COUNT)
     .map((entry) => entry.name);
 
+  const [eventInfo, content] = await Promise.all([getEventInfo(), getSiteContent()]);
+
   return (
     <KaryaClient
       initialState={gallery.initialState}
@@ -171,6 +174,8 @@ export default async function PublicKaryaPage({ searchParams }: { searchParams: 
       spotlightNames={spotlightNames}
       initialKarya={initialKarya}
       initialQuery={initialQuery}
+      tagline={content["karya.tagline"]}
+      intro={fillPlaceholders(content["karya.intro"], eventInfo)}
     />
   );
 }

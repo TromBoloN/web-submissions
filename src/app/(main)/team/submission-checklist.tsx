@@ -10,38 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-const CHECKLIST_ITEMS = [
-  {
-    id: "public_repo",
-    label: "Repositori GitHub berstatus publik (coba buka lewat jendela penyamaran).",
-  },
-  {
-    id: "readme_docs",
-    label: "README menjelaskan fitur utama dan cara menjalankan proyek.",
-  },
-  {
-    id: "live_demo",
-    label: "Live demo bisa dibuka tanpa login atau instalasi apa pun.",
-  },
-  {
-    id: "video_access",
-    label: "Video demo bisa ditonton siapa saja yang memiliki tautan.",
-  },
-  {
-    id: "video_duration",
-    label: "Durasi dan isi video sudah sesuai juknis.",
-  },
-  {
-    id: "links_verified",
-    label: "Tautan sudah dicek ulang, tanpa typo atau spasi.",
-  },
-] as const;
-
-export function SubmissionChecklist() {
+/** `items`: Pengaturan → Konten "Checklist sebelum mengirim", one string per item. */
+export function SubmissionChecklist({ items }: { items: string[] }) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
-  const checkedCount = CHECKLIST_ITEMS.filter((item) => checkedItems[item.id]).length;
-  const isAllChecked = checkedCount === CHECKLIST_ITEMS.length;
+  // Ticks are local and reset on reload, so keying by position is fine.
+  const checklist = items.map((label, index) => ({ id: `item-${index}`, label }));
+  const checkedCount = checklist.filter((item) => checkedItems[item.id]).length;
+  const isAllChecked = checklist.length > 0 && checkedCount === checklist.length;
 
   const toggleItem = (id: string) => {
     setCheckedItems((prev) => ({
@@ -69,14 +45,14 @@ export function SubmissionChecklist() {
               className={cn("font-mono text-xs", isAllChecked && "bg-emerald-600 text-white hover:bg-emerald-600/90")}
             >
               {isAllChecked && <CheckCircle2 className="mr-1 size-3" />}
-              {checkedCount} dari {CHECKLIST_ITEMS.length}
+              {checkedCount} dari {checklist.length}
             </Badge>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 p-4">
         <div className="space-y-2">
-          {CHECKLIST_ITEMS.map((item) => {
+          {checklist.map((item) => {
             const isChecked = Boolean(checkedItems[item.id]);
 
             return (
