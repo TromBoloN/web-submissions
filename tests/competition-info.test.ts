@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { winnersGoogleCalendarUrl } from "@/app/karya/karya-utils";
 import {
   formatStageDateLong,
   formatStageDates,
   getStage,
   SCHEDULE_FALLBACK,
   scheduleOrFallback,
+  stageState,
 } from "@/lib/competition-info";
 
 describe("formatStageDates", () => {
@@ -27,7 +29,37 @@ describe("scheduleOrFallback", () => {
     expect(scheduleOrFallback([])).toBe(SCHEDULE_FALLBACK);
     const rows = [{ ...SCHEDULE_FALLBACK[0], title: "Ganti" }];
     expect(scheduleOrFallback(rows)).toBe(rows);
-    expect(getStage(rows, "review")?.title).toBe("Ganti");
-    expect(getStage(rows, "missing")).toBeUndefined();
+    expect(getStage(rows, "review").title).toBe("Ganti");
+    // A system stage missing from a broken response falls back to the default row.
+    expect(getStage(rows, "final").starts_on).toBe("2026-11-21");
+  });
+});
+
+describe("stageState", () => {
+  const stage = { starts_on: "2026-11-11", ends_on: "2026-11-17", status_override: null };
+  it("follows WITA date keys, inclusive on both ends", () => {
+    expect(stageState(stage, "2026-11-10")).toBe("future");
+    expect(stageState(stage, "2026-11-11")).toBe("current");
+    expect(stageState(stage, "2026-11-17")).toBe("current");
+    expect(stageState(stage, "2026-11-18")).toBe("past");
+  });
+  it("lets the admin override win", () => {
+    expect(stageState({ ...stage, status_override: "upcoming" }, "2026-11-20")).toBe("future");
+    expect(stageState({ ...stage, status_override: "done" }, "2026-11-12")).toBe("past");
+    expect(stageState({ ...stage, status_override: "current" }, "2026-11-01")).toBe("current");
+  });
+});
+
+describe("winners calendar event", () => {
+  it("ends the all-day event on the day after, across month ends", () => {
+    const url = winnersGoogleCalendarUrl("https://example.test/karya", {
+      startsOn: "2027-11-30",
+      endsOn: "2027-11-30",
+      eventName: "MIT-WEEK 2027",
+      eventTrack: "Web Development",
+    });
+    const params = new URL(url).searchParams;
+    expect(params.get("dates")).toBe("20271130/20271201");
+    expect(params.get("text")).toBe("Pengumuman Juara · Web Development Competition MIT-WEEK 2027");
   });
 });

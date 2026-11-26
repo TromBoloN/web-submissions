@@ -48,7 +48,7 @@ See [Competition phases](./COMPETITION-PHASES.md) for behavior.
 | `layout.tsx` | `requireRole("team")`, results-released flag, team code for the sidebar user chip |
 | `submission-client.tsx` | Orchestrates the page: phase, form state, open vs closed (bento) layout, showcase card, help strip |
 | `team-phase.ts` | `resolveTeamPhase()`: pure phase resolver, plus the `FinalistNoticeData` type |
-| `team-schedule.ts` | Hardcoded `TEAM_SCHEDULE`, `FINAL_PRESENTATION`, `toWitaDateKey()`, `daysBetweenDateKeys()` |
+| `team-schedule.ts` | `FinalPresentation` type, `toWitaDateKey()`, `daysBetweenDateKeys()` |
 | `team-hero.tsx` | Phase-aware hero (countdown + live checklist, milestone tile, finalist/final/results states) |
 | `journey-track.tsx` | Hex-node timeline; horizontal on `md+`, vertical on mobile |
 | `guardian-id-card.tsx` | Team code access pass with members; hover tilt (off under reduced motion) |
@@ -98,7 +98,7 @@ src/lib/user-display.ts              names, initials, role labels
 src/lib/supabase/client.ts           browser client
 src/lib/supabase/server.ts           cookie-based server client (RLS applies)
 src/lib/supabase/admin.ts            service role client, server-only, bypasses RLS
-src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased, galleryState, rankingPublished)
+src/navigation/sidebar/sidebar-items.ts   getSidebarItems(role, juknisUrl, resultsReleased, galleryState, rankingPublished, rankingNav, galleryOpeningLabel)
 src/app/(main)/_components/ranking/   published-ranking UI shared by team and judge Peringkat: ranking-podium (top 3), ranking-list (rest), ranking-shared (RankingRow, formatScore, RankHex, ScoreBar, ids), use-count-up, share-card (Canvas 2D PNGs: team achievement `createShareImage`, judge appreciation `createJudgeCardImage`, plus shareOrDownload)
 src/app/(main)/admin/_components/team-detail/   TeamDetailSheet + teamRowProps (click a row on Tim, Submission, Peringkat); getTeamDetail admin-only action
 src/components/theme-toggle.tsx      shared two-state light/dark toggle (header; floating on /karya)
@@ -112,7 +112,7 @@ src/scripts/seed.mjs                 npm run seed / seed:clear (never against pr
 scripts/                             backup, restore, local-stack (local Docker Supabase), seed-showcase, seed-finalists (local stack only: top 5 -> finalists + final judges), import-registrations, whatsapp-links
 supabase/config.toml                 local Docker Supabase config (npm run local:*)
 supabase/schema/full_schema.sql      GENERATED final state of all migrations, idempotent (fresh installs); rebuild: node scripts/build-full-schema.mjs
-src/lib/competition-info.ts          event identity + schedule types, 2026 fallbacks, stage date labels (pure)
+src/lib/competition-info.ts          event identity + schedule types, 2026 fallbacks, getStage(), stageState(), stage date labels (pure)
 src/lib/competition-info.server.ts   getEventInfo(), getSchedule(): cached RPC readers with fallback
 src/components/event-info-provider.tsx  root-layout context: useEventInfo() gives client components event_name/track (server code calls getEventInfo())
 ```
@@ -134,7 +134,7 @@ Full reference: [Data model](./DATA-MODEL.md).
 | --- | --- |
 | Rubric weights | `src/lib/rubric.ts` and a migration (ask first) |
 | Deadline logic | `src/lib/deadline.ts`, `admin/pengaturan/pengumpulan`, team hero countdown, `team-phase.ts` |
-| A competition date | all five places in [Competition phases](./COMPETITION-PHASES.md#where-the-schedule-is-hardcoded-until-the-stages-migration-is-live) |
+| A competition date | Pengaturan → Jadwal (no code change); see [Competition phases](./COMPETITION-PHASES.md#how-the-schedule-reaches-the-pages) |
 | Team phase rules | `team-phase.ts`, `team-hero.tsx`, the phase table in COMPETITION-PHASES.md |
 | New settings section | `settings-sections.ts`, overview `statusByHref`, [Admin settings](./ADMIN-SETTINGS.md) |
 | New screen | page, client, actions, `sidebar-items.ts`, this file |

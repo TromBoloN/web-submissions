@@ -6,29 +6,21 @@ How the app decides which stage of the competition a team is in, where the sched
 
 All dates are WITA calendar days. Times are WITA.
 
-| Stage | Date | Source of truth today |
-| --- | --- | --- |
-| Submission deadline | set in admin (default 10 Nov 2026, 23.59) | `competition_settings.submission_closes_at` (database) |
-| Penilaian Babak Awal | 11–17 Nov | hardcoded (see below) |
-| Pengumuman Top 5 + gallery opens | 18 Nov | hardcoded |
-| Babak Final | 21 Nov (10 min presentation + 10 min Q&A) | hardcoded |
-| Pengumuman Juara | 25 Nov | hardcoded |
+| Stage | Source of truth |
+| --- | --- |
+| Submission deadline | `competition_settings.submission_closes_at` (Pengaturan → Pengumpulan) |
+| Penilaian Babak Awal, Pengumuman Top N, Galeri dibuka, Babak Final, Pengumuman Juara, plus any custom stages | `competition_stages` (Pengaturan → Jadwal) |
+| Final format and logistics (minutes, venue, link, note) | `final_presentation` (Pengaturan → Identitas & Final) |
 
 `submission_closes_at` is stored as an **exclusive** cutoff: the first instant that is no longer accepted. The UI shows the previous minute as the last accepted minute. See `src/lib/deadline.ts`.
 
-## Where the schedule is hardcoded (until the stages migration is live)
+## How the schedule reaches the pages
 
-Changing a date today means editing **all** of these:
-
-| File | What it holds |
-| --- | --- |
-| `src/app/(main)/team/team-schedule.ts` | `TEAM_SCHEDULE` (team journey track and phases) and `FINAL_PRESENTATION` |
-| `src/app/(main)/admin/page.tsx` (~line 365) | Admin dashboard phase timeline dates |
-| `src/app/karya/karya-constants.ts` | `KARYA_DATES` for the public gallery |
-| `src/app/karya/karya-client.tsx` (~lines 311–493) | Dates inside gallery sentences |
-| `src/navigation/sidebar/sidebar-items.ts` | `GALLERY_OPENING_LABEL` ("18 Nov") on the locked Galeri badge |
-
-The migrations `20261114000000_competition_stages.sql` and `20261114010000_event_identity_and_final_details.sql` replace these with the `competition_stages` and `final_presentation` tables. They are **written but not yet applied**; see [Data model](./DATA-MODEL.md#pending-migrations). After they are applied and `src/types/database.ts` is regenerated, the app must be switched to read them, and this table should shrink to nothing.
+- The root layout loads `getSchedule()` (`get_public_competition_schedule()`, works for anon) and passes it to `EventInfoProvider`. Client code reads it with `useSchedule()`, server code calls `getSchedule()`. If the RPC fails, the 2026 rows in `SCHEDULE_FALLBACK` (`src/lib/competition-info.ts`) are used.
+- System stages are looked up with `getStage(schedule, key)` (`review`, `top5`, `gallery`, `final`, `winners`). Their keys never change and they cannot be deleted.
+- `stageState(stage, today)` decides past/current/future. A stage's `status_override` wins over its dates.
+- Consumers: team phase resolver and hero, journey track, admin dashboard timeline, public gallery sentences and calendar reminder, and the sidebar's locked Galeri badge (gallery start date).
+- Final logistics reach the team hero through `get_my_final_presentation()`. It returns nothing for non-finalists, and venue and link are withheld until logistics are published.
 
 ## Team phase resolver
 
@@ -41,9 +33,9 @@ The migrations `20261114000000_competition_stages.sql` and `20261114010000_event
 | 3 | `missed` | closed and no submitted entry | Calm: "Tidak ada karya tercatat" |
 | 4 | `not-finalist` | finalist notice published, team not a finalist | Calm: "Terima kasih sudah berkompetisi" + admin message |
 | 5 | `results` | finalist and `final_results_released` | Loud: "Hasil final" + link to `/team/hasil` |
-| 6 | `final` | finalist, today ≥ final date | Loud: "Babak Final" + presentation details |
+| 6 | `final` | finalist, `final` stage is current or past | Loud: "Babak Final" + presentation details |
 | 7 | `finalist` | finalist, before the final date | Loud: "Finalis!" + Top 5 badge + final details with days remaining |
-| 8 | `closed` | submitted, today < review start | Loud: outlined "TERKUNCI." + "Penilaian dimulai · N hari lagi" tile |
+| 8 | `closed` | submitted, `review` stage still upcoming | Loud: outlined "TERKUNCI." + "Penilaian dimulai · N hari lagi" tile |
 | 9 | `review` | submitted, review started, no notice yet | Loud, quiet mood: "Juri sedang menilai" + "Top 5 diumumkan · N hari lagi" tile (shows "Segera" once the date has passed without a notice) |
 
 The finalist notice comes from `get_my_finalist_notice()`. It returns a row only once the admin publishes the notice, and never for disqualified teams.
@@ -57,9 +49,9 @@ The finalist notice comes from `get_my_finalist_notice()`. It returns a row only
 
 ## Journey track
 
-`src/app/(main)/team/journey-track.tsx` renders `TEAM_SCHEDULE` as hex nodes:
+`src/app/(main)/team/journey-track.tsx` renders the deadline plus every stage with `show_on_track` as hex nodes:
 
-- Each step is `past` (end < today), `current` (start ≤ today ≤ end) or `future`.
+- Each step is `past` (end < today), `current` (start ≤ today ≤ end) or `future`, unless the admin set a status override.
 - "HARI INI" sits above the current node. If today falls between steps, a dated chip sits on the connector between them. Before the first step or after the last, the chip shows in the header.
 - Horizontal from `md`, vertical list below.
 
@@ -67,11 +59,9 @@ The finalist notice comes from `get_my_finalist_notice()`. It returns a row only
 
 Computed server-side in `dashboard-shell.tsx`:
 
-- `showcase_published_at` is null: **locked**, with the planned date ("18 Nov").
-- published less than 7 days ago: **"Baru"**.
+- `showcase_published_at` is null: **locked**, with the `gallery` stage date.
+- published less than `gallery_new_badge_days` days ago (Pengaturan → Identitas, 0 disables it): **"Baru"**.
 - otherwise: no badge.
-
-After the identity migration, the 7 days becomes `competition_settings.gallery_new_badge_days`.
 
 ## Testing each phase
 

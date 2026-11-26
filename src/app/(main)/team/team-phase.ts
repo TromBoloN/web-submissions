@@ -1,4 +1,6 @@
-import { getScheduleStep, toWitaDateKey } from "./team-schedule";
+import { type CompetitionStage, getStage, stageState } from "@/lib/competition-info";
+
+import { toWitaDateKey } from "./team-schedule";
 
 export type FinalistNoticeData = {
   is_finalist: boolean;
@@ -34,6 +36,7 @@ export type TeamPhaseInput = {
   isDisqualified: boolean;
   finalistNotice: FinalistNoticeData | null;
   finalResultsReleased: boolean;
+  schedule: readonly CompetitionStage[];
 };
 
 /** Pure: depends only on server time and data, never the device clock. */
@@ -47,9 +50,9 @@ export function resolveTeamPhase(input: TeamPhaseInput): TeamPhase {
     if (!notice.is_finalist) return "not-finalist";
     if (input.finalResultsReleased) return "results";
     const today = toWitaDateKey(input.serverNowIso);
-    return today >= getScheduleStep("final").start ? "final" : "finalist";
+    return stageState(getStage(input.schedule, "final"), today) === "future" ? "finalist" : "final";
   }
 
   const today = toWitaDateKey(input.serverNowIso);
-  return today < getScheduleStep("review").start ? "closed" : "review";
+  return stageState(getStage(input.schedule, "review"), today) === "future" ? "closed" : "review";
 }

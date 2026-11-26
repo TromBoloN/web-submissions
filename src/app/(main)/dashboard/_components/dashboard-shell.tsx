@@ -15,8 +15,6 @@ import { getPreference } from "@/server/server-actions";
 import { SearchDialog } from "./header/search-dialog";
 import { AppSidebar } from "./sidebar/app-sidebar";
 
-const GALLERY_NEW_BADGE_MS = 7 * 24 * 60 * 60 * 1000;
-
 export async function DashboardShell({
   children,
   user,
@@ -45,7 +43,7 @@ export async function DashboardShell({
   const supabase = await createClient();
   const { data: settings } = await supabase
     .from("competition_settings")
-    .select("juknis_url, showcase_published_at")
+    .select("juknis_url, showcase_published_at, gallery_new_badge_days")
     .eq("id", true)
     .maybeSingle();
   const juknisUrl = user.role === "team" || user.role === "judge" ? (settings?.juknis_url ?? null) : null;
@@ -54,7 +52,9 @@ export async function DashboardShell({
   let galleryState: GalleryNavState = "locked";
   if (settings?.showcase_published_at) {
     const publishedMs = new Date(settings.showcase_published_at).getTime();
-    galleryState = Date.now() - publishedMs < GALLERY_NEW_BADGE_MS ? "new" : "open";
+    // gallery_new_badge_days (Pengaturan → Identitas); 0 turns the "Baru" badge off.
+    const newBadgeMs = settings.gallery_new_badge_days * 24 * 60 * 60 * 1000;
+    galleryState = Date.now() - publishedMs < newBadgeMs ? "new" : "open";
   }
 
   return (

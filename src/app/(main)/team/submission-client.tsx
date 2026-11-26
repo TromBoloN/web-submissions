@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useEventInfo } from "@/components/event-info-provider";
+import { useEventInfo, useSchedule } from "@/components/event-info-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -55,6 +55,7 @@ import { SubmissionChecklist } from "./submission-checklist";
 import { SubmissionReceipt } from "./submission-receipt";
 import { TeamHero } from "./team-hero";
 import { type FinalistNoticeData, resolveTeamPhase } from "./team-phase";
+import type { FinalPresentation } from "./team-schedule";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -71,6 +72,7 @@ type SubmissionClientProps = {
   /** Preliminary or final results released (team can open /team/hasil). */
   resultsReleased: boolean;
   finalResultsReleased: boolean;
+  finalPresentation: FinalPresentation | null;
 };
 
 function formatTimestampWita(iso: string | null | undefined): string {
@@ -250,7 +252,9 @@ export function SubmissionClient({
   finalistNotice,
   resultsReleased,
   finalResultsReleased,
+  finalPresentation,
 }: SubmissionClientProps) {
+  const schedule = useSchedule();
   const router = useRouter();
   // Closed state is only applied when page is loaded after deadline
   const isClosed = initialClosed;
@@ -298,6 +302,7 @@ export function SubmissionClient({
     isDisqualified,
     finalistNotice,
     finalResultsReleased,
+    schedule,
   });
   let submissionState: "none" | "draft" | "submitted" = "none";
   if (isSubmitted) submissionState = "submitted";
@@ -828,6 +833,7 @@ export function SubmissionClient({
           onExpire={handleCountdownExpire}
           finalistNotice={finalistNotice}
           resultsReleased={resultsReleased}
+          finalPresentation={finalPresentation}
           liveLinks={{ github: githubUrl, liveDemo: liveDemoUrl, video: videoUrl }}
           hasUnsavedChanges={hasUnsavedChanges}
         />
@@ -895,11 +901,11 @@ export function SubmissionClient({
             </div>
           </div>
 
-          <JourneyTrack serverNowIso={serverNowIso} />
+          <JourneyTrack serverNowIso={serverNowIso} deadlineIso={deadlineIso} />
         </>
       ) : (
         <>
-          <JourneyTrack serverNowIso={serverNowIso} />
+          <JourneyTrack serverNowIso={serverNowIso} deadlineIso={deadlineIso} />
 
           {/* Receipt left; showcase + help share one column that matches the receipt's height */}
           <div className="grid gap-6 lg:grid-cols-12">

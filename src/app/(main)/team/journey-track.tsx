@@ -3,9 +3,10 @@ import { Fragment } from "react";
 import { cn } from "cn";
 import { Check } from "lucide-react";
 
-import { TEAM_SCHEDULE, toWitaDateKey } from "./team-schedule";
+import { useSchedule } from "@/components/event-info-provider";
+import { formatStageDates, type StageState as StepState, stageState } from "@/lib/competition-info";
 
-type StepState = "past" | "current" | "future";
+import { toWitaDateKey } from "./team-schedule";
 
 function formatTodayLabel(iso: string): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -52,16 +53,39 @@ function TodayChip({ label }: { label: string }) {
   );
 }
 
-export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
+function formatDeadlineTime(iso: string): string {
+  return new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit" }).format(
+    new Date(iso),
+  );
+}
+
+export function JourneyTrack({ serverNowIso, deadlineIso }: { serverNowIso: string; deadlineIso: string | null }) {
+  const schedule = useSchedule();
   const today = toWitaDateKey(serverNowIso);
   const todayLabel = `Hari ini · ${formatTodayLabel(serverNowIso)}`;
 
-  const steps = TEAM_SCHEDULE.map((step) => {
-    let state: StepState = "future";
-    if (step.end < today) state = "past";
-    else if (step.start <= today) state = "current";
-    return { ...step, state };
-  });
+  // The deadline step comes from Pengaturan → Pengumpulan; the rest from Pengaturan → Jadwal.
+  const deadlineDay = deadlineIso ? toWitaDateKey(deadlineIso) : null;
+  const submitStep =
+    deadlineIso && deadlineDay
+      ? [
+          {
+            key: "submit",
+            starts_on: deadlineDay,
+            ends_on: deadlineDay,
+            title: "Batas pengumpulan karya",
+            description: `${formatDeadlineTime(deadlineIso)} WITA`,
+            time_label: "",
+            status_override: null,
+          },
+        ]
+      : [];
+  const steps = [...submitStep, ...schedule.filter((stage) => stage.show_on_track)].map((step) => ({
+    ...step,
+    dates: formatStageDates(step),
+    desc: [step.time_label, step.description].filter(Boolean).join(" · "),
+    state: stageState(step, today),
+  }));
 
   const hasCurrent = steps.some((step) => step.state === "current");
   // Without an active step, today falls in a gap: after step `gapAfter`, before the next one.
@@ -79,14 +103,14 @@ export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
       </div>
 
       {/* Desktop: horizontal track */}
-      <ol className="hidden grid-cols-5 md:grid" aria-label="Linimasa kompetisi">
+      <ol className="hidden auto-cols-fr grid-flow-col md:grid" aria-label="Linimasa kompetisi">
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1;
           const nextReached = !isLast && steps[index + 1].state !== "future";
 
           return (
             <li
-              key={step.id}
+              key={step.key}
               className="relative flex flex-col items-center px-2 text-center"
               aria-current={step.state === "current" ? "step" : undefined}
             >
@@ -131,7 +155,7 @@ export function JourneyTrack({ serverNowIso }: { serverNowIso: string }) {
           const nextReached = !isLast && steps[index + 1].state !== "future";
 
           return (
-            <Fragment key={step.id}>
+            <Fragment key={step.key}>
               <li
                 className="relative flex items-start gap-3"
                 aria-current={step.state === "current" ? "step" : undefined}

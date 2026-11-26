@@ -109,33 +109,50 @@ export function findSimilar<T extends { teamName: string; title: string; descrip
 }
 
 // ---------------------------------------------------------------------------
-// "Ingatkan saya": the winners announcement on 25 Nov 2026 as an all-day calendar event.
+// "Ingatkan saya": the winners announcement (Pengaturan → Jadwal) as an all-day calendar event.
 
-const WINNERS_EVENT = {
-  title: "Pengumuman Juara · Web Development Competition MIT-WEEK 2026",
-  details: "Pengumuman juara 1, 2, dan 3 Web Development Competition MIT-WEEK 2026. Lihat di galeri karya.",
-  start: "20261125",
-  endExclusive: "20261126",
+export type WinnersEventInput = {
+  /** WITA calendar days, YYYY-MM-DD. */
+  startsOn: string;
+  endsOn: string;
+  eventName: string;
+  eventTrack: string;
 };
 
-export function winnersCalendarIcs(galleryUrl: string): string {
+function winnersEvent(input: WinnersEventInput) {
+  const compact = (day: string) => day.replaceAll("-", "");
+  // All-day events end on the day after the last day (exclusive).
+  const after = new Date(`${input.endsOn}T00:00:00Z`);
+  after.setUTCDate(after.getUTCDate() + 1);
+  const competition = `${input.eventTrack} Competition ${input.eventName}`;
+  return {
+    title: `Pengumuman Juara · ${competition}`,
+    details: `Pengumuman juara 1, 2, dan 3 ${competition}. Lihat di galeri karya.`,
+    start: compact(input.startsOn),
+    endExclusive: compact(after.toISOString().slice(0, 10)),
+  };
+}
+
+export function winnersCalendarIcs(galleryUrl: string, input: WinnersEventInput): string {
+  const event = winnersEvent(input);
   const escapeIcs = (value: string) => value.replace(/[\\,;]/g, (c) => `\\${c}`);
+  const stamp = `${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`;
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//MIT-WEEK 2026//Galeri Karya//ID",
+    `PRODID:-//${escapeIcs(input.eventName)}//Galeri Karya//ID`,
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
-    "UID:mitweek2026-webdev-juara@mitweek",
-    "DTSTAMP:20261118T000000Z",
-    `DTSTART;VALUE=DATE:${WINNERS_EVENT.start}`,
-    `DTEND;VALUE=DATE:${WINNERS_EVENT.endExclusive}`,
-    `SUMMARY:${escapeIcs(WINNERS_EVENT.title)}`,
-    `DESCRIPTION:${escapeIcs(`${WINNERS_EVENT.details} ${galleryUrl}`)}`,
+    `UID:juara-${event.start}@galeri-karya`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${event.start}`,
+    `DTEND;VALUE=DATE:${event.endExclusive}`,
+    `SUMMARY:${escapeIcs(event.title)}`,
+    `DESCRIPTION:${escapeIcs(`${event.details} ${galleryUrl}`)}`,
     `URL:${galleryUrl}`,
     "BEGIN:VALARM",
     "ACTION:DISPLAY",
-    `DESCRIPTION:${escapeIcs(WINNERS_EVENT.title)}`,
+    `DESCRIPTION:${escapeIcs(event.title)}`,
     "TRIGGER:PT9H",
     "END:VALARM",
     "END:VEVENT",
@@ -144,12 +161,13 @@ export function winnersCalendarIcs(galleryUrl: string): string {
   ].join("\r\n");
 }
 
-export function winnersGoogleCalendarUrl(galleryUrl: string): string {
+export function winnersGoogleCalendarUrl(galleryUrl: string, input: WinnersEventInput): string {
+  const event = winnersEvent(input);
   const params = new URLSearchParams({
     action: "TEMPLATE",
-    text: WINNERS_EVENT.title,
-    dates: `${WINNERS_EVENT.start}/${WINNERS_EVENT.endExclusive}`,
-    details: `${WINNERS_EVENT.details} ${galleryUrl}`,
+    text: event.title,
+    dates: `${event.start}/${event.endExclusive}`,
+    details: `${event.details} ${galleryUrl}`,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

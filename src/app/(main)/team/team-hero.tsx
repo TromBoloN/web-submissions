@@ -18,18 +18,13 @@ import {
   Trophy,
 } from "lucide-react";
 
-import { useEventInfo } from "@/components/event-info-provider";
+import { useEventInfo, useSchedule } from "@/components/event-info-provider";
 import { Button } from "@/components/ui/button";
+import { formatStageDateLong, formatStageDates, getStage, type SystemStageKey } from "@/lib/competition-info";
 import { formatDeadlineMultiZone, formatDeadlineWita } from "@/lib/deadline";
 
 import type { FinalistNoticeData, TeamPhase } from "./team-phase";
-import {
-  daysBetweenDateKeys,
-  FINAL_PRESENTATION,
-  getScheduleStep,
-  type ScheduleStepId,
-  toWitaDateKey,
-} from "./team-schedule";
+import { daysBetweenDateKeys, type FinalPresentation, toWitaDateKey } from "./team-schedule";
 
 type SubmissionState = "none" | "draft" | "submitted";
 
@@ -41,6 +36,8 @@ export type TeamHeroProps = {
   onExpire: () => void;
   finalistNotice: FinalistNoticeData | null;
   resultsReleased: boolean;
+  /** From get_my_final_presentation(); null for non-finalists or if the RPC failed. */
+  finalPresentation: FinalPresentation | null;
   /** Current form values, so the open-phase checklist updates while typing. */
   liveLinks: { github: string; liveDemo: string; video: string };
   hasUnsavedChanges: boolean;
@@ -306,17 +303,18 @@ function MilestoneTile({
   pendingText,
 }: {
   label: string;
-  stepId: ScheduleStepId;
+  stepId: SystemStageKey;
   serverNowIso: string;
   /** Shown instead of a count once the date has passed but the milestone has not happened yet. */
   pendingText: string;
 }) {
-  const step = getScheduleStep(stepId);
-  const days = daysBetweenDateKeys(toWitaDateKey(serverNowIso), step.start);
+  const step = getStage(useSchedule(), stepId);
+  const dates = formatStageDates(step);
+  const days = daysBetweenDateKeys(toWitaDateKey(serverNowIso), step.starts_on);
 
   let value = String(days);
   let unit = "hari lagi";
-  let sentence = `${label} dalam ${days} hari, pada ${step.dates}.`;
+  let sentence = `${label} dalam ${days} hari, pada ${dates}.`;
   if (days === 0) {
     value = "Hari ini";
     unit = "";
@@ -336,14 +334,14 @@ function MilestoneTile({
           <span className="font-display font-extrabold text-5xl text-ink tabular-nums leading-none">{value}</span>
           {unit && <span className="font-semibold text-foreground/80 text-sm">{unit}</span>}
         </p>
-        <p className="mt-2 font-mono text-foreground/75 text-xs">{days < 0 ? pendingText : step.dates}</p>
+        <p className="mt-2 font-mono text-foreground/75 text-xs">{days < 0 ? pendingText : dates}</p>
       </div>
     </div>
   );
 }
 
 function ClosedHero(props: TeamHeroProps) {
-  const review = getScheduleStep("review");
+  const review = getStage(useSchedule(), "review");
 
   return (
     <LoudShell>
@@ -352,7 +350,7 @@ function ClosedHero(props: TeamHeroProps) {
         <div className="min-w-0 space-y-3">
           <h1 className="team-hero-title team-hero-title-outline">Terkunci.</h1>
           <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
-            Karya tim Anda sudah tercatat dan siap dinilai dewan juri. Penilaian dimulai {review.dates}.
+            Karya tim Anda sudah tercatat dan siap dinilai dewan juri. Penilaian dimulai {formatStageDates(review)}.
           </p>
         </div>
         <MilestoneTile
@@ -368,8 +366,9 @@ function ClosedHero(props: TeamHeroProps) {
 
 function ReviewHero(props: TeamHeroProps) {
   const { finalist_count } = useEventInfo();
-  const review = getScheduleStep("review");
-  const top5 = getScheduleStep("top5");
+  const schedule = useSchedule();
+  const review = getStage(schedule, "review");
+  const top5 = getStage(schedule, "top5");
 
   return (
     <LoudShell>
@@ -384,8 +383,8 @@ function ReviewHero(props: TeamHeroProps) {
           </div>
           <div className="team-scan max-w-md" aria-hidden="true" />
           <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
-            Tidak ada yang perlu dilakukan sekarang. Karya Anda aman tercatat. Penilaian berlangsung {review.dates},
-            pengumuman Top {finalist_count} pada {top5.dates}.
+            Tidak ada yang perlu dilakukan sekarang. Karya Anda aman tercatat. Penilaian berlangsung{" "}
+            {formatStageDates(review)}, pengumuman Top {finalist_count} pada {formatStageDates(top5)}.
           </p>
         </div>
         <MilestoneTile
@@ -399,14 +398,33 @@ function ReviewHero(props: TeamHeroProps) {
   );
 }
 
-function FinalDetails({ serverNowIso }: { serverNowIso: string }) {
-  const days = daysBetweenDateKeys(toWitaDateKey(serverNowIso), getScheduleStep("final").start);
+const FINAL_FALLBACK: FinalPresentation = {
+  presentation_minutes: 10,
+  qa_minutes: 10,
+  venue: null,
+  meeting_url: null,
+  note: "Urutan tampil serta lokasi atau tautan sesi akan dikirim langsung oleh panitia.",
+};
+
+function FinalDetails({
+  serverNowIso,
+  presentation,
+}: {
+  serverNowIso: string;
+  presentation: FinalPresentation | null;
+}) {
+  const final = getStage(useSchedule(), "final");
+  const days = daysBetweenDateKeys(toWitaDateKey(serverNowIso), final.starts_on);
+  const info = presentation ?? FINAL_FALLBACK;
+  const details = [{ label: "Presentasi", value: `${info.presentation_minutes} menit` }];
+  if (info.qa_minutes > 0) details.push({ label: "Tanya jawab", value: `${info.qa_minutes} menit` });
+  const meetingUrl = info.meeting_url?.startsWith("https://") ? info.meeting_url : null;
 
   return (
     <div className="rounded-2xl border-2 border-ink bg-card p-4 text-card-foreground shadow-brutal-sm">
       <p className="flex items-center gap-2 font-bold font-mono text-ink text-xs uppercase tracking-wider">
         <Mic className="size-3.5" aria-hidden="true" />
-        Babak Final · {FINAL_PRESENTATION.dateLabel}
+        Babak Final · {formatStageDateLong(final.starts_on)}
       </p>
       {days > 0 && (
         <p className="mt-2 flex items-baseline gap-2">
@@ -415,14 +433,35 @@ function FinalDetails({ serverNowIso }: { serverNowIso: string }) {
         </p>
       )}
       <dl className="mt-3 grid grid-cols-2 gap-3">
-        {FINAL_PRESENTATION.details.map((item) => (
+        {details.map((item) => (
           <div key={item.label}>
             <dt className="text-foreground/75 text-xs">{item.label}</dt>
             <dd className="font-display font-extrabold text-xl">{item.value}</dd>
           </div>
         ))}
       </dl>
-      <p className="mt-3 text-foreground/75 text-xs">{FINAL_PRESENTATION.note}</p>
+      {(info.venue || meetingUrl) && (
+        <div className="mt-3 space-y-1 text-sm">
+          {info.venue && (
+            <p>
+              <span className="text-foreground/75 text-xs">Lokasi: </span>
+              <span className="font-semibold">{info.venue}</span>
+            </p>
+          )}
+          {meetingUrl && (
+            <a
+              href={meetingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-ink underline underline-offset-4"
+            >
+              Buka tautan sesi
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </a>
+          )}
+        </div>
+      )}
+      {info.note && <p className="mt-3 text-foreground/75 text-xs">{info.note}</p>}
     </div>
   );
 }
@@ -455,13 +494,14 @@ function FinalistHero(props: TeamHeroProps) {
           <NoticeMessage notice={props.finalistNotice} />
           {props.resultsReleased && <ResultsLink label="Lihat masukan juri" />}
         </div>
-        <FinalDetails serverNowIso={props.serverNowIso} />
+        <FinalDetails serverNowIso={props.serverNowIso} presentation={props.finalPresentation} />
       </div>
     </LoudShell>
   );
 }
 
 function FinalHero(props: TeamHeroProps) {
+  const schedule = useSchedule();
   return (
     <LoudShell>
       <Eyebrow>Fase · Babak Final</Eyebrow>
@@ -469,11 +509,12 @@ function FinalHero(props: TeamHeroProps) {
         <div className="min-w-0 space-y-4">
           <h1 className="team-hero-title">Babak Final</h1>
           <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
-            Saatnya tampil. Hasil akhir diumumkan {getScheduleStep("winners").dates} setelah seluruh finalis presentasi.
+            Saatnya tampil. Hasil akhir diumumkan {formatStageDates(getStage(schedule, "winners"))} setelah seluruh
+            finalis presentasi.
           </p>
           <NoticeMessage notice={props.finalistNotice} />
         </div>
-        <FinalDetails serverNowIso={props.serverNowIso} />
+        <FinalDetails serverNowIso={props.serverNowIso} presentation={props.finalPresentation} />
       </div>
     </LoudShell>
   );

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { formatStageDatesWithYear, getStage, type SystemStageKey } from "@/lib/competition-info";
+import { getSchedule } from "@/lib/competition-info.server";
 import { formatDeadlineWita } from "@/lib/deadline";
 import { createClient } from "@/lib/supabase/server";
 
@@ -363,24 +365,24 @@ export default async function AdminPage() {
     });
   }
 
+  const schedule = await getSchedule();
+  const stage = (key: SystemStageKey) => getStage(schedule, key);
+  const stageRange = (key: SystemStageKey) => formatStageDatesWithYear(stage(key));
+  // A stage starts at 00:00 WITA on its first day.
+  const witaStart = (key: SystemStageKey) => new Date(`${stage(key).starts_on}T00:00:00+08:00`);
+
   const phaseDefinitions = [
     { id: "submission", label: "Submission", range: `s.d. ${deadlineLabel}` },
-    { id: "judging", label: "Penilaian", range: "11–17 Nov 2026" },
-    { id: "top5", label: "Top 5", range: "18 Nov 2026" },
-    { id: "final", label: "Final", range: "21 Nov 2026" },
-    { id: "winners", label: "Pemenang", range: "25 Nov 2026" },
+    { id: "judging", label: "Penilaian", range: stageRange("review") },
+    { id: "top5", label: "Top 5", range: stageRange("top5") },
+    { id: "final", label: "Final", range: stageRange("final") },
+    { id: "winners", label: "Pemenang", range: stageRange("winners") },
   ];
 
   const parsedDeadline = deadlineIso ? new Date(deadlineIso) : null;
   const submissionEnd =
-    parsedDeadline && !Number.isNaN(parsedDeadline.getTime()) ? parsedDeadline : new Date("2026-11-10T23:59:00+08:00");
-  const phaseEnds: (Date | null)[] = [
-    submissionEnd,
-    new Date("2026-11-18T00:00:00+08:00"),
-    new Date("2026-11-21T00:00:00+08:00"),
-    new Date("2026-11-25T00:00:00+08:00"),
-    null,
-  ];
+    parsedDeadline && !Number.isNaN(parsedDeadline.getTime()) ? parsedDeadline : witaStart("review");
+  const phaseEnds: (Date | null)[] = [submissionEnd, witaStart("top5"), witaStart("final"), witaStart("winners"), null];
 
   let activePhaseIndex = phaseEnds.findIndex((end) => end === null || now < end);
   if (activePhaseIndex === -1) {

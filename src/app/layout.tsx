@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { EventInfoProvider } from "@/components/event-info-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getEventInfo } from "@/lib/competition-info.server";
+import { getEventInfo, getSchedule } from "@/lib/competition-info.server";
 import { displayFont, fontVars } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { ThemeBootScript } from "@/scripts/theme-boot";
@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const eventInfo = await getEventInfo();
+  const [eventInfo, schedule] = await Promise.all([getEventInfo(), getSchedule()]);
   const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
     PREFERENCE_DEFAULTS;
   return (
@@ -69,7 +69,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className={`${fontVars} ${displayFont.variable} min-h-screen antialiased`}>
         <TooltipProvider>
           <PreferencesStoreProvider initialValues={PREFERENCE_DEFAULTS}>
-            <EventInfoProvider value={eventInfo}>{children}</EventInfoProvider>
+            <EventInfoProvider value={eventInfo} schedule={schedule}>
+              {children}
+            </EventInfoProvider>
             <Toaster />
           </PreferencesStoreProvider>
         </TooltipProvider>

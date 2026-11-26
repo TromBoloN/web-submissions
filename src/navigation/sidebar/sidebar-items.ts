@@ -25,9 +25,6 @@ export type NavBadge = "locked" | "new" | "soon";
  */
 export type GalleryNavState = "locked" | "new" | "open";
 
-/** Planned gallery opening, shown on the locked badge. TODO: move to admin settings. */
-export const GALLERY_OPENING_LABEL = "18 Nov";
-
 export interface NavSubItem {
   id: string;
   title: string;
@@ -82,9 +79,10 @@ export interface NavGroup {
   items: NavMainItem[];
 }
 
-function galleryItem(state: GalleryNavState): NavMainLinkItem {
+/** `openingLabel`: planned opening date from Pengaturan → Jadwal, shown on the locked badge. */
+function galleryItem(state: GalleryNavState, openingLabel?: string): NavMainLinkItem {
   const item: NavMainLinkItem = { id: "karya", title: "Galeri", url: "/karya", icon: Compass };
-  if (state === "locked") return { ...item, badge: "locked", badgeLabel: GALLERY_OPENING_LABEL };
+  if (state === "locked") return { ...item, badge: "locked", badgeLabel: openingLabel };
   if (state === "new") return { ...item, badge: "new" };
   return item;
 }
@@ -96,6 +94,7 @@ export function getSidebarItems(
   galleryState: GalleryNavState = "open",
   rankingPublished?: boolean,
   rankingNav?: RankingNavState,
+  galleryOpeningLabel?: string,
 ): NavGroup[] {
   if (role === "admin") {
     return [
@@ -113,7 +112,7 @@ export function getSidebarItems(
           { id: "submissions", title: "Submission", url: "/admin/submission", icon: FileText },
           { id: "ranking", title: "Peringkat", url: "/admin/peringkat", icon: Award },
           { id: "finalists", title: "Finalis", url: "/admin/finalis", icon: Trophy },
-          galleryItem(galleryState),
+          galleryItem(galleryState, galleryOpeningLabel),
         ],
       },
       {
@@ -151,7 +150,7 @@ export function getSidebarItems(
   }
 
   const exploreItems: NavMainItem[] = [
-    galleryItem(galleryState),
+    galleryItem(galleryState, galleryOpeningLabel),
     { id: "case-study", title: "Studi Kasus", url: `${basePath}/studi-kasus`, icon: BookOpen },
   ];
   if (juknisUrl?.startsWith("https://")) {

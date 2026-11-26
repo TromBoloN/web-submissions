@@ -7,7 +7,7 @@ export default async function TeamPage() {
   const profile = await requireRole("team");
   const supabase = await createClient();
 
-  const [teamRes, settingsRes, noticeRes] = await Promise.all([
+  const [teamRes, settingsRes, noticeRes, finalRes] = await Promise.all([
     // Own submission embedded (1:1, RLS applies) so it doesn't wait on a second round trip.
     supabase.from("teams").select("*, submissions(*)").eq("profile_id", profile.id).maybeSingle(),
     supabase
@@ -18,6 +18,8 @@ export default async function TeamPage() {
       .eq("id", true)
       .maybeSingle(),
     supabase.rpc("get_my_finalist_notice"),
+    // Zero rows unless this team is an announced finalist.
+    supabase.rpc("get_my_final_presentation"),
   ]);
 
   if (teamRes.error || !teamRes.data) {
@@ -52,6 +54,7 @@ export default async function TeamPage() {
         settingsRes.data?.preliminary_results_released || settingsRes.data?.final_results_released,
       )}
       finalResultsReleased={Boolean(settingsRes.data?.final_results_released)}
+      finalPresentation={finalRes.data?.[0] ?? null}
     />
   );
 }

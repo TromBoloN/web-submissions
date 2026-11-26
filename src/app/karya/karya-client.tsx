@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useEventInfo } from "@/components/event-info-provider";
+import { useEventInfo, useSchedule } from "@/components/event-info-provider";
+import { formatStageDateLong, formatStageDates, formatStageDatesWithYear, getStage } from "@/lib/competition-info";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import {
@@ -30,7 +31,6 @@ import {
   SeenMark,
   VidIcon,
 } from "./karya-card";
-import { KARYA_DATES } from "./karya-constants";
 import { KaryaLogo } from "./karya-logo";
 import { SpotlightCarousel } from "./karya-spotlight";
 import { findSimilar, getVideoEmbed, karyaSlug, winnersCalendarIcs, winnersGoogleCalendarUrl } from "./karya-utils";
@@ -58,12 +58,6 @@ const STAGE_LABELS = {
 } as const;
 
 type StageStatus = keyof typeof STAGE_LABELS;
-
-const TIMELINE_STAGES = [
-  { label: KARYA_DATES.stage1Label, description: KARYA_DATES.stage1Desc },
-  { label: KARYA_DATES.stage2Label, description: KARYA_DATES.stage2Desc },
-  { label: KARYA_DATES.stage3Label, description: KARYA_DATES.stage3Desc },
-] as const;
 
 function getStageStatus(index: number, activeIndex: number): StageStatus {
   if (index < activeIndex) return "done";
@@ -124,6 +118,31 @@ export function KaryaClient({
   initialQuery: string;
 }) {
   const { event_name, event_track, finalist_count } = useEventInfo();
+  const schedule = useSchedule();
+  const galleryStage = getStage(schedule, "gallery");
+  const top5Stage = getStage(schedule, "top5");
+  const finalStage = getStage(schedule, "final");
+  const winnersStage = getStage(schedule, "winners");
+  const winnersEventInput = {
+    startsOn: winnersStage.starts_on,
+    endsOn: winnersStage.ends_on,
+    eventName: event_name,
+    eventTrack: event_track,
+  };
+  const timelineStages = [
+    {
+      label: `${formatStageDates(galleryStage).toUpperCase()} · GALERI DIBUKA & TOP ${finalist_count}`,
+      description: `Pembukaan galeri karya peserta dan pengumuman ${finalist_count} finalis terbaik.`,
+    },
+    {
+      label: `${formatStageDates(finalStage).toUpperCase()} · PRESENTASI FINAL`,
+      description: "Sesi presentasi karya dan tanya jawab tim finalis di hadapan dewan juri.",
+    },
+    {
+      label: `${formatStageDates(winnersStage).toUpperCase()} · PENGUMUMAN PEMENANG`,
+      description: `Pengumuman juara 1, 2, dan 3 kompetisi ${event_track} ${event_name}.`,
+    },
+  ];
   const state = initialState;
   const isLocked = state === "locked";
   const isWin = state === "win";
@@ -464,23 +483,23 @@ export function KaryaClient({
     return () => window.removeEventListener("keydown", onKey);
   }, [isLocked, modal, closeModal, openRandom]);
 
-  // "Ingatkan saya": winners announcement on 25 Nov (no gallery changes are planned before then).
+  // "Ingatkan saya": the winners announcement (no gallery changes are planned before then).
   const [reminderOpen, setReminderOpen] = useState(false);
   const downloadReminder = () => {
     const galleryUrl = `${window.location.origin}/karya`;
-    const blob = new Blob([winnersCalendarIcs(galleryUrl)], { type: "text/calendar;charset=utf-8" });
+    const blob = new Blob([winnersCalendarIcs(galleryUrl, winnersEventInput)], { type: "text/calendar;charset=utf-8" });
     const href = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = href;
-    link.download = "pengumuman-juara-mitweek-2026.ics";
+    link.download = `pengumuman-juara-${karyaSlug(event_name)}.ics`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(href), 1000);
     setReminderOpen(false);
-    toast.success("Pengingat 25 November disimpan. Buka berkasnya untuk menambah ke kalender.");
+    toast.success(`Pengingat ${formatStageDates(winnersStage)} disimpan. Buka berkasnya untuk menambah ke kalender.`);
   };
-  const googleCalendarHref = () => winnersGoogleCalendarUrl(`${window.location.origin}/karya`);
+  const googleCalendarHref = () => winnersGoogleCalendarUrl(`${window.location.origin}/karya`, winnersEventInput);
 
   // Finish moment: the first time this visitor has opened every visible project.
   const [showFinish, setShowFinish] = useState(false);
@@ -584,14 +603,14 @@ export function KaryaClient({
   }
   const showFinalists = isLocked || (isWin ? remainingFinalists.length > 0 : finalists.length > 0);
 
-  let fnoteText = "Lima karya terbaik yang melaju ke presentasi final 21 November 2026.";
+  let fnoteText = `Karya Top ${finalist_count} yang melaju ke presentasi final ${formatStageDateLong(finalStage.starts_on)}.`;
   if (isLocked) {
-    fnoteText = "Diumumkan 18 November 2026, bersamaan dengan dibukanya galeri.";
+    fnoteText = `Diumumkan ${formatStageDateLong(top5Stage.starts_on)}, bersamaan dengan dibukanya galeri.`;
   } else if (isWin) {
     fnoteText = "Finalis yang belum meraih posisi juara.";
   }
 
-  let worksNoteText = "Karya tampil atas persetujuan tim, dalam urutan acak. Pemenang diumumkan 25 November 2026.";
+  let worksNoteText = `Karya tampil atas persetujuan tim, dalam urutan acak. Pemenang diumumkan ${formatStageDateLong(winnersStage.starts_on)}.`;
   if (isLocked) {
     worksNoteText =
       "Galeri belum dibuka. Tampilan di bawah hanya contoh (grid dan list); jumlah karya yang tampil tergantung persetujuan tiap tim.";
@@ -609,7 +628,7 @@ export function KaryaClient({
         Jadwal · {event_track} Competition {event_name}
       </p>
       <ol id="tlist" className="grid w-full gap-6 md:grid-cols-3">
-        {TIMELINE_STAGES.map((stage, index) => {
+        {timelineStages.map((stage, index) => {
           const status = getStageStatus(index, activeStage);
           const isDone = status === "done";
           const isNow = status === "now";
@@ -814,7 +833,9 @@ export function KaryaClient({
                       </button>
                       {reminderOpen && (
                         <div className="remind box" role="menu" aria-label="Pengingat pengumuman juara">
-                          <p className="mono muted px-1 pb-1 text-xs">Pengumuman juara · 25 Nov 2026</p>
+                          <p className="mono muted px-1 pb-1 text-xs">
+                            Pengumuman juara · {formatStageDatesWithYear(winnersStage)}
+                          </p>
                           <button type="button" role="menuitem" className="btn w-full" onClick={downloadReminder}>
                             Simpan ke kalender (.ics)
                           </button>
@@ -834,7 +855,7 @@ export function KaryaClient({
                   )}
                 </div>
               </div>
-              <p className="mono muted mt-4 text-xs">{`Galeri dibuka 18 Nov 2026 · Final ${KARYA_DATES.stage2Date} · Juara ${KARYA_DATES.stage3Date}`}</p>
+              <p className="mono muted mt-4 text-xs">{`Galeri dibuka ${formatStageDatesWithYear(galleryStage)} · Final ${formatStageDatesWithYear(finalStage)} · Juara ${formatStageDatesWithYear(winnersStage)}`}</p>
             </section>
             {showSchedule && timelineSection}
             <SpotlightCarousel items={spotlightItems} onOpen={(item) => openModal(item, spotlightItems)} />
@@ -847,7 +868,7 @@ export function KaryaClient({
           {isWin && (
             <div id="podium" className="mb-16">
               <h2 className="font-extrabold text-3xl tracking-tight sm:text-4xl">Juara {event_name}</h2>
-              <p className="muted mt-2">Diumumkan pada 25 November 2026.</p>
+              <p className="muted mt-2">Diumumkan pada {formatStageDateLong(winnersStage.starts_on)}.</p>
               <div id="pgrid" className="mt-8 grid items-start gap-7 md:grid-cols-3">
                 {podiumWinners.map(({ item, rank, orderClass }) => (
                   <CardView
@@ -1341,7 +1362,7 @@ export function KaryaClient({
                 }}
               >
                 <BellRing aria-hidden="true" className="size-4" />
-                Ingatkan saya 25 Nov
+                Ingatkan saya {formatStageDates(winnersStage)}
               </button>
             )}
             <button type="button" className="btn" onClick={() => setShowFinish(false)}>

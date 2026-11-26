@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { useShallow } from "zustand/react/shallow";
 
-import { useEventInfo } from "@/components/event-info-provider";
+import { useEventInfo, useSchedule } from "@/components/event-info-provider";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { formatStageDates, getStage } from "@/lib/competition-info";
 import type { CurrentUser } from "@/lib/user-display";
 import { type GalleryNavState, getSidebarItems, type RankingNavState } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -42,6 +43,7 @@ export function AppSidebar({
   teamCode?: string | null;
 }) {
   const { event_name, event_track } = useEventInfo();
+  const schedule = useSchedule();
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
       sidebarVariant: s.values.sidebar_variant,
@@ -82,7 +84,15 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={getSidebarItems(user.role, juknisUrl, resultsReleased, galleryState, rankingPublished, rankingNav)}
+          items={getSidebarItems(
+            user.role,
+            juknisUrl,
+            resultsReleased,
+            galleryState,
+            rankingPublished,
+            rankingNav,
+            formatStageDates(getStage(schedule, "gallery")),
+          )}
         />
       </SidebarContent>
       <SidebarFooter>

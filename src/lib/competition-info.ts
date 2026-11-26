@@ -90,8 +90,27 @@ export function scheduleOrFallback(rows: CompetitionStage[] | null | undefined):
   return rows && rows.length > 0 ? rows : SCHEDULE_FALLBACK;
 }
 
-export function getStage(schedule: readonly CompetitionStage[], key: string): CompetitionStage | undefined {
-  return schedule.find((stage) => stage.key === key);
+/** Built-in stages: the DB blocks deleting them, so they always exist. */
+export type SystemStageKey = "review" | "top5" | "gallery" | "final" | "winners";
+
+export function getStage(schedule: readonly CompetitionStage[], key: SystemStageKey): CompetitionStage {
+  // The fallback only covers a broken RPC response; system rows cannot be deleted.
+  return (schedule.find((stage) => stage.key === key) ??
+    SCHEDULE_FALLBACK.find((stage) => stage.key === key)) as CompetitionStage;
+}
+
+export type StageState = "past" | "current" | "future";
+
+/** The admin's status override wins; otherwise compare WITA date keys (YYYY-MM-DD). */
+export function stageState(
+  stage: Pick<CompetitionStage, "starts_on" | "ends_on" | "status_override">,
+  today: string,
+): StageState {
+  if (stage.status_override === "done") return "past";
+  if (stage.status_override === "current") return "current";
+  if (stage.status_override === "upcoming") return "future";
+  if (stage.ends_on < today) return "past";
+  return stage.starts_on <= today ? "current" : "future";
 }
 
 // DATE values carry no time zone: format them as UTC so the calendar day never shifts.
@@ -112,6 +131,11 @@ export function formatStageDates(stage: Pick<CompetitionStage, "starts_on" | "en
     return `${dayOnly.format(start)}–${dayMonth.format(end)}`;
   }
   return `${dayMonth.format(start)} – ${dayMonth.format(end)}`;
+}
+
+/** "18 Nov 2026", "11–17 Nov 2026". */
+export function formatStageDatesWithYear(stage: Pick<CompetitionStage, "starts_on" | "ends_on">): string {
+  return `${formatStageDates(stage)} ${stage.ends_on.slice(0, 4)}`;
 }
 
 /** "21 November 2026". */

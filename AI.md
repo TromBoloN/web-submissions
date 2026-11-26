@@ -88,10 +88,7 @@ Secrets
 
 - Team portal redesign ("Guardian" look) is implemented: phase-aware hero, journey track, Guardian ID card, ticket receipt, bento layout, restyled sidebar, shared `ThemeToggle`. See `docs/documentation/DESIGN-SYSTEM.md` and `docs/documentation/COMPETITION-PHASES.md`.
 - `/admin/pengaturan` is split into sub-routes (`pengumpulan`, `hasil`, `galeri`, `studi-kasus`, `tautan`). See `docs/documentation/ADMIN-SETTINGS.md`.
-- The competition schedule is still hardcoded in five files (listed in COMPETITION-PHASES.md). Two migrations that move it to the database are written but NOT applied:
-  - `supabase/migrations/20261114000000_competition_stages.sql`
-  - `supabase/migrations/20261114010000_event_identity_and_final_details.sql`
-  If `competition_stages` is missing from `src/types/database.ts`, they are not applied. Do not write code against those tables until the owner has applied them and regenerated the types.
+- The competition schedule lives in `competition_stages` (Pengaturan → Jadwal) and final logistics in `final_presentation` (Pengaturan → Identitas & Final). Pages read them through `getSchedule()` / `useSchedule()` and `get_my_final_presentation()`; see COMPETITION-PHASES.md.
 - `finalist_count` (Pengaturan → Identitas & Final) drives team-facing and public text only ("Top N"). The Top-5 selection on Peringkat and the admin Tim/Finalis checks stay hardcoded at 5 (owner decision, 2026-11-26).
 - Direction: the owner wants the site as dynamic as possible (comprehensive admin settings). Planned order: (1) stages as data, (2) event identity + final details, (3) content store for copy, (4) settings polish + phase preview.
 
