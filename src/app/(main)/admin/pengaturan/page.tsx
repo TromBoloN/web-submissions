@@ -33,15 +33,16 @@ function published(iso: string | null) {
 export default async function SettingsOverviewPage() {
   const supabase = await createClient();
 
-  const [settingsRes, caseStudyRes] = await Promise.all([
+  const [settingsRes, caseStudyRes, finalRes] = await Promise.all([
     supabase
       .from("competition_settings")
       .select(
-        "submission_closes_at, updated_at, juknis_url, contact_whatsapp, preliminary_results_released, final_results_released, showcase_published_at, winners_published_at",
+        "event_name, finalist_count, submission_closes_at, updated_at, juknis_url, contact_whatsapp, preliminary_results_released, final_results_released, showcase_published_at, winners_published_at",
       )
       .eq("id", true)
       .maybeSingle(),
     supabase.from("case_study").select("title, release_at").eq("id", true).maybeSingle(),
+    supabase.from("final_presentation").select("logistics_published").eq("id", true).maybeSingle(),
   ]);
 
   if (settingsRes.error) return <SettingsLoadError />;
@@ -51,6 +52,17 @@ export default async function SettingsOverviewPage() {
   const contact = formatWhatsAppNumber(s?.contact_whatsapp ?? null);
 
   const statusByHref: Record<string, StatusLine[]> = {
+    "/admin/pengaturan/identitas": [
+      { label: "Acara", value: s ? `${s.event_name} · Top ${s.finalist_count}` : "-" },
+      {
+        label: "Logistik final",
+        value: finalRes.data?.logistics_published ? (
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Ditampilkan</span>
+        ) : (
+          <span className="text-muted-foreground">Disembunyikan</span>
+        ),
+      },
+    ],
     "/admin/pengaturan/pengumpulan": [
       { label: "Batas aktif", value: formatDeadlineWita(s?.submission_closes_at ?? null) },
     ],

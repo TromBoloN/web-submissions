@@ -665,3 +665,145 @@ export async function saveFinalistShowcase(input: {
   revalidatePath("/team/karya");
   return { success: true };
 }
+
+// ----------------------------------------------------------------------------
+// Identitas & Final
+// ----------------------------------------------------------------------------
+
+const httpsUrlOrEmpty = (label: string) =>
+  z
+    .string()
+    .trim()
+    .max(500, `${label} maksimal 500 karakter.`)
+    .refine((val) => {
+      if (val === "") return true;
+      try {
+        return new URL(val).protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, `${label} harus berupa URL https:// yang valid.`);
+
+const eventIdentitySchema = z.object({
+  event_name: z.string().trim().min(1, "Nama acara wajib diisi.").max(60, "Nama acara maksimal 60 karakter."),
+  event_track: z.string().trim().min(1, "Nama bidang lomba wajib diisi.").max(60, "Bidang lomba maksimal 60 karakter."),
+  finalist_count: z.coerce
+    .number({ message: "Jumlah finalis harus berupa angka." })
+    .int("Jumlah finalis harus bilangan bulat.")
+    .min(1, "Jumlah finalis minimal 1.")
+    .max(20, "Jumlah finalis maksimal 20."),
+  gallery_new_badge_days: z.coerce
+    .number({ message: "Durasi label harus berupa angka." })
+    .int("Durasi label harus bilangan bulat.")
+    .min(0, "Durasi label minimal 0 hari.")
+    .max(60, "Durasi label maksimal 60 hari."),
+});
+
+export async function updateEventIdentity(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = eventIdentitySchema.safeParse({
+    event_name: formData.get("event_name") ?? "",
+    event_track: formData.get("event_track") ?? "",
+    finalist_count: formData.get("finalist_count") ?? "",
+    gallery_new_badge_days: formData.get("gallery_new_badge_days") ?? "",
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data identitas acara tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("competition_settings")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", true)
+    .select("id");
+
+  if (error) {
+    console.error("Failed to update event identity", error);
+    return { success: false, error: "Gagal menyimpan identitas acara. Coba lagi." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "event_identity_updated",
+    targetType: "competition_settings",
+    metadata: parsed.data,
+  });
+
+  // The event name appears on every page (titles, sidebar, gallery, login).
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+const finalPresentationSchema = z.object({
+  presentation_minutes: z.coerce
+    .number({ message: "Durasi presentasi harus berupa angka." })
+    .int("Durasi presentasi harus bilangan bulat.")
+    .min(1, "Durasi presentasi minimal 1 menit.")
+    .max(120, "Durasi presentasi maksimal 120 menit."),
+  qa_minutes: z.coerce
+    .number({ message: "Durasi tanya jawab harus berupa angka." })
+    .int("Durasi tanya jawab harus bilangan bulat.")
+    .min(0, "Durasi tanya jawab minimal 0 menit.")
+    .max(120, "Durasi tanya jawab maksimal 120 menit."),
+  venue: z.string().trim().max(160, "Lokasi maksimal 160 karakter."),
+  meeting_url: httpsUrlOrEmpty("Tautan sesi"),
+  note: z.string().trim().max(500, "Catatan maksimal 500 karakter."),
+  logistics_published: z.boolean(),
+});
+
+export async function updateFinalPresentation(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = finalPresentationSchema.safeParse({
+    presentation_minutes: formData.get("presentation_minutes") ?? "",
+    qa_minutes: formData.get("qa_minutes") ?? "",
+    venue: formData.get("venue") ?? "",
+    meeting_url: formData.get("meeting_url") ?? "",
+    note: formData.get("note") ?? "",
+    logistics_published: formData.get("logistics_published") === "on",
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data babak final tidak valid." };
+  }
+
+  const values = { ...parsed.data, meeting_url: parsed.data.meeting_url === "" ? null : parsed.data.meeting_url };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("final_presentation").update(values).eq("id", true).select("id");
+
+  if (error) {
+    console.error("Failed to update final presentation", error);
+    return { success: false, error: "Gagal menyimpan detail babak final. Coba lagi." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Data babak final tidak ditemukan untuk diperbarui." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "final_presentation_updated",
+    targetType: "final_presentation",
+    // Venue/link are finalist-only details; the audit log records what changed, not the values.
+    metadata: {
+      presentation_minutes: values.presentation_minutes,
+      qa_minutes: values.qa_minutes,
+      logistics_published: values.logistics_published,
+    },
+  });
+
+  revalidatePath("/admin/pengaturan", "layout");
+  revalidatePath("/team", "layout");
+  revalidatePath("/judge", "layout");
+  return { success: true };
+}

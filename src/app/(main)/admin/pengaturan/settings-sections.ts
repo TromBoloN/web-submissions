@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Award, CalendarClock, FileText, LayoutGrid, Link2, Megaphone } from "lucide-react";
+import { Award, CalendarClock, FileText, LayoutGrid, Link2, Megaphone, Sparkles } from "lucide-react";
 
 export type SettingsSection = {
   href: string;
@@ -15,6 +15,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     title: "Ringkasan",
     description: "Status semua pengaturan dalam satu layar.",
     icon: LayoutGrid,
+  },
+  {
+    href: "/admin/pengaturan/identitas",
+    title: "Identitas & Final",
+    description: "Nama acara, jumlah finalis, dan logistik babak final.",
+    icon: Sparkles,
   },
   {
     href: "/admin/pengaturan/pengumpulan",
