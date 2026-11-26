@@ -111,6 +111,9 @@ src/types/database.ts                generated Supabase types (UTF-8)
 src/scripts/seed.mjs                 npm run seed / seed:clear (never against production)
 scripts/                             backup, restore, local-stack (local Docker Supabase), seed-showcase, seed-finalists (local stack only: top 5 -> finalists + final judges), import-registrations, whatsapp-links
 supabase/config.toml                 local Docker Supabase config (npm run local:*)
+supabase/schema/full_schema.sql      GENERATED final state of all migrations, idempotent (fresh installs); rebuild: node scripts/build-full-schema.mjs
+src/lib/competition-info.ts          event identity + schedule types, 2026 fallbacks, stage date labels (pure)
+src/lib/competition-info.server.ts   getEventInfo(), getSchedule(): cached RPC readers with fallback
 ```
 
 UI preferences and theming internals (`lib/preferences`, `stores/preferences`, `server/server-actions.ts`, `styles/presets`, `scripts/theme-boot.tsx`, `generate-theme-presets.ts`) are unrelated to feature work. Do not touch them. The only consumer-facing piece is `ThemeToggle`.

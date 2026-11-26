@@ -683,6 +683,38 @@ export type Database = {
           ui_ux_score: number | null;
         }[];
       };
+      get_my_final_presentation: {
+        Args: never;
+        Returns: {
+          meeting_url: string | null;
+          note: string;
+          presentation_minutes: number;
+          qa_minutes: number;
+          venue: string | null;
+        }[];
+      };
+      get_public_competition_schedule: {
+        Args: never;
+        Returns: {
+          description: string;
+          ends_on: string;
+          key: string;
+          show_on_track: boolean;
+          sort_order: number;
+          starts_on: string;
+          status_override: string | null;
+          time_label: string;
+          title: string;
+        }[];
+      };
+      get_public_event_info: {
+        Args: never;
+        Returns: {
+          event_name: string;
+          event_track: string;
+          finalist_count: number;
+        }[];
+      };
       get_public_ranking: {
         Args: never;
         Returns: {

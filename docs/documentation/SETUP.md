@@ -33,17 +33,9 @@ Set these variables in `.env.local`:
 
 ## Database setup
 
-Apply migrations in filename order through the Supabase SQL Editor or CLI:
+**New project (e.g. the next edition):** run [`supabase/schema/full_schema.sql`](../../supabase/schema/full_schema.sql) once in the Supabase SQL Editor. It is the final state of every migration in one transaction, safe to run twice, and it never overwrites existing settings. Then create the public `web-showcase` storage bucket (2 MB, PNG/JPEG/WebP; same as `supabase/config.toml`). The file is generated: after adding a migration, run `node scripts/build-full-schema.mjs` against the fully migrated local stack (`npm run local:up`) and commit the result.
 
-1. `20261020000000_init_schema.sql`
-2. `20261024000000_contestant_features.sql`
-3. `20261025000000_judging_and_contact.sql`
-4. `20261026000000_team_results.sql`
-5. `20261027000000_score_release_lock.sql`
-6. `20261108000000_fix_first_submitted_at.sql`
-7. `20261108010000_drafts_recusals_and_private_notes.sql`
-
-The initial migration creates the core tables, policies, helper functions, and ranking views. Later migrations add contestant features, judging/contact fields, released-results RPC behavior, release locks, and judge drafts/recusals/private notes.
+**Existing project:** keep applying the files in `supabase/migrations/` in filename order (SQL Editor or CLI). They remain the history the production database recorded; do not delete them.
 
 Do not run the seed or restore commands against production unless the operation is explicitly approved and the target has been verified.
 
