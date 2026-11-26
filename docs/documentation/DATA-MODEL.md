@@ -65,6 +65,10 @@ Anon access is only ever granted on functions that return public fields. `anon` 
 
 Written, **not applied** at the time of writing. Check `src/types/database.ts` for `competition_stages`: if it is missing, they have not been applied.
 
+### `20261127000000_site_content.sql`
+
+Apply after `20261126000000`. Adds `site_content (key, value, updated_at, updated_by)` for admin-edited page copy (Pengaturan → Konten). Keys match `^[a-z0-9_.]+$` (≤ 80 chars), values ≤ 5000 chars; a missing row means the app uses its built-in default. RLS: admin-only SELECT/INSERT/UPDATE/DELETE, no `anon` privileges. `get_site_content()` (SECURITY DEFINER, anon + authenticated) returns only `key, value`. **Everything in this table is public by design**: never store private data there. Regenerate types after applying.
+
 ### `20261126000000_judges_view_public_ranking.sql`
 
 Apply after `20261122000000`. Redefines `get_public_ranking()` with the body unchanged except the role check: active judges may now call it too (for `/judge/peringkat`). Same `ranking_published` gate and columns; `is_own_team` is always false for judges. No type changes.
