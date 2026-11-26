@@ -123,7 +123,7 @@ export function KaryaClient({
   /** ?q= from the address bar, so a search can be shared. */
   initialQuery: string;
 }) {
-  const { event_name, event_track } = useEventInfo();
+  const { event_name, event_track, finalist_count } = useEventInfo();
   const state = initialState;
   const isLocked = state === "locked";
   const isWin = state === "win";
@@ -872,7 +872,7 @@ export function KaryaClient({
           {showFinalists && (
             <div id="finals" className="mb-16">
               <h2 id="h-fin" className="font-extrabold text-3xl tracking-tight sm:text-4xl">
-                {isWin ? "Finalis lainnya" : "Top 5 finalis"}
+                {isWin ? "Finalis lainnya" : `Top ${finalist_count} finalis`}
               </h2>
               <p id="fnote" className="muted mt-2">
                 {fnoteText}

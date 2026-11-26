@@ -807,3 +807,149 @@ export async function updateFinalPresentation(formData: FormData): Promise<Actio
   revalidatePath("/judge", "layout");
   return { success: true };
 }
+
+// ----------------------------------------------------------------------------
+// Jadwal (competition_stages)
+// ----------------------------------------------------------------------------
+
+const isoDate = (label: string) =>
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, `${label} wajib diisi.`)
+    .refine((v) => !Number.isNaN(new Date(`${v}T00:00:00Z`).getTime()), `${label} tidak valid.`);
+
+const stageSchema = z
+  .object({
+    key: z
+      .string()
+      .regex(/^[a-z][a-z0-9_]{1,31}$/, "Tahap tidak valid.")
+      .nullable(),
+    title: z.string().trim().min(1, "Judul tahap wajib diisi.").max(80, "Judul tahap maksimal 80 karakter."),
+    description: z.string().trim().max(240, "Deskripsi maksimal 240 karakter."),
+    starts_on: isoDate("Tanggal mulai"),
+    ends_on: isoDate("Tanggal selesai"),
+    time_label: z.string().trim().max(40, "Keterangan waktu maksimal 40 karakter."),
+    sort_order: z.coerce
+      .number({ message: "Urutan harus berupa angka." })
+      .int("Urutan harus bilangan bulat.")
+      .min(0, "Urutan minimal 0.")
+      .max(1000, "Urutan maksimal 1000."),
+    show_on_track: z.boolean(),
+    status_override: z.enum(["auto", "upcoming", "current", "done"], { message: "Status tidak valid." }),
+  })
+  .refine((v) => v.ends_on >= v.starts_on, {
+    message: "Tanggal selesai tidak boleh sebelum tanggal mulai.",
+    path: ["ends_on"],
+  });
+
+function revalidateSchedule() {
+  // Stages show on the team journey, admin timeline, public gallery and sidebar badge.
+  revalidatePath("/", "layout");
+}
+
+/** Creates a custom stage (no key in the form) or updates an existing one. */
+export async function saveStage(formData: FormData): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const rawKey = formData.get("key");
+  const parsed = stageSchema.safeParse({
+    key: typeof rawKey === "string" && rawKey !== "" ? rawKey : null,
+    title: formData.get("title") ?? "",
+    description: formData.get("description") ?? "",
+    starts_on: formData.get("starts_on") ?? "",
+    ends_on: formData.get("ends_on") ?? "",
+    time_label: formData.get("time_label") ?? "",
+    sort_order: formData.get("sort_order") ?? "",
+    show_on_track: formData.get("show_on_track") === "on",
+    status_override: formData.get("status_override") ?? "auto",
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data tahap tidak valid." };
+  }
+
+  const { key, status_override, ...rest } = parsed.data;
+  const values = { ...rest, status_override: status_override === "auto" ? null : status_override };
+  const supabase = await createClient();
+
+  if (key === null) {
+    // Admin-created stages are never system stages; the key is internal, so generate one.
+    const newKey = `custom_${Date.now().toString(36)}`;
+    const { data, error } = await supabase
+      .from("competition_stages")
+      .insert({ ...values, key: newKey, is_system: false })
+      .select("key");
+    if (error || !data || data.length === 0) {
+      console.error("Failed to create stage", error);
+      return { success: false, error: "Gagal menambah tahap. Coba lagi." };
+    }
+    await logAuditEvent({
+      actorId: caller.id,
+      action: "stage_created",
+      targetType: "competition_stages",
+      metadata: { key: newKey, title: values.title, starts_on: values.starts_on, ends_on: values.ends_on },
+    });
+  } else {
+    const { data, error } = await supabase.from("competition_stages").update(values).eq("key", key).select("key");
+    if (error) {
+      console.error("Failed to update stage", error);
+      return { success: false, error: "Gagal menyimpan tahap. Coba lagi." };
+    }
+    if (!data || data.length === 0) {
+      return { success: false, error: "Tahap tidak ditemukan untuk diperbarui." };
+    }
+    await logAuditEvent({
+      actorId: caller.id,
+      action: "stage_updated",
+      targetType: "competition_stages",
+      metadata: { key, title: values.title, starts_on: values.starts_on, ends_on: values.ends_on },
+    });
+  }
+
+  revalidateSchedule();
+  return { success: true };
+}
+
+export async function deleteStage(key: string): Promise<ActionResult> {
+  const caller = await getCurrentProfile();
+  if (caller?.role !== "admin") {
+    return { success: false, error: "Anda tidak memiliki akses ke tindakan ini." };
+  }
+
+  const parsed = z
+    .string()
+    .regex(/^[a-z][a-z0-9_]{1,31}$/)
+    .safeParse(key);
+  if (!parsed.success) {
+    return { success: false, error: "Tahap tidak valid." };
+  }
+
+  const supabase = await createClient();
+  // RLS also refuses system stages; the filter keeps the intent explicit.
+  const { data, error } = await supabase
+    .from("competition_stages")
+    .delete()
+    .eq("key", parsed.data)
+    .eq("is_system", false)
+    .select("key, title");
+
+  if (error) {
+    console.error("Failed to delete stage", error);
+    return { success: false, error: "Gagal menghapus tahap. Coba lagi." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Tahap bawaan tidak dapat dihapus." };
+  }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "stage_deleted",
+    targetType: "competition_stages",
+    metadata: { key: parsed.data, title: data[0].title },
+  });
+
+  revalidateSchedule();
+  return { success: true };
+}

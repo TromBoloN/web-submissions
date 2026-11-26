@@ -14,6 +14,7 @@ src/app/(main)/admin/pengaturan/
   settings-utils.ts        formatWitaTimestamp, hasLinkWarning, SETTINGS_LOAD_ERROR
   settings-load-error.tsx  generic load-error box
   identitas/     page.tsx + identity-client.tsx          event name/track, finalist count, gallery badge days, final logistics
+  jadwal/        page.tsx + schedule-client.tsx          competition_stages: edit each stage, add/delete custom stages
   pengumpulan/   page.tsx + deadline-client.tsx          submission deadline
   hasil/         page.tsx + results-release-client.tsx   results release + judging progress
   galeri/        page.tsx + showcase-client.tsx          gallery stage 1 / stage 2 publishing
@@ -30,6 +31,7 @@ The admin role is enforced by `src/app/(main)/admin/layout.tsx` (`requireRole("a
 | --- | --- | --- | --- |
 | Ringkasan | `/admin/pengaturan` | `competition_settings`, `case_study` | none |
 | Identitas & Final | `/identitas` | `event_name`, `event_track`, `finalist_count`, `gallery_new_badge_days`; `final_presentation` | `updateEventIdentity` (revalidates every page), `updateFinalPresentation` (`logistics_published` hides venue and link from finalists and judges). Both write audit events; the final's venue/link values are not logged |
+| Jadwal | `/jadwal` | `competition_stages` | `saveStage` (no key = create a custom stage with a generated `custom_*` key; otherwise update), `deleteStage` (custom stages only; RLS and the trigger also protect system stages). Dates are WITA calendar days; status override forces upcoming/current/done. All write audit events and revalidate every page |
 | Pengumpulan | `/pengumpulan` | `submission_closes_at`, `updated_at` | `updateCompetitionDeadline` |
 | Rilis Hasil | `/hasil` | release flags, `ranking_published`, judges, teams, submissions, scores, recusals | `updateResultsRelease`, `updateRankingPublication` (confirmation dialogs; ranking before final release = test mode, teams see "Peringkat sementara") |
 | Galeri | `/galeri` | showcase timestamps, consenting teams + finalists, link checks, finalist cards | `publishShowcasePhase("gallery")`, `publishShowcaseWinners`, `unpublishShowcasePhase`, `saveFinalistShowcase` |
@@ -52,11 +54,7 @@ Responsive conventions used throughout: inputs `w-full sm:max-w-md`, footers `fl
 
 ## Planned sections
 
-Blocked on the pending migrations ([Data model](./DATA-MODEL.md#pending-migrations)) being applied and types regenerated:
-
-- **Jadwal**: edit `competition_stages` (dates, text, order, visibility, status override); add custom stages.
-
-Later candidates: a content store for checklist items, FAQ, rules and gallery copy, and a read-only phase preview ("what a team sees in each phase"). See the "Open decisions" section of [AI.md](../../AI.md).
+Candidates: a content store for checklist items, FAQ, rules and gallery copy, and a read-only phase preview ("what a team sees in each phase"). See the "Open decisions" section of [AI.md](../../AI.md).
 
 ## Links into settings from elsewhere
 

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { Bookmark, BookmarkCheck, Eye } from "lucide-react";
 
+import { useEventInfo } from "@/components/event-info-provider";
+
 // Public gallery card, shared by /karya and the editor previews (team "Atur Tampilan", admin finalist cards).
 // Styles live under .karya-page in globals.css; KaryaCardPreview provides that wrapper outside /karya.
 
@@ -253,13 +255,14 @@ export function CardView({
   seen?: boolean;
   onToggleSave?: () => void;
 }) {
+  const { finalist_count } = useEventInfo();
   return (
     <article className={`card box ${orderClass ?? ""}`}>
       {isFinalistBadge && (
         <div className="flex items-center justify-between px-5 pt-3 pb-2">
           <span className="mono muted text-xs">Finalis</span>
           <span className="pill mono" style={{ boxShadow: "none", padding: "2px 10px" }}>
-            Top 5
+            Top {finalist_count}
           </span>
         </div>
       )}

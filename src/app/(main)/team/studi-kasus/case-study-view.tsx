@@ -69,7 +69,7 @@ const guardiansSteps = [
 const juknisTimeline = [
   "Pengumpulan karya sampai batas waktu yang tercantum di portal.",
   "Penilaian babak awal oleh dewan juri.",
-  "Pengumuman Top 5 dan pelaksanaan babak final.",
+  "Pengumuman finalis dan pelaksanaan babak final.",
   "Pengumuman juara oleh panitia.",
 ];
 

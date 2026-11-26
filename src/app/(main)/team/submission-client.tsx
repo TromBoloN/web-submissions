@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -108,6 +109,7 @@ function ShowcaseConsentCard({
   /** True only after the finalist announcement is published and this team is a finalist. */
   isAnnouncedFinalist: boolean;
 }) {
+  const { finalist_count } = useEventInfo();
   const isLocked = Boolean(showcasePublishedAt) && !isAnnouncedFinalist;
 
   let line = "Atur judul, deskripsi, dan gambar yang tampil bersama karya tim di galeri.";
@@ -116,8 +118,7 @@ function ShowcaseConsentCard({
     line = "Kirim submission dulu untuk memilih apakah karya ikut dipamerkan.";
     chip = { label: "Belum tersedia", tone: "muted" };
   } else if (isAnnouncedFinalist) {
-    line =
-      "Sebagai Top 5, karya tim otomatis tampil di galeri finalis. Atur tampilannya sebelum galeri finalis terbit.";
+    line = `Sebagai Top ${finalist_count}, karya tim otomatis tampil di galeri finalis. Atur tampilannya sebelum galeri finalis terbit.`;
     chip = { label: "Tampil · finalis", tone: "mint" };
   } else if (isLocked) {
     line = "Galeri sudah terbit, jadi tampilan karya dikunci.";

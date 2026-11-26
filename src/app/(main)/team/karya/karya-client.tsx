@@ -9,6 +9,7 @@ import { ImageIcon, ImageUp, LoaderCircle, LockKeyhole, Save } from "lucide-reac
 import { toast } from "sonner";
 
 import { KaryaCardPreview, type KaryaItem } from "@/app/karya/karya-card";
+import { useEventInfo } from "@/components/event-info-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export function KaryaClient({
   isAnnouncedFinalist: boolean;
   supabaseUrl: string;
 }) {
+  const { finalist_count } = useEventInfo();
   const supabase = useMemo(() => createClient(), []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [consent, setConsent] = useState(team.showcase_consent);
@@ -143,9 +145,9 @@ export function KaryaClient({
             <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
               <ImageIcon className="mt-0.5 size-4 shrink-0 text-primary" />
               <p>
-                Sebagai tim Top 5, karya Anda <strong>otomatis tampil di galeri finalis</strong>. Panitia dapat
-                menyiapkan judul, deskripsi, dan gambar, dan Anda tetap bisa mengubahnya di sini sampai galeri finalis
-                diterbitkan.
+                Sebagai tim Top {finalist_count}, karya Anda <strong>otomatis tampil di galeri finalis</strong>. Panitia
+                dapat menyiapkan judul, deskripsi, dan gambar, dan Anda tetap bisa mengubahnya di sini sampai galeri
+                finalis diterbitkan.
               </p>
             </div>
           )}

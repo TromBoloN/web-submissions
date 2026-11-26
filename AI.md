@@ -92,12 +92,12 @@ Secrets
   - `supabase/migrations/20261114000000_competition_stages.sql`
   - `supabase/migrations/20261114010000_event_identity_and_final_details.sql`
   If `competition_stages` is missing from `src/types/database.ts`, they are not applied. Do not write code against those tables until the owner has applied them and regenerated the types.
+- `finalist_count` (Pengaturan → Identitas & Final) drives team-facing and public text only ("Top N"). The Top-5 selection on Peringkat and the admin Tim/Finalis checks stay hardcoded at 5 (owner decision, 2026-11-26).
 - Direction: the owner wants the site as dynamic as possible (comprehensive admin settings). Planned order: (1) stages as data, (2) event identity + final details, (3) content store for copy, (4) settings polish + phase preview.
 
 ## Open decisions (ask, never decide)
 
 - Judges with `judge_stage = 'both'` can read final logistics through `get_my_final_presentation()`. Confirm this is intended before relying on it.
-- `finalist_count` is display-only. Should the admin Finalis screen enforce it?
 - Rubric weights: keep them out of settings entirely, or allow edits only until the first score is saved? Currently out of settings.
 - Content store for copy (checklist items, FAQ, rules, gallery text): table design and how `/karya` copy reaches anon users (must be an anon-callable SECURITY DEFINER RPC, never a table grant).
 - Event name/edition as settings so a next edition needs no code change (single competition at a time, not multi-tenant).

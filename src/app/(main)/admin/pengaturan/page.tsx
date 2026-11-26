@@ -4,7 +4,9 @@ import Link from "next/link";
 
 import { ChevronRight } from "lucide-react";
 
+import { formatStageDates } from "@/lib/competition-info";
 import { formatWhatsAppNumber } from "@/lib/contact";
+import { formatWitaDateOnly } from "@/lib/csv";
 import { formatDeadlineWita } from "@/lib/deadline";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,7 +35,7 @@ function published(iso: string | null) {
 export default async function SettingsOverviewPage() {
   const supabase = await createClient();
 
-  const [settingsRes, caseStudyRes, finalRes] = await Promise.all([
+  const [settingsRes, caseStudyRes, finalRes, stagesRes] = await Promise.all([
     supabase
       .from("competition_settings")
       .select(
@@ -43,6 +45,7 @@ export default async function SettingsOverviewPage() {
       .maybeSingle(),
     supabase.from("case_study").select("title, release_at").eq("id", true).maybeSingle(),
     supabase.from("final_presentation").select("logistics_published").eq("id", true).maybeSingle(),
+    supabase.from("competition_stages").select("title, starts_on, ends_on").order("starts_on"),
   ]);
 
   if (settingsRes.error) return <SettingsLoadError />;
@@ -51,7 +54,22 @@ export default async function SettingsOverviewPage() {
   const caseStudy = caseStudyRes.data;
   const contact = formatWhatsAppNumber(s?.contact_whatsapp ?? null);
 
+  const stages = stagesRes.data ?? [];
+  const todayWita = formatWitaDateOnly(new Date());
+  const nextStage = stages.find((stage) => stage.starts_on > todayWita);
+
   const statusByHref: Record<string, StatusLine[]> = {
+    "/admin/pengaturan/jadwal": [
+      { label: "Tahap", value: `${stages.length} tahap` },
+      {
+        label: "Berikutnya",
+        value: nextStage ? (
+          `${nextStage.title} · ${formatStageDates(nextStage)}`
+        ) : (
+          <span className="text-muted-foreground">Semua tahap sudah lewat</span>
+        ),
+      },
+    ],
     "/admin/pengaturan/identitas": [
       { label: "Acara", value: s ? `${s.event_name} · Top ${s.finalist_count}` : "-" },
       {

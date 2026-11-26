@@ -367,6 +367,7 @@ function ClosedHero(props: TeamHeroProps) {
 }
 
 function ReviewHero(props: TeamHeroProps) {
+  const { finalist_count } = useEventInfo();
   const review = getScheduleStep("review");
   const top5 = getScheduleStep("top5");
 
@@ -384,11 +385,11 @@ function ReviewHero(props: TeamHeroProps) {
           <div className="team-scan max-w-md" aria-hidden="true" />
           <p className="max-w-xl text-hero-fg-muted text-sm sm:text-base">
             Tidak ada yang perlu dilakukan sekarang. Karya Anda aman tercatat. Penilaian berlangsung {review.dates},
-            pengumuman Top 5 pada {top5.dates}.
+            pengumuman Top {finalist_count} pada {top5.dates}.
           </p>
         </div>
         <MilestoneTile
-          label="Top 5 diumumkan"
+          label={`Top ${finalist_count} diumumkan`}
           stepId="top5"
           serverNowIso={props.serverNowIso}
           pendingText="Menunggu pengumuman panitia."
@@ -427,7 +428,7 @@ function FinalDetails({ serverNowIso }: { serverNowIso: string }) {
 }
 
 function FinalistHero(props: TeamHeroProps) {
-  const { event_name } = useEventInfo();
+  const { event_name, finalist_count } = useEventInfo();
   return (
     <LoudShell>
       <Eyebrow>Hasil Babak Awal</Eyebrow>
@@ -436,7 +437,7 @@ function FinalistHero(props: TeamHeroProps) {
           <div className="flex flex-wrap items-center gap-3">
             <span className="team-pop inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-mint px-3 py-1 font-bold font-mono text-ink text-xs uppercase tracking-wider shadow-brutal-sm dark:text-ink-foreground">
               <Trophy className="size-3.5" aria-hidden="true" />
-              Top 5
+              Top {finalist_count}
             </span>
             {[0, 1, 2].map((index) => (
               <Sparkles
@@ -495,7 +496,7 @@ function ResultsHero() {
 }
 
 function NotFinalistHero(props: TeamHeroProps) {
-  const { event_name } = useEventInfo();
+  const { event_name, finalist_count } = useEventInfo();
   return (
     <CalmShell>
       <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Hasil Babak Awal</p>
@@ -503,7 +504,8 @@ function NotFinalistHero(props: TeamHeroProps) {
         Terima kasih sudah berkompetisi.
       </h1>
       <p className="max-w-2xl text-muted-foreground text-sm">
-        Tim Anda belum masuk lima besar kali ini. Karya Anda tetap tercatat dan menjadi bagian dari {event_name}.
+        Tim Anda belum masuk Top {finalist_count} kali ini. Karya Anda tetap tercatat dan menjadi bagian dari{" "}
+        {event_name}.
       </p>
       <NoticeMessage notice={props.finalistNotice} />
       {props.resultsReleased && (

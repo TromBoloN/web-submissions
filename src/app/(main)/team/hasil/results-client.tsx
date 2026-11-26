@@ -329,7 +329,7 @@ function StageResultsView({
 }
 
 export function ResultsClient({ results }: ResultsClientProps) {
-  const { event_name } = useEventInfo();
+  const { event_name, finalist_count } = useEventInfo();
   const showFinalTab = results.is_finalist && Boolean(results.final);
   const defaultTab = results.preliminary ? "preliminary" : "final";
 
@@ -387,7 +387,7 @@ export function ResultsClient({ results }: ResultsClientProps) {
             <Info aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" />
           )}
           <div>
-            <h2 className="font-semibold">{results.is_finalist ? "Lolos Top 5" : "Belum lolos"}</h2>
+            <h2 className="font-semibold">{results.is_finalist ? `Lolos Top ${finalist_count}` : "Belum lolos"}</h2>
             <p className="mt-0.5 text-foreground/80 text-sm">
               {results.is_finalist
                 ? "Selamat, tim Anda melanjutkan ke babak final."
