@@ -7,7 +7,7 @@ import { Award } from "lucide-react";
 import { toast } from "sonner";
 
 import { createJudgeCardImage, shareOrDownload } from "@/app/(main)/_components/ranking/share-card";
-import { APP_CONFIG } from "@/config/app-config";
+import { useEventInfo } from "@/components/event-info-provider";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 export const JUDGE_STAGE_TEXT: Record<"preliminary" | "final" | "both", string> = {
@@ -28,6 +28,7 @@ export function JudgeCardButton({
   teamsJudged: number;
   className?: string;
 }) {
+  const { event_name, event_track } = useEventInfo();
   const [busy, setBusy] = useState(false);
 
   async function handleClick() {
@@ -37,10 +38,11 @@ export function JudgeCardButton({
         judgeName,
         stageText,
         teamsJudged,
-        eventName: APP_CONFIG.name,
+        eventName: event_name,
+        eventTrack: event_track,
         logoSrc: logo.src,
       });
-      const result = await shareOrDownload(blob, "kartu-apresiasi-juri.png", `Apresiasi Juri ${APP_CONFIG.name}`);
+      const result = await shareOrDownload(blob, "kartu-apresiasi-juri.png", `Apresiasi Juri ${event_name}`);
       if (result === "downloaded") toast.success("Kartu apresiasi diunduh.");
     } catch {
       toast.error("Gagal membuat kartu apresiasi. Silakan coba lagi.");

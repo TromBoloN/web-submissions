@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { useShallow } from "zustand/react/shallow";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import {
   Sidebar,
   SidebarContent,
@@ -14,7 +15,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { APP_CONFIG } from "@/config/app-config";
 import type { CurrentUser } from "@/lib/user-display";
 import { type GalleryNavState, getSidebarItems, type RankingNavState } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -41,6 +41,7 @@ export function AppSidebar({
   galleryState?: GalleryNavState;
   teamCode?: string | null;
 }) {
+  const { event_name, event_track } = useEventInfo();
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
       sidebarVariant: s.values.sidebar_variant,
@@ -69,9 +70,9 @@ export function AppSidebar({
                   priority
                 />
                 <span className="grid min-w-0 leading-tight">
-                  <span className="truncate font-display font-extrabold text-base">{APP_CONFIG.name}</span>
+                  <span className="truncate font-display font-extrabold text-base">{event_name}</span>
                   <span className="truncate font-bold font-mono text-[11px] text-sidebar-foreground/70 uppercase tracking-wider">
-                    Web Development
+                    {event_track}
                   </span>
                 </span>
               </Link>

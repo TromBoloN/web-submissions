@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import {
@@ -122,6 +123,7 @@ export function KaryaClient({
   /** ?q= from the address bar, so a search can be shared. */
   initialQuery: string;
 }) {
+  const { event_name, event_track } = useEventInfo();
   const state = initialState;
   const isLocked = state === "locked";
   const isWin = state === "win";
@@ -497,7 +499,7 @@ export function KaryaClient({
     const url = `${window.location.origin}/karya`;
     if (window.matchMedia("(pointer: coarse)").matches && typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "GUARDIANS · Galeri Karya MIT-WEEK 2026", url });
+        await navigator.share({ title: `GUARDIANS · Galeri Karya ${event_name}`, url });
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -509,29 +511,32 @@ export function KaryaClient({
     } catch {
       toast.error("Tautan gagal disalin. Salin dari bilah alamat browser.");
     }
-  }, []);
+  }, [event_name]);
 
-  const shareItem = useCallback(async (item: KaryaItem) => {
-    const url = `${window.location.origin}/karya?karya=${karyaSlug(item.teamName)}`;
-    if (window.matchMedia("(pointer: coarse)").matches && typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          title: `${item.title} · Galeri Karya MIT-WEEK 2026`,
-          text: `Lihat karya ${item.teamName} di galeri MIT-WEEK 2026.`,
-          url,
-        });
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+  const shareItem = useCallback(
+    async (item: KaryaItem) => {
+      const url = `${window.location.origin}/karya?karya=${karyaSlug(item.teamName)}`;
+      if (window.matchMedia("(pointer: coarse)").matches && typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            title: `${item.title} · Galeri Karya ${event_name}`,
+            text: `Lihat karya ${item.teamName} di galeri ${event_name}.`,
+            url,
+          });
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+        }
       }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Tautan karya disalin.");
-    } catch {
-      toast.error("Tautan gagal disalin. Salin dari bilah alamat browser.");
-    }
-  }, []);
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Tautan karya disalin.");
+      } catch {
+        toast.error("Tautan gagal disalin. Salin dari bilah alamat browser.");
+      }
+    },
+    [event_name],
+  );
 
   const toggleTheme = () => {
     const next = isDark ? "light" : "dark";
@@ -600,7 +605,9 @@ export function KaryaClient({
   // Full schedule: always shown while locked, behind "Lihat jadwal" once the gallery is open.
   const timelineSection = (
     <section id="tl" className="mt-10" aria-label="Jadwal">
-      <p className="mono muted mb-3 text-xs">Jadwal · Web Development Competition MIT-WEEK 2026</p>
+      <p className="mono muted mb-3 text-xs">
+        Jadwal · {event_track} Competition {event_name}
+      </p>
       <ol id="tlist" className="grid w-full gap-6 md:grid-cols-3">
         {TIMELINE_STAGES.map((stage, index) => {
           const status = getStageStatus(index, activeStage);
@@ -701,10 +708,10 @@ export function KaryaClient({
       {/* Header */}
       <header className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 pt-5 sm:px-6">
         <KaryaLogo className="size-9 shrink-0" spin={false} />
-        <span className="font-extrabold text-base tracking-tight sm:text-lg">MIT-WEEK 2026</span>
+        <span className="font-extrabold text-base tracking-tight sm:text-lg">{event_name}</span>
         {/* Wrapper carries the breakpoint: .pill sets display itself, which would override "hidden". */}
         <span className="ml-1 hidden sm:inline-flex">
-          <span className="pill mono">Web Development Competition</span>
+          <span className="pill mono">{event_track} Competition</span>
         </span>
       </header>
 
@@ -720,7 +727,7 @@ export function KaryaClient({
             >
               <div className="lg:col-span-8">
                 <span className="pill mono rise" style={{ "--e": ".2s" } as React.CSSProperties}>
-                  Galeri karya · Web Development Competition
+                  Galeri karya · {event_track} Competition
                 </span>
                 <h1 className="ttl mt-5" aria-label="GUARDIANS">
                   {TITLE_LETTERS.map((item) => (
@@ -742,7 +749,7 @@ export function KaryaClient({
                     className="muted mt-4 max-w-xl text-base leading-relaxed sm:text-lg rise"
                     style={{ "--e": "1.1s" } as React.CSSProperties}
                   >
-                    Ruang pameran karya peserta Web Development Competition, salah satu kompetisi di MIT-WEEK 2026.
+                    Ruang pameran karya peserta {event_track} Competition, salah satu kompetisi di {event_name}.
                     Jelajahi ide, eksperimen, dan solusi nyata dari teman-temanmu yang menjaga ruang digital kita tetap
                     aman, inklusif, dan bersahabat.
                   </p>
@@ -754,7 +761,9 @@ export function KaryaClient({
                 style={{ "--e": "1.1s" } as React.CSSProperties}
               >
                 <KaryaLogo className="size-36 sm:size-44" />
-                <span className="pill mono">MIT-WEEK 2026 · Web Development</span>
+                <span className="pill mono">
+                  {event_name} · {event_track}
+                </span>
               </div>
             </section>
             {timelineSection}
@@ -765,7 +774,7 @@ export function KaryaClient({
             <section id="hero" className="hero slim mt-6 p-5 sm:p-6">
               <div className="slim-row">
                 <div className="min-w-0">
-                  <span className="pill mono">Galeri karya · Web Development Competition</span>
+                  <span className="pill mono">Galeri karya · {event_track} Competition</span>
                   <h1 className="slim-ttl mt-3">GUARDIANS</h1>
                   <p className="muted mt-1 text-sm sm:text-base">
                     Kenalan sama para penjaga digital · {allVisible.length} karya
@@ -837,7 +846,7 @@ export function KaryaClient({
           {/* Winner Podium (Visible only in 'win' release) */}
           {isWin && (
             <div id="podium" className="mb-16">
-              <h2 className="font-extrabold text-3xl tracking-tight sm:text-4xl">Juara MIT-WEEK 2026</h2>
+              <h2 className="font-extrabold text-3xl tracking-tight sm:text-4xl">Juara {event_name}</h2>
               <p className="muted mt-2">Diumumkan pada 25 November 2026.</p>
               <div id="pgrid" className="mt-8 grid items-start gap-7 md:grid-cols-3">
                 {podiumWinners.map(({ item, rank, orderClass }) => (
@@ -1115,13 +1124,15 @@ export function KaryaClient({
       {/* Footer */}
       <footer className="mx-auto max-w-[1360px] px-4 pb-28 sm:px-6">
         <div className="border-t pt-6" style={{ borderColor: "color-mix(in srgb, var(--line) 22%, transparent)" }}>
-          <p className="font-extrabold">MIT-WEEK 2026 · Web Development Competition</p>
+          <p className="font-extrabold">
+            {event_name} · {event_track} Competition
+          </p>
           <p className="muted mt-1 text-sm">
-            Galeri ini hanya memuat karya Web Development Competition; kompetisi MIT-WEEK 2026 lainnya tidak ditampilkan
-            di sini. Karya tampil atas persetujuan tim, tanpa skor numerik.
+            Galeri ini hanya memuat karya {event_track} Competition; kompetisi {event_name} lainnya tidak ditampilkan di
+            sini. Karya tampil atas persetujuan tim, tanpa skor numerik.
           </p>
           <p className="mt-2 font-semibold text-sm">
-            Untuk permintaan penghapusan karya atau pembaruan tautan, silakan hubungi panitia MIT-WEEK 2026.
+            Untuk permintaan penghapusan karya atau pembaruan tautan, silakan hubungi panitia {event_name}.
           </p>
         </div>
       </footer>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { APP_CONFIG } from "@/config/app-config";
 import { formatDeadlineWita } from "@/lib/deadline";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,8 +16,8 @@ import {
 } from "./dashboard-client";
 
 export const metadata: Metadata = {
-  title: `Dasbor | ${APP_CONFIG.name}`,
-  description: "Ringkasan, tindak lanjut, dan progres kompetisi MIT-WEEK 2026.",
+  title: "Dasbor",
+  description: "Ringkasan, tindak lanjut, dan progres kompetisi.",
 };
 
 const auditActionLabels: Record<string, string> = {
@@ -140,7 +139,7 @@ export default async function AdminPage() {
       <div className="space-y-6">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">Dasbor</h1>
-          <p className="text-muted-foreground text-sm">Ringkasan dan tindak lanjut kompetisi MIT-WEEK 2026.</p>
+          <p className="text-muted-foreground text-sm">Ringkasan dan tindak lanjut kompetisi.</p>
         </div>
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive text-sm">
           Data dasbor tidak dapat dimuat. Silakan coba lagi.

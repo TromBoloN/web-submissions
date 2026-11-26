@@ -6,6 +6,7 @@ import Image from "next/image";
 
 import { Check, Copy } from "lucide-react";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import mitWeekLogo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 type GuardianIdCardProps = {
@@ -34,6 +35,7 @@ function useTiltAllowed(): boolean {
 }
 
 export function GuardianIdCard({ teamCode, teamName, institution, leaderName, members }: GuardianIdCardProps) {
+  const { event_name, event_track } = useEventInfo();
   const cardRef = useRef<HTMLElement>(null);
   const tiltAllowed = useTiltAllowed();
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -136,7 +138,7 @@ export function GuardianIdCard({ teamCode, teamName, institution, leaderName, me
         </div>
 
         <p className="mt-auto font-mono text-[11px] text-foreground/75 uppercase tracking-wider">
-          MIT-WEEK 2026 · Web Development
+          {event_name} · {event_track}
         </p>
       </div>
     </section>

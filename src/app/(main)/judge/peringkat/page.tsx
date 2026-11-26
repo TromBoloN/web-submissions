@@ -2,15 +2,14 @@ import { redirect } from "next/navigation";
 
 import type { Metadata } from "next";
 
-import { APP_CONFIG } from "@/config/app-config";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 import { JudgePeringkatClient } from "./peringkat-client";
 
 export const metadata: Metadata = {
-  title: `Peringkat | ${APP_CONFIG.name}`,
-  description: "Peringkat akhir seluruh tim kompetisi MIT-WEEK 2026.",
+  title: "Peringkat",
+  description: "Peringkat akhir seluruh tim kompetisi.",
 };
 
 export default async function JudgePeringkatPage() {

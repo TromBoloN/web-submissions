@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/types/database";
 
@@ -199,6 +200,7 @@ function generateReceiptNumber(teamCode: string, dateIso: string | null | undefi
 }
 
 export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) {
+  const { event_name } = useEventInfo();
   const [copied, setCopied] = useState(false);
 
   const receiptNumber = generateReceiptNumber(team.team_code, submission.first_submitted_at);
@@ -207,7 +209,7 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
 
   const handleCopy = async () => {
     const textToCopy = [
-      "BUKTI PENGIRIMAN RESMI MIT-WEEK 2026",
+      `BUKTI PENGIRIMAN RESMI ${event_name.toUpperCase()}`,
       `No. Bukti: ${receiptNumber}`,
       `Institusi: ${team.institution}`,
       `GitHub: ${submission.github_url || "-"}`,
@@ -238,7 +240,7 @@ export function SubmissionReceipt({ team, submission }: SubmissionReceiptProps) 
           <div className="min-w-0 space-y-1">
             <p className="flex items-center gap-1.5 font-bold font-mono text-[11px] text-ink uppercase tracking-wider print:text-black">
               <Ticket className="size-3.5 print:hidden" aria-hidden="true" />
-              Bukti pengiriman · MIT-WEEK 2026
+              Bukti pengiriman · {event_name}
             </p>
             <h2 id="receipt-title" className="break-all font-bold font-mono text-foreground text-lg sm:text-xl">
               <span className="sr-only">Nomor bukti </span>

@@ -12,7 +12,7 @@ import {
   type RankingRow,
   stageLabel,
 } from "@/app/(main)/_components/ranking/ranking-shared";
-import { APP_CONFIG } from "@/config/app-config";
+import { useEventInfo } from "@/components/event-info-provider";
 import type { Database } from "@/types/database";
 
 import { JUDGE_STAGE_TEXT } from "../judge-card-button";
@@ -48,6 +48,7 @@ export function JudgeRankingHero({
   scoredPreliminary: number | null;
   scoredFinal: number | null;
 }) {
+  const { event_name } = useEventInfo();
   const stage = judgeStage ?? "preliminary";
   const judgesPreliminary = stage === "preliminary" || stage === "both";
   const judgesFinal = stage === "final" || stage === "both";
@@ -76,7 +77,7 @@ export function JudgeRankingHero({
           </div>
           <p className="inline-flex items-center gap-1.5 font-bold font-mono text-[11px] text-hero-fg uppercase tracking-wider">
             <Gavel className="size-3.5" aria-hidden="true" />
-            Dewan juri {APP_CONFIG.name}
+            Dewan juri {event_name}
           </p>
           <h1 id={HERO_TITLE_ID} tabIndex={-1} className="team-hero-title break-words outline-none">
             Terima kasih, {judgeName}.

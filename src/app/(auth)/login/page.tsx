@@ -6,8 +6,8 @@ import { createClient as createPlainClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 
 import { Card } from "@/components/ui/card";
-import { APP_CONFIG } from "@/config/app-config";
 import { getCurrentProfile, getDashboardPath } from "@/lib/auth";
+import { getEventInfo } from "@/lib/competition-info.server";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 import type { Database } from "@/types/database";
@@ -15,8 +15,8 @@ import type { Database } from "@/types/database";
 import { LoginForm } from "../_components/login-form";
 
 export const metadata: Metadata = {
-  title: `Masuk | ${APP_CONFIG.name}`,
-  description: "Masuk ke portal MIT-WEEK 2026.",
+  title: "Masuk",
+  description: "Masuk ke portal kompetisi.",
   alternates: { canonical: "/login" },
 };
 
@@ -60,7 +60,7 @@ export default async function LoginPage() {
       <Card className="w-full gap-6 p-6 shadow-sm sm:p-8">
         <div className="flex flex-col items-center text-center">
           <Image src={logo} alt="" className="size-24 object-contain" priority />
-          <h1 className="mt-3 font-semibold text-2xl tracking-tight">{APP_CONFIG.name}</h1>
+          <h1 className="mt-3 font-semibold text-2xl tracking-tight">{(await getEventInfo()).event_name}</h1>
           <p className="mt-1 text-muted-foreground text-sm">Portal Pengumpulan Karya Web Development</p>
         </div>
         <LoginForm />

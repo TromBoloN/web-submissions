@@ -2,6 +2,7 @@
 
 import { Award, Gavel, Info, MessageSquareQuote, Sparkles } from "lucide-react";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import { type RubricBarItem, RubricBars } from "@/components/rubric-bars";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +108,7 @@ function StageResultsView({
   stageTitle: string;
   stageData: StageResult;
 }) {
+  const { event_name } = useEventInfo();
   const rubricList: readonly RubricCriterion[] = stage === "preliminary" ? PRELIMINARY_RUBRIC : FINAL_RUBRIC;
   const rubricMap = new Map(rubricList.map((c) => [c.column, c]));
   const insight = getInsight(stageData.criteria, rubricMap);
@@ -173,7 +175,7 @@ function StageResultsView({
             <Award className="size-4 text-primary" />
             Rincian Nilai per Kriteria
           </CardTitle>
-          <CardDescription>Tabel penilaian kriteria berdasarkan rubrik evaluasi resmi MIT-WEEK 2026.</CardDescription>
+          <CardDescription>Tabel penilaian kriteria berdasarkan rubrik evaluasi resmi {event_name}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="hidden md:block">
@@ -327,6 +329,7 @@ function StageResultsView({
 }
 
 export function ResultsClient({ results }: ResultsClientProps) {
+  const { event_name } = useEventInfo();
   const showFinalTab = results.is_finalist && Boolean(results.final);
   const defaultTab = results.preliminary ? "preliminary" : "final";
 
@@ -370,7 +373,7 @@ export function ResultsClient({ results }: ResultsClientProps) {
       <div>
         <h1 className="font-display font-semibold text-2xl tracking-tight">Hasil Penilaian</h1>
         <p className="text-muted-foreground text-sm">
-          Hasil evaluasi, rata-rata kriteria, dan masukan anonim dewan juri kompetisi MIT-WEEK 2026.
+          Hasil evaluasi, rata-rata kriteria, dan masukan anonim dewan juri kompetisi {event_name}.
         </p>
       </div>
 
@@ -388,7 +391,7 @@ export function ResultsClient({ results }: ResultsClientProps) {
             <p className="mt-0.5 text-foreground/80 text-sm">
               {results.is_finalist
                 ? "Selamat, tim Anda melanjutkan ke babak final."
-                : "Terima kasih telah mengikuti babak awal MIT-WEEK 2026."}
+                : `Terima kasih telah mengikuti babak awal ${event_name}.`}
             </p>
           </div>
         </CardContent>

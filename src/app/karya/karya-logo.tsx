@@ -10,8 +10,8 @@ export function KaryaLogo({ className, spin = true }: { className?: string; spin
   const orbitPurpleId = `karya-orbit-purple-${rawId}`;
 
   return (
-    <svg viewBox="0 0 120 120" className={className} role="img" aria-label="Logo MIT-WEEK 2026">
-      <title>Logo MIT-WEEK 2026</title>
+    <svg viewBox="0 0 120 120" className={className} role="img" aria-label="Logo MIT-WEEK">
+      <title>Logo MIT-WEEK</title>
       <defs>
         <linearGradient id={ringId} x1="18" y1="10" x2="106" y2="112" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#7a97ef" />

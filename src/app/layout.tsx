@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 
 import type { Metadata } from "next";
 
+import { EventInfoProvider } from "@/components/event-info-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { APP_CONFIG } from "@/config/app-config";
+import { getEventInfo } from "@/lib/competition-info.server";
 import { displayFont, fontVars } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { ThemeBootScript } from "@/scripts/theme-boot";
@@ -12,27 +13,28 @@ import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provi
 
 import "./globals.css";
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://web-submissions.vercel.app"),
-  title: APP_CONFIG.meta.title,
-  description: APP_CONFIG.meta.description,
-  openGraph: {
-    type: "website",
-    locale: "id_ID",
-    siteName: "MIT-WEEK 2026",
-    title: APP_CONFIG.meta.title,
-    description: APP_CONFIG.meta.description,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Portal MIT-WEEK 2026" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: APP_CONFIG.meta.title,
-    description: APP_CONFIG.meta.description,
-    images: ["/og.png"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { event_name } = await getEventInfo();
+  const description = `Portal manajemen kompetisi ${event_name}.`;
+  return {
+    metadataBase: new URL("https://web-submissions.vercel.app"),
+    // Pages set only their own title ("Peringkat"); the event name is appended here.
+    title: { default: event_name, template: `%s | ${event_name}` },
+    description,
+    openGraph: {
+      type: "website",
+      locale: "id_ID",
+      siteName: event_name,
+      title: event_name,
+      description,
+      images: [{ url: "/og.png", width: 1200, height: 630, alt: `Portal ${event_name}` }],
+    },
+    twitter: { card: "summary_large_image", title: event_name, description, images: ["/og.png"] },
+  };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const eventInfo = await getEventInfo();
   const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
     PREFERENCE_DEFAULTS;
   return (
@@ -67,7 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body className={`${fontVars} ${displayFont.variable} min-h-screen antialiased`}>
         <TooltipProvider>
           <PreferencesStoreProvider initialValues={PREFERENCE_DEFAULTS}>
-            {children}
+            <EventInfoProvider value={eventInfo}>{children}</EventInfoProvider>
             <Toaster />
           </PreferencesStoreProvider>
         </TooltipProvider>

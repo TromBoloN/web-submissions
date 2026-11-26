@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { getEventInfo } from "@/lib/competition-info.server";
 import { PRELIMINARY_RUBRIC } from "@/lib/rubric";
 
 type CaseStudyData = {
@@ -312,7 +313,7 @@ function JuknisSummary() {
   );
 }
 
-export function CaseStudyView({
+export async function CaseStudyView({
   caseStudy,
   deadlineIso,
   juknisUrl,
@@ -327,7 +328,7 @@ export function CaseStudyView({
       <div className="mx-auto max-w-3xl space-y-6">
         <div>
           <h1 className="font-display font-semibold text-2xl">Studi Kasus</h1>
-          <p className="text-muted-foreground text-sm">Tantangan resmi MIT-WEEK 2026.</p>
+          <p className="text-muted-foreground text-sm">Tantangan resmi {(await getEventInfo()).event_name}.</p>
         </div>
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="text-center sm:text-left">

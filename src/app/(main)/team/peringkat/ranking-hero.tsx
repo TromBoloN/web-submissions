@@ -19,7 +19,7 @@ import {
 } from "@/app/(main)/_components/ranking/ranking-shared";
 import { createShareImage, shareOrDownload } from "@/app/(main)/_components/ranking/share-card";
 import { useCountUp } from "@/app/(main)/_components/ranking/use-count-up";
-import { APP_CONFIG } from "@/config/app-config";
+import { useEventInfo } from "@/components/event-info-provider";
 import logo from "@/styles/flag-icons/MIT-WEEK, WEB LOGO.png";
 
 import { CelebrationLayer } from "./celebration-layer";
@@ -67,6 +67,7 @@ function neighbourGap(own: RankingRow, rows: RankingRow[]): string | null {
 
 /** Draws the achievement PNG (share-card.ts) and opens the share sheet, or downloads it. */
 function ShareButton({ own, total, tier }: { own: RankingRow; total: number; tier: RankTier }) {
+  const { event_name, event_track } = useEventInfo();
   const [busy, setBusy] = useState(false);
 
   async function handleShare() {
@@ -81,10 +82,11 @@ function ShareButton({ own, total, tier }: { own: RankingRow; total: number; tie
         stageText: stageLabel(own.stage),
         stamp: TIER_STAMP[tier],
         accent: TIER_ACCENT[tier],
-        eventName: APP_CONFIG.name,
+        eventName: event_name,
+        eventTrack: event_track,
         logoSrc: logo.src,
       });
-      const result = await shareOrDownload(blob, `peringkat-${own.rank}.png`, `Peringkat ${APP_CONFIG.name}`);
+      const result = await shareOrDownload(blob, `peringkat-${own.rank}.png`, `Peringkat ${event_name}`);
       if (result === "downloaded") toast.success("Gambar pencapaian diunduh.");
     } catch {
       toast.error("Gagal membuat gambar pencapaian. Silakan coba lagi.");

@@ -13,6 +13,7 @@ import {
   TeamDetailSheet,
   teamRowProps,
 } from "@/app/(main)/admin/_components/team-detail/team-detail-sheet";
+import { useEventInfo } from "@/components/event-info-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -61,12 +62,13 @@ type TeamsClientProps = {
 const features = tableFeatures({});
 
 function FinalistStatusAlert({ finalistCount }: { finalistCount: number }) {
+  const { event_name } = useEventInfo();
   if (finalistCount === 5) {
     return (
       <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200">
         <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
         <AlertTitle>Kuota finalis lengkap</AlertTitle>
-        <AlertDescription>Tepat 5 tim telah ditetapkan sebagai finalis MIT-WEEK 2026.</AlertDescription>
+        <AlertDescription>Tepat 5 tim telah ditetapkan sebagai finalis {event_name}.</AlertDescription>
       </Alert>
     );
   }

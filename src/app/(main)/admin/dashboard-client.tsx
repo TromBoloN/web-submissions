@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useEventInfo } from "@/components/event-info-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -380,6 +381,7 @@ function PhaseTimeline({ phases }: { phases: PhaseItem[] }) {
 }
 
 function ChasePanel({ teams, deadlineLabel }: { teams: ChaseTeam[]; deadlineLabel: string }) {
+  const { event_name } = useEventInfo();
   const draftCount = teams.filter((team) => team.status === "draft").length;
 
   return (
@@ -407,7 +409,7 @@ function ChasePanel({ teams, deadlineLabel }: { teams: ChaseTeam[]; deadlineLabe
           <ul className="space-y-2">
             {teams.map((team) => {
               const isDraft = team.status === "draft";
-              const message = `Halo Kak, kami dari panitia MIT-WEEK 2026. Tim ${team.teamName} (${team.teamCode}) ${
+              const message = `Halo Kak, kami dari panitia ${event_name}. Tim ${team.teamName} (${team.teamCode}) ${
                 isDraft ? "masih berstatus draf" : "belum mengirim submission"
               }. Batas pengiriman ${deadlineLabel}. Mohon segera diselesaikan melalui portal peserta. Terima kasih.`;
               const whatsappHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -931,6 +933,7 @@ export function AdminDashboardClient({
   phases,
   currentPhaseLabel,
 }: AdminDashboardClientProps) {
+  const { event_name } = useEventInfo();
   const trendLabel =
     todayDelta === 0 ? "Sama dengan kemarin" : `${todayDelta > 0 ? "+" : ""}${todayDelta} dari kemarin`;
 
@@ -944,7 +947,9 @@ export function AdminDashboardClient({
               Fase {currentPhaseLabel}
             </Badge>
           </div>
-          <p className="text-muted-foreground text-sm">MIT-WEEK 2026 · data per {formatDateTimeWita(serverNowIso)}</p>
+          <p className="text-muted-foreground text-sm">
+            {event_name} · data per {formatDateTimeWita(serverNowIso)}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground text-xs">
           <span className="relative flex size-2">

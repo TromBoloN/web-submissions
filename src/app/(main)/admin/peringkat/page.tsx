@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { APP_CONFIG } from "@/config/app-config";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,8 +13,8 @@ import {
 import type { ScoreSanctionDetail } from "./sanction-panel";
 
 export const metadata: Metadata = {
-  title: `Peringkat | ${APP_CONFIG.name}`,
-  description: "Hasil pemeringkatan dan progres penilaian juri MIT-WEEK 2026.",
+  title: "Peringkat",
+  description: "Hasil pemeringkatan dan progres penilaian juri.",
 };
 
 export default async function AdminPeringkatPage() {

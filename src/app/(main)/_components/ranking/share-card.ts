@@ -11,6 +11,7 @@ export interface ShareCardInput {
   stamp: string | null;
   accent: "gold" | "silver" | "bronze" | "mint" | null;
   eventName: string;
+  eventTrack: string;
   logoSrc: string;
 }
 
@@ -289,7 +290,7 @@ export async function createShareImage(input: ShareCardInput): Promise<Blob> {
   ctx.fillStyle = fgMuted;
   ctx.font = `700 34px ${mono}`;
   setSpacing(ctx, 4);
-  ctx.fillText(`${input.eventName.toUpperCase()} · WEB DEVELOPMENT`, W / 2, H - 110);
+  ctx.fillText(`${input.eventName} · ${input.eventTrack}`.toUpperCase(), W / 2, H - 110);
   setSpacing(ctx, 0);
 
   return toPng(canvas);
@@ -300,6 +301,7 @@ export interface JudgeCardInput {
   stageText: string;
   teamsJudged: number;
   eventName: string;
+  eventTrack: string;
   logoSrc: string;
 }
 
@@ -362,7 +364,7 @@ export async function createJudgeCardImage(input: JudgeCardInput): Promise<Blob>
   ctx.fillStyle = fgMuted;
   ctx.font = `700 34px ${mono}`;
   setSpacing(ctx, 4);
-  ctx.fillText(`${input.eventName.toUpperCase()} · WEB DEVELOPMENT`, W / 2, H - 110);
+  ctx.fillText(`${input.eventName} · ${input.eventTrack}`.toUpperCase(), W / 2, H - 110);
   setSpacing(ctx, 0);
 
   return toPng(canvas);

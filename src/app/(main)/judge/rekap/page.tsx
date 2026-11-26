@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { APP_CONFIG } from "@/config/app-config";
 import { requireRole } from "@/lib/auth";
 import { getRubricForStage, type ScoringStage } from "@/lib/rubric";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +8,7 @@ import type { Database } from "@/types/database";
 import { type RecapRecusal, type RecapScore, RekapClient } from "./rekap-client";
 
 export const metadata: Metadata = {
-  title: `Rekap Penilaian | ${APP_CONFIG.name}`,
+  title: "Rekap Penilaian",
 };
 
 type Tables = Database["public"]["Tables"];

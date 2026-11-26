@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import type { Metadata } from "next";
 
+import { getEventInfo } from "@/lib/competition-info.server";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,9 +10,6 @@ import { KARYA_DESCRIPTION_FALLBACK } from "./karya-card";
 import { KaryaClient, type KaryaItem } from "./karya-client";
 import { karyaSlug } from "./karya-utils";
 
-const BASE_TITLE = "GUARDIANS · Galeri Karya MIT-WEEK 2026";
-const BASE_DESCRIPTION =
-  "Ruang pameran karya peserta Web Development Competition MIT-WEEK 2026: Guardians of the Digital Space. Menampilkan karya inovatif dari tim peserta.";
 const SPOTLIGHT_COUNT = 5;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -107,11 +105,15 @@ const loadGallery = cache(async () => {
 });
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const { event_name, event_track } = await getEventInfo();
+  const baseTitle = `GUARDIANS · Galeri Karya ${event_name}`;
+  const baseDescription = `Ruang pameran karya peserta ${event_track} Competition ${event_name}: Guardians of the Digital Space. Menampilkan karya inovatif dari tim peserta.`;
+  // absolute: these titles already carry the event name, so skip the root "%s | name" template.
   const base: Metadata = {
-    title: BASE_TITLE,
-    description: BASE_DESCRIPTION,
+    title: { absolute: baseTitle },
+    description: baseDescription,
     robots: { index: false, follow: false },
-    openGraph: { title: BASE_TITLE, description: BASE_DESCRIPTION, type: "website" },
+    openGraph: { title: baseTitle, description: baseDescription, type: "website" },
   };
 
   const slug = await readKaryaParam(searchParams);
@@ -122,13 +124,13 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   const item = gallery?.visible.find((entry) => karyaSlug(entry.teamName) === slug);
   if (!item) return base;
 
-  const title = `${item.title} · Galeri Karya MIT-WEEK 2026`;
+  const title = `${item.title} · Galeri Karya ${event_name}`;
   const description = `Karya ${item.teamName}. ${item.description}`.slice(0, 200);
   const images = item.imageUrl ? [{ url: item.imageUrl, alt: `Pratinjau karya ${item.title}` }] : undefined;
 
   return {
     ...base,
-    title,
+    title: { absolute: title },
     description,
     openGraph: { title, description, type: "website", images },
     twitter: { card: images ? "summary_large_image" : "summary", title, description, images },

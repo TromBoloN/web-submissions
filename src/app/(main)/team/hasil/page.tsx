@@ -3,15 +3,14 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { APP_CONFIG } from "@/config/app-config";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 import { ResultsClient, type TeamResultsData } from "./results-client";
 
 export const metadata: Metadata = {
-  title: `Hasil Penilaian | ${APP_CONFIG.name}`,
-  description: "Hasil penilaian dan masukan juri kompetisi MIT-WEEK 2026.",
+  title: "Hasil Penilaian",
+  description: "Hasil penilaian dan masukan juri kompetisi.",
 };
 
 export default async function TeamHasilPage() {

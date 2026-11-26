@@ -9,7 +9,7 @@ import { FlaskConical } from "lucide-react";
 import { RankingList } from "@/app/(main)/_components/ranking/ranking-list";
 import { RankingPodium } from "@/app/(main)/_components/ranking/ranking-podium";
 import { HERO_TITLE_ID, MAIN_ID, type RankingRow } from "@/app/(main)/_components/ranking/ranking-shared";
-import { APP_CONFIG } from "@/config/app-config";
+import { useEventInfo } from "@/components/event-info-provider";
 import { deleteClientCookie, setClientCookie } from "@/lib/cookie.client";
 
 import { RankingHero } from "./ranking-hero";
@@ -36,6 +36,7 @@ export function PeringkatClient({
   /** The seen cookie already matched this release when the page was rendered. */
   seenThisRelease: boolean;
 }) {
+  const { event_name } = useEventInfo();
   const router = useRouter();
   const own = rows.find((row) => row.is_own_team);
   const tier = own ? rankTier(own, rows.length) : null;
@@ -74,7 +75,7 @@ export function PeringkatClient({
   return (
     <>
       {introPlaying && own && tier && (
-        <RevealIntro own={own} tier={tier} eventName={APP_CONFIG.name} onDone={handleIntroDone} />
+        <RevealIntro own={own} tier={tier} eventName={event_name} onDone={handleIntroDone} />
       )}
 
       <div id={MAIN_ID} className="space-y-8">

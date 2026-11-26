@@ -17,6 +17,8 @@ import {
   X,
 } from "lucide-react";
 
+import { useEventInfo } from "@/components/event-info-provider";
+
 export type GuardianMember = {
   name: string;
   role?: string;
@@ -138,6 +140,7 @@ export function ShowcaseCard({
   variant?: "default" | "winner";
   onOpenDetail?: (card: ShowcaseCardData) => void;
 }) {
+  const { event_name } = useEventInfo();
   const cardRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const placeholderGradient = useMemo(() => getPlaceholderGradient(data.teamName), [data.teamName]);
@@ -235,7 +238,7 @@ export function ShowcaseCard({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#262470] dark:text-[#6F8FD0]">
               <GraduationCap className="size-3.5 text-[#3FA9D9]" aria-hidden="true" />
-              <span className="truncate max-w-[200px]">{data.campus ?? "Finalis MIT-WEEK 2026"}</span>
+              <span className="truncate max-w-[200px]">{data.campus ?? `Finalis ${event_name}`}</span>
             </div>
             <AvatarStack members={data.teamMembers} />
           </div>
@@ -302,6 +305,7 @@ export function ShowcaseCard({
  * Displays deep information, problem statement, defense mechanism, team quote, and links.
  */
 export function ShowcaseDetailModal({ card, onClose }: { card: ShowcaseCardData | null; onClose: () => void }) {
+  const { event_name } = useEventInfo();
   const [shieldUnlocked, setShieldUnlocked] = useState(false);
 
   useEffect(() => {
@@ -383,7 +387,7 @@ export function ShowcaseDetailModal({ card, onClose }: { card: ShowcaseCardData 
           <div className="flex flex-wrap items-center gap-2">
             <span className="guardian-pill px-3 py-1 text-xs font-bold text-[#262470]">Tim: {card.teamName}</span>
             <span className="guardian-pill px-3 py-1 text-xs font-bold text-[#262470]">
-              Kampus: {card.campus ?? "Finalis MIT-WEEK 2026"}
+              Kampus: {card.campus ?? `Finalis ${event_name}`}
             </span>
           </div>
 
@@ -393,7 +397,7 @@ export function ShowcaseDetailModal({ card, onClose }: { card: ShowcaseCardData 
               Tentang Karya
             </h2>
             <p className="text-sm text-foreground/90 leading-relaxed font-medium">
-              {card.description || "Solusi inovatif karya tim peserta MIT-WEEK 2026."}
+              {card.description || `Solusi inovatif karya tim peserta ${event_name}.`}
             </p>
           </div>
 
