@@ -100,4 +100,3 @@ Secrets
 - Event name/edition as settings so a next edition needs no code change (single competition at a time, not multi-tenant).
 - Migrating the remaining raw hex colors in `src/app/karya/*` and `src/components/showcase-card.tsx` to tokens (separate step, may change how `/karya` looks).
 - Floating dock / icon-rail navigation: deferred, because the shell is shared with admin and judge.
-- Audit gaps: deadline, juknis, contact and case-study saves do not write audit events.

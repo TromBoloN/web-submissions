@@ -40,7 +40,7 @@ The admin role is enforced by `src/app/(main)/admin/layout.tsx` (`requireRole("a
 | Studi Kasus | `/studi-kasus` | `case_study` | `updateCaseStudy` |
 | Tautan & Kontak | `/tautan` | `juknis_url`, `contact_whatsapp` | `updateJuknisUrl`, `updateContactWhatsapp` |
 
-**Audit coverage:** `updateResultsRelease`, the three gallery actions and `saveFinalistShowcase` write audit events. `updateCompetitionDeadline`, `updateJuknisUrl`, `updateContactWhatsapp` and `updateCaseStudy` currently do **not**. This is a known gap; new actions should log.
+**Audit coverage:** every settings action writes an audit event. `updateContactWhatsapp` logs only whether a number is set, and `updateCaseStudy` logs the title, release time and content length, not the text. New actions must log too, and their action name needs a label in both `admin/audit/page.tsx` and `admin/page.tsx`.
 
 Judging progress on Rilis Hasil uses the same eligibility rules as `/admin/peringkat`: active judges for the stage, non-disqualified teams with a submitted entry (finalists only for the final), counting locked scores plus recusals.
 

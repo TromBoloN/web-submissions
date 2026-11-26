@@ -60,6 +60,13 @@ export async function updateCompetitionDeadline(formData: FormData): Promise<Act
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
   }
 
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "deadline_updated",
+    targetType: "competition_settings",
+    metadata: { submission_closes_at: closesAtIso },
+  });
+
   revalidatePath("/admin");
   revalidatePath("/admin/pengaturan", "layout");
   return { success: true };
@@ -117,6 +124,13 @@ export async function updateJuknisUrl(formData: FormData): Promise<ActionResult>
   if (!data || data.length === 0) {
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
   }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "juknis_url_updated",
+    targetType: "competition_settings",
+    metadata: { juknis_url: normalizedUrl },
+  });
 
   revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team", "layout");
@@ -185,6 +199,14 @@ export async function updateContactWhatsapp(formData: FormData): Promise<ActionR
   if (!data || data.length === 0) {
     return { success: false, error: "Data pengaturan kompetisi tidak ditemukan untuk diperbarui." };
   }
+
+  // The number itself is not logged, only whether one is set.
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "contact_whatsapp_updated",
+    targetType: "competition_settings",
+    metadata: { has_number: normalized !== null },
+  });
 
   revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team");
@@ -258,6 +280,17 @@ export async function updateCaseStudy(formData: FormData): Promise<ActionResult>
   if (!data || data.length === 0) {
     return { success: false, error: "Data studi kasus tidak ditemukan untuk diperbarui." };
   }
+
+  await logAuditEvent({
+    actorId: caller.id,
+    action: "case_study_updated",
+    targetType: "case_study",
+    metadata: {
+      title: parsed.data.title,
+      release_at: releaseAtIso,
+      content_length: parsed.data.content_md.length,
+    },
+  });
 
   revalidatePath("/admin/pengaturan", "layout");
   revalidatePath("/team/studi-kasus");

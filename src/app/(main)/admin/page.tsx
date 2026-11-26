@@ -40,6 +40,25 @@ const auditActionLabels: Record<string, string> = {
   score_locked: "Mengunci nilai",
   team_disqualified: "Mendiskualifikasi tim",
   team_disqualification_removed: "Membatalkan diskualifikasi",
+  deadline_updated: "Mengubah batas pengumpulan",
+  juknis_url_updated: "Mengubah tautan juknis",
+  contact_whatsapp_updated: "Mengubah WhatsApp panitia",
+  case_study_updated: "Mengubah studi kasus",
+  event_identity_updated: "Mengubah identitas acara",
+  final_presentation_updated: "Mengubah detail babak final",
+  stage_created: "Menambah tahap jadwal",
+  stage_updated: "Mengubah tahap jadwal",
+  stage_deleted: "Menghapus tahap jadwal",
+  site_content_updated: "Mengubah teks halaman",
+  site_content_reset: "Mengembalikan teks bawaan",
+  showcase_phase_one_published: "Menerbitkan galeri awal",
+  showcase_phase_two_published: "Menerbitkan galeri finalis",
+  showcase_gallery_published: "Menerbitkan galeri",
+  showcase_gallery_unpublished: "Menarik galeri",
+  showcase_phase_one_unpublished: "Menarik galeri awal",
+  showcase_phase_two_unpublished: "Menarik galeri finalis",
+  showcase_winners_published: "Menerbitkan pemenang galeri",
+  showcase_winners_unpublished: "Menarik pemenang galeri",
 };
 
 const targetTypeLabels: Record<string, string> = {
@@ -48,6 +67,10 @@ const targetTypeLabels: Record<string, string> = {
   preliminary_score: "Nilai babak awal",
   profile: "Akun",
   team: "Tim",
+  case_study: "Studi kasus",
+  competition_stages: "Jadwal",
+  final_presentation: "Babak final",
+  site_content: "Konten halaman",
 };
 
 function witaDateKey(date: Date) {
