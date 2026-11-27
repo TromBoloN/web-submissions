@@ -48,6 +48,7 @@ See [Competition phases](./COMPETITION-PHASES.md) for behavior.
 | `layout.tsx` | `requireRole("team")`, results-released flag, team code for the sidebar user chip |
 | `submission-client.tsx` | Orchestrates the page: phase, form state, open vs closed (bento) layout, showcase card, help strip |
 | `team-phase.ts` | `resolveTeamPhase()`: pure phase resolver, plus the `FinalistNoticeData` type |
+| `submission-form.tsx` | `useSubmissionForm()` (link/notes state, validation, save, link check) and `SubmissionForm` (form card + submit confirmation) |
 | `submission-link-field.tsx` | `LinkField` (one submission link input: clear, paste, error/help, link-check badge) |
 | `submission-rules.ts` | `validateSubmissionLinks()` and the GitHub/HTTP URL patterns, shared by the form, `saveSubmission` and the phase checklists |
 | `team-schedule.ts` | `FinalPresentation` type, `toWitaDateKey()`, `daysBetweenDateKeys()` |
