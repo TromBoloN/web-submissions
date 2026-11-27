@@ -1092,7 +1092,7 @@ export function KaryaClient({
               {filteredRestCards.map((item) => (
                 <article key={`row-${item.teamName}`} className="row" onPointerEnter={() => setHoveredItem(item)}>
                   <div className="thumb">
-                    <CardThumbnail item={item} />
+                    <CardThumbnail item={item} sizes="84px" />
                     {visitorProps(item).seen && <SeenMark compact />}
                   </div>
                   <div className="min-w-0">
@@ -1241,7 +1241,7 @@ export function KaryaClient({
               </div>
             ) : (
               <div className="thumb" key={activeModalItem.teamName}>
-                <CardThumbnail item={activeModalItem} />
+                <CardThumbnail item={activeModalItem} sizes="(max-width: 672px) 100vw, 640px" />
                 {videoEmbed && (
                   <button
                     type="button"
@@ -1302,7 +1302,7 @@ export function KaryaClient({
                       <li key={item.teamName} className="min-w-0">
                         <button type="button" className="simcard" onClick={() => openModal(item, allVisible)}>
                           <span className="thumb">
-                            <CardThumbnail item={item} />
+                            <CardThumbnail item={item} sizes="200px" />
                           </span>
                           <span className="simtitle">{item.title}</span>
                           <span className="mono muted simteam">{item.teamName}</span>

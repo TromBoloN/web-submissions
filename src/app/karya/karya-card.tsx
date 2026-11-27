@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import Image from "next/image";
+
 import { Bookmark, BookmarkCheck, Eye } from "lucide-react";
 
 import { useEventInfo } from "@/components/event-info-provider";
@@ -78,7 +80,10 @@ export const VidIcon = () => (
   </svg>
 );
 
-export function CardThumbnail({ item }: { item: KaryaItem }) {
+/** Rendered width of a grid card: one column on phones, two on tablets, three on desktop. */
+const CARD_IMAGE_SIZES = "(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw";
+
+export function CardThumbnail({ item, sizes = CARD_IMAGE_SIZES }: { item: KaryaItem; sizes?: string }) {
   const [c1, c2] = getPalette(item.teamName);
   const initials = getInitials(item.teamName);
   // A missing or broken image falls back to the gradient placeholder instead of a broken icon.
@@ -94,17 +99,17 @@ export function CardThumbnail({ item }: { item: KaryaItem }) {
   if (item.imageUrl && failedUrl !== item.imageUrl) {
     const onError = () => setFailedUrl(item.imageUrl);
     // The whole image is always visible (contain). Images that are not 16:10 sit on a blurred,
-    // zoomed copy of themselves instead of being cropped. Same URL, so it downloads once.
+    // zoomed copy of themselves instead of being cropped. Same URL and sizes, so it downloads once.
+    // next/image serves a resized WebP/AVIF for the rendered width instead of the original upload.
     return (
       <>
-        {/* biome-ignore lint/performance/noImgElement: public storage image */}
-        <img src={item.imageUrl} alt="" aria-hidden="true" loading="lazy" className="thumb-bg" />
-        {/* biome-ignore lint/performance/noImgElement: public storage image */}
-        <img
+        <Image src={item.imageUrl} alt="" aria-hidden="true" fill sizes={sizes} className="thumb-bg" />
+        <Image
           ref={imgRef}
           src={item.imageUrl}
           alt={`Pratinjau karya ${item.title}`}
-          loading="lazy"
+          fill
+          sizes={sizes}
           className="thumb-fg"
           onError={onError}
         />

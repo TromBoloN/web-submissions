@@ -4,10 +4,8 @@ import { useState, useTransition } from "react";
 
 import Link from "next/link";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -16,26 +14,22 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { Spinner } from "@/components/ui/spinner";
 import { signIn } from "@/lib/auth-actions";
 
-const formSchema = z.object({
-  identifier: z.string().trim().min(1, { message: "Masukkan email atau username." }),
-  password: z.string().min(1, { message: "Masukkan kata sandi." }),
-});
-
-type LoginFormValues = z.infer<typeof formSchema>;
+// Built-in react-hook-form rules, not zod: this is every user's first page and zod adds ~125 KB for two checks.
+// The signIn server action validates the input again.
+type LoginFormValues = { identifier: string; password: string };
 
 export function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isPending, startTransition] = useTransition();
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver(formSchema),
     defaultValues: { identifier: "", password: "" },
   });
 
   const onSubmit = (values: LoginFormValues) => {
     setErrorMessage(undefined);
     const formData = new FormData();
-    formData.set("identifier", values.identifier);
+    formData.set("identifier", values.identifier.trim());
     formData.set("password", values.password);
 
     startTransition(async () => {
@@ -52,6 +46,7 @@ export function LoginForm() {
         <Controller
           control={form.control}
           name="identifier"
+          rules={{ validate: (value) => value.trim() !== "" || "Masukkan email atau username." }}
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="login-identifier">Email atau username</FieldLabel>
@@ -74,6 +69,7 @@ export function LoginForm() {
         <Controller
           control={form.control}
           name="password"
+          rules={{ required: "Masukkan kata sandi." }}
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="login-password">Kata sandi</FieldLabel>

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { cache, type ReactNode } from "react";
 
 import { cookies } from "next/headers";
 
@@ -14,6 +14,21 @@ import { getPreference } from "@/server/server-actions";
 
 import { SearchDialog } from "./header/search-dialog";
 import { AppSidebar } from "./sidebar/app-sidebar";
+
+/**
+ * The competition_settings fields the shell and the role layouts need, in one query per request.
+ * Layouts call it too; React cache() makes the shell reuse their result instead of querying again.
+ */
+export const getShellSettings = cache(async () => {
+  const supabase = await createClient();
+  return supabase
+    .from("competition_settings")
+    .select(
+      "juknis_url, showcase_published_at, gallery_new_badge_days, ranking_published, preliminary_results_released, final_results_released",
+    )
+    .eq("id", true)
+    .maybeSingle();
+});
 
 export async function DashboardShell({
   children,
@@ -40,12 +55,7 @@ export async function DashboardShell({
     getPreference("sidebar_collapsible"),
   ]);
 
-  const supabase = await createClient();
-  const { data: settings } = await supabase
-    .from("competition_settings")
-    .select("juknis_url, showcase_published_at, gallery_new_badge_days")
-    .eq("id", true)
-    .maybeSingle();
+  const { data: settings } = await getShellSettings();
   const juknisUrl = user.role === "team" || user.role === "judge" ? (settings?.juknis_url ?? null) : null;
 
   // Gallery badge: locked until published, "Baru" for the first week, then nothing. Server time only.

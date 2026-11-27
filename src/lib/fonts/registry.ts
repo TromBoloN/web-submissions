@@ -1,44 +1,7 @@
-import {
-  DM_Sans,
-  Figtree,
-  Geist,
-  Geist_Mono,
-  Inter,
-  JetBrains_Mono,
-  Lora,
-  Merriweather,
-  Noto_Sans,
-  Noto_Serif,
-  Nunito_Sans,
-  Outfit,
-  Playfair_Display,
-  Public_Sans,
-  Raleway,
-  Roboto,
-  Roboto_Slab,
-  Space_Grotesk,
-} from "next/font/google";
+import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 
-import { GeistPixelSquare } from "geist/font/pixel";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-});
-
-const notoSans = Noto_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-noto-sans",
-});
-
-const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  display: "swap",
-  variable: "--font-roboto",
-});
+// Only fonts the CSS actually uses (globals.css: --font-geist, --font-geist-mono, --font-space-grotesk).
+// Every font registered here is preloaded on every page, so add one only when a style uses it.
 
 const geist = Geist({
   subsets: ["latin"],
@@ -46,83 +9,10 @@ const geist = Geist({
   variable: "--font-geist",
 });
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-outfit",
-});
-
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-geist-mono",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-dm-sans",
-});
-
-const nunitoSans = Nunito_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-nunito-sans",
-});
-
-const figtree = Figtree({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-figtree",
-});
-
-const raleway = Raleway({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-raleway",
-});
-
-const publicSans = Public_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-public-sans",
-});
-
-const jetBrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-jetbrains-mono",
-});
-
-const notoSerif = Noto_Serif({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-noto-serif",
-});
-
-const robotoSlab = Roboto_Slab({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-roboto-slab",
-});
-
-const merriweather = Merriweather({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-  variable: "--font-merriweather",
-});
-
-const lora = Lora({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-lora",
-});
-
-const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-playfair-display",
 });
 
 export const displayFont = Space_Grotesk({
@@ -136,73 +26,9 @@ export const fontRegistry = {
     label: "Geist",
     font: geist,
   },
-  inter: {
-    label: "Inter",
-    font: inter,
-  },
-  notoSans: {
-    label: "Noto Sans",
-    font: notoSans,
-  },
-  nunitoSans: {
-    label: "Nunito Sans",
-    font: nunitoSans,
-  },
-  figtree: {
-    label: "Figtree",
-    font: figtree,
-  },
-  roboto: {
-    label: "Roboto",
-    font: roboto,
-  },
-  raleway: {
-    label: "Raleway",
-    font: raleway,
-  },
-  dmSans: {
-    label: "DM Sans",
-    font: dmSans,
-  },
-  publicSans: {
-    label: "Public Sans",
-    font: publicSans,
-  },
-  outfit: {
-    label: "Outfit",
-    font: outfit,
-  },
   geistMono: {
     label: "Geist Mono",
     font: geistMono,
-  },
-  geistPixelSquare: {
-    label: "Geist Pixel Square",
-    font: GeistPixelSquare,
-  },
-  jetBrainsMono: {
-    label: "JetBrains Mono",
-    font: jetBrainsMono,
-  },
-  notoSerif: {
-    label: "Noto Serif",
-    font: notoSerif,
-  },
-  robotoSlab: {
-    label: "Roboto Slab",
-    font: robotoSlab,
-  },
-  merriweather: {
-    label: "Merriweather",
-    font: merriweather,
-  },
-  lora: {
-    label: "Lora",
-    font: lora,
-  },
-  playfairDisplay: {
-    label: "Playfair Display",
-    font: playfairDisplay,
   },
 } as const;
 
