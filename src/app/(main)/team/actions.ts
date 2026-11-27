@@ -10,9 +10,11 @@ import { getCurrentProfile } from "@/lib/auth";
 import { checkLinks, type LinkCheckResult } from "@/lib/link-check";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import type { Json } from "@/types/database";
+import type { Database, Json } from "@/types/database";
 
 import { validateSubmissionLinks } from "./submission-rules";
+
+type SubmissionRow = Database["public"]["Tables"]["submissions"]["Row"];
 
 export type SaveSubmissionResult =
   | { ok: true; status: "draft" | "submitted"; updatedAt: string }
@@ -56,6 +58,14 @@ export async function saveShowcaseConsent(formData: FormData): Promise<SaveShowc
 
   revalidatePath("/team");
   return { ok: true, consent };
+}
+
+const SUBMISSION_REJECTED =
+  "Pengiriman ditolak. Batas waktu telah berakhir atau akun tidak diizinkan mengubah submission.";
+
+function savedResult(row: Pick<SubmissionRow, "status" | "updated_at">): SaveSubmissionResult {
+  revalidatePath("/team");
+  return { ok: true, status: row.status, updatedAt: row.updated_at };
 }
 
 const submissionInputSchema = z.object({
@@ -128,106 +138,35 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
     return { ok: false, message: firstLinkError };
   }
 
-  if (existingSubmission) {
-    // Update existing row
-    const { data: updated, error: updateError } = await supabase
-      .from("submissions")
-      .update({
-        github_url,
-        live_demo_url,
-        video_url,
-        notes_for_judges,
-        status: targetStatus,
-      })
-      .eq("team_id", team.id)
-      .select();
+  const values = { github_url, live_demo_url, video_url, notes_for_judges, status: targetStatus };
 
-    if (updateError) {
-      if (updateError.code === "42501") {
-        return {
-          ok: false,
-          message: "Pengiriman ditolak. Batas waktu telah berakhir atau akun tidak diizinkan mengubah submission.",
-        };
-      }
-      console.error("Failed to update submission", updateError);
+  // Zero rows back means RLS blocked the update (deadline passed or disqualified).
+  const updateRow = async (): Promise<SaveSubmissionResult> => {
+    const { data, error } = await supabase.from("submissions").update(values).eq("team_id", team.id).select();
+    if (error && error.code !== "42501") {
+      console.error("Failed to update submission", error);
       return { ok: false, message: "Gagal memperbarui submission. Coba lagi." };
     }
+    if (error || !data?.[0]) return { ok: false, message: SUBMISSION_REJECTED };
+    return savedResult(data[0]);
+  };
 
-    // Zero rows returned means RLS blocked the update (deadline passed or disqualified)
-    if (!updated || updated.length === 0) {
-      return {
-        ok: false,
-        message: "Pengiriman ditolak. Batas waktu telah berakhir atau akun tidak diizinkan mengubah submission.",
-      };
-    }
+  if (existingSubmission) return updateRow();
 
-    const updatedRow = updated[0];
-    revalidatePath("/team");
-    return { ok: true, status: updatedRow.status, updatedAt: updatedRow.updated_at };
-  }
-
-  // Insert new row
   const { data: inserted, error: insertError } = await supabase
     .from("submissions")
-    .insert({
-      team_id: team.id,
-      github_url,
-      live_demo_url,
-      video_url,
-      notes_for_judges,
-      status: targetStatus,
-    })
+    .insert({ team_id: team.id, ...values })
     .select();
 
-  if (insertError) {
-    // Unique violation race condition (another request inserted first)
-    if (insertError.code === "23505") {
-      const { data: updatedRetry, error: retryError } = await supabase
-        .from("submissions")
-        .update({
-          github_url,
-          live_demo_url,
-          video_url,
-          notes_for_judges,
-          status: targetStatus,
-        })
-        .eq("team_id", team.id)
-        .select();
-
-      if (retryError || !updatedRetry || updatedRetry.length === 0) {
-        return {
-          ok: false,
-          message: "Pengiriman ditolak. Batas waktu telah berakhir atau akun tidak diizinkan mengubah submission.",
-        };
-      }
-
-      const retryRow = updatedRetry[0];
-      revalidatePath("/team");
-      return { ok: true, status: retryRow.status, updatedAt: retryRow.updated_at };
-    }
-
-    // 42501 = RLS check failed (deadline passed or disqualified)
-    if (insertError.code === "42501") {
-      return {
-        ok: false,
-        message: "Pengiriman ditolak. Batas waktu telah berakhir atau akun tidak diizinkan mengubah submission.",
-      };
-    }
-
+  // 23505: another request created the row between our check and insert, so update it instead.
+  if (insertError?.code === "23505") return updateRow();
+  // 42501: RLS rejected the insert (deadline passed or disqualified).
+  if (insertError && insertError.code !== "42501") {
     console.error("Failed to insert submission", insertError);
     return { ok: false, message: "Gagal menyimpan submission. Coba lagi." };
   }
-
-  if (!inserted || inserted.length === 0) {
-    return {
-      ok: false,
-      message: "Pengiriman ditolak. Batas waktu telah berakhir atau akun tidak diizinkan mengubah submission.",
-    };
-  }
-
-  const insertedRow = inserted[0];
-  revalidatePath("/team");
-  return { ok: true, status: insertedRow.status, updatedAt: insertedRow.updated_at };
+  if (insertError || !inserted?.[0]) return { ok: false, message: SUBMISSION_REJECTED };
+  return savedResult(inserted[0]);
 }
 
 export type CheckMyLinksResult =
