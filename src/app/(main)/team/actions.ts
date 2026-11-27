@@ -12,6 +12,8 @@ import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
+import { validateSubmissionLinks } from "./submission-rules";
+
 export type SaveSubmissionResult =
   | { ok: true; status: "draft" | "submitted"; updatedAt: string }
   | { ok: false; message: string };
@@ -117,37 +119,13 @@ export async function saveSubmission(formData: FormData): Promise<SaveSubmission
   const isAlreadySubmitted = existingSubmission?.status === "submitted";
   const targetStatus: "draft" | "submitted" = isAlreadySubmitted || intent === "submit" ? "submitted" : "draft";
 
-  // Validate URLs according to rules
-  if (targetStatus === "submitted") {
-    if (!github_url) {
-      return { ok: false, message: "Repositori GitHub wajib diisi untuk mengirim submission." };
-    }
-    if (!/^https:\/\/github\.com\/.+/i.test(github_url)) {
-      return { ok: false, message: "URL Repositori harus diawali dengan https://github.com/" };
-    }
-    if (!live_demo_url) {
-      return { ok: false, message: "URL Live Demo wajib diisi untuk mengirim submission." };
-    }
-    if (!/^https?:\/\/.+/i.test(live_demo_url)) {
-      return { ok: false, message: "URL Live Demo harus berupa tautan valid (diawali http:// atau https://)." };
-    }
-    if (!video_url) {
-      return { ok: false, message: "URL Video Demo wajib diisi untuk mengirim submission." };
-    }
-    if (!/^https?:\/\/.+/i.test(video_url)) {
-      return { ok: false, message: "URL Video Demo harus berupa tautan valid (diawali http:// atau https://)." };
-    }
-  } else {
-    // Draft allows empty, but if provided must follow format
-    if (github_url && !/^https:\/\/github\.com\/.+/i.test(github_url)) {
-      return { ok: false, message: "URL Repositori harus diawali dengan https://github.com/" };
-    }
-    if (live_demo_url && !/^https?:\/\/.+/i.test(live_demo_url)) {
-      return { ok: false, message: "URL Live Demo harus diawali http:// atau https://" };
-    }
-    if (video_url && !/^https?:\/\/.+/i.test(video_url)) {
-      return { ok: false, message: "URL Video Demo harus diawali http:// atau https://" };
-    }
+  const linkErrors = validateSubmissionLinks(
+    { github_url, live_demo_url, video_url },
+    targetStatus === "submitted" ? "submit" : "draft",
+  );
+  const firstLinkError = Object.values(linkErrors)[0];
+  if (firstLinkError) {
+    return { ok: false, message: firstLinkError };
   }
 
   if (existingSubmission) {

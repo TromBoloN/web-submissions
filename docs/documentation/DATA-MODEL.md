@@ -19,7 +19,7 @@ erDiagram
     PROFILES ||--o{ AUDIT_LOGS : acts
 ```
 
-Single-row tables (`id BOOLEAN PRIMARY KEY CHECK (id)`): `competition_settings`, `case_study`, `finalist_notice` and, once applied, `final_presentation`.
+Single-row tables (`id BOOLEAN PRIMARY KEY CHECK (id)`): `competition_settings`, `case_study`, `finalist_notice` and `final_presentation`.
 
 ## Tables
 
@@ -27,14 +27,17 @@ Single-row tables (`id BOOLEAN PRIMARY KEY CHECK (id)`): `competition_settings`,
 | --- | --- |
 | `profiles` | Role (`admin`/`judge`/`team`), judge stage (`preliminary`/`final`/`both`), `is_active`, linked to `auth.users`. The only source of roles. |
 | `teams` | Team code, name, institution, leader, members, `is_finalist`, `is_disqualified`, showcase consent/title/description/image path, `showcase_is_finalist` snapshot. |
-| `competition_settings` | Deadline (`submission_closes_at`, exclusive), `juknis_url`, `contact_whatsapp`, result-release flags, `ranking_published`, showcase/winners publication timestamps, `showcase_consent_locked_at`. |
+| `competition_settings` | Deadline (`submission_closes_at`, exclusive), `juknis_url`, `contact_whatsapp`, result-release flags, `ranking_published`, showcase/winners publication timestamps, `showcase_consent_locked_at`, event identity (`event_name`, `event_track`, `finalist_count`, `gallery_new_badge_days`). Every signed-in role can read it, so nothing private goes here. |
+| `competition_stages` | Schedule milestones (Pengaturan → Jadwal): WITA `DATE` range, `time_label`, `sort_order`, `show_on_track`, `status_override`, `is_system`. System keys `review`, `top5`, `gallery`, `final`, `winners` cannot be deleted or renamed. |
+| `final_presentation` | Single row: final format and logistics (`presentation_minutes`, `qa_minutes`, `venue`, `meeting_url`, `note`, `logistics_published`). Admin-only RLS; others read via `get_my_final_presentation()`. |
+| `site_content` | Admin-edited page copy (Pengaturan → Konten), one row per registry key; no row = built-in default. Admin-only RLS; **public** via `get_site_content()`, so never store private text. |
 | `submissions` | One draft or submitted set of GitHub, live-demo and video links per team, notes for judges, link-check result, `first_submitted_at`. |
 | `submission_history` | Trigger-written history of submission changes (`log_submission_change`). |
 | `case_study` | Markdown case study, optional `release_at`, last updater. |
 | `finalist_notice` | Finalist and non-finalist messages, `is_published`, `published_at`. Admin-only; teams read via `get_my_finalist_notice()`. |
 | `preliminary_scores`, `final_scores` | One score per judge/team pair, generated weighted total, feedback, draft/final status. |
 | `judge_recusals` | Judge/team/stage conflicts excluded from assignments and progress. |
-| `score_sanctions` | Admin sanctions: points deducted from one criterion of a team's stage average, with a reason shown to the team. Admin-only RLS (select/insert/delete, no update). Pending migration `20261122000000`. |
+| `score_sanctions` | Admin sanctions: points deducted from one criterion of a team's stage average, with a reason shown to the team. Admin-only RLS (select/insert/delete, no update). |
 | `audit_logs` | Sensitive admin/judging actions, written server-side by `logAuditEvent()` with the service role; admin-only SELECT. |
 | `preliminary_ranking`, `final_ranking` | Aggregate ranking views (`security_invoker`). |
 
@@ -57,17 +60,21 @@ All are `SECURITY DEFINER` with an empty `search_path` unless noted, and check a
 | `publish_showcase_phase_one()`, `publish_showcase_phase_two()`, `publish_showcase_winners()` | authenticated (admin check inside) | Gallery publication stages |
 | `get_public_showcase()`, `get_public_showcase_winners()` | **anon** | Public gallery data (consenting teams only) |
 | `get_public_contact_whatsapp()` | **anon** | Committee WhatsApp number for the login page |
+| `get_public_event_info()` | **anon** | Event name, track and finalist count |
+| `get_public_competition_schedule()` | **anon** | Schedule fields of every stage |
+| `get_site_content()` | **anon** | `key, value` of every saved page-copy row |
+| `get_my_final_presentation()` | authenticated (admin, final/`both` judge, announced finalist team) | Final format and note; venue and link `NULL` until `logistics_published` |
 | Trigger functions (`touch_updated_at`, `lock_score_keys`, `check_*`, `log_submission_change`, `set_submission_*`) | not client-callable | Timestamps, score locks after release, recusal checks, history |
 
 Anon access is only ever granted on functions that return public fields. `anon` has no privileges on any table, view or sequence.
 
-## Pending migrations
+## Migration notes
 
-Written, **not applied** at the time of writing. Check `src/types/database.ts` for `competition_stages`: if it is missing, they have not been applied.
+Every migration up to `20261127000000` was applied by the owner (2026-11-26). New migrations are listed here as pending until the owner confirms they are applied; then the note stays as a record.
 
 ### `20261127000000_site_content.sql`
 
-Apply after `20261126000000`. Adds `site_content (key, value, updated_at, updated_by)` for admin-edited page copy (Pengaturan → Konten). Keys match `^[a-z0-9_.]+$` (≤ 80 chars), values ≤ 5000 chars; a missing row means the app uses its built-in default. RLS: admin-only SELECT/INSERT/UPDATE/DELETE, no `anon` privileges. `get_site_content()` (SECURITY DEFINER, anon + authenticated) returns only `key, value`. **Everything in this table is public by design**: never store private data there. Regenerate types after applying.
+Apply after `20261126000000`. Adds `site_content (key, value, updated_at, updated_by)` for admin-edited page copy (Pengaturan → Konten). Keys match `^[a-z0-9_.]+$` (≤ 80 chars), values ≤ 5000 chars; a missing row means the app uses its built-in default. RLS: admin-only SELECT/INSERT/UPDATE/DELETE, no `anon` privileges. `get_site_content()` (SECURITY DEFINER, anon + authenticated) returns only `key, value`. **Everything in this table is public by design**: never store private data there. Its types were added to `src/types/database.ts` by hand; regenerating gives the same shape.
 
 ### `20261126000000_judges_view_public_ranking.sql`
 
@@ -99,7 +106,6 @@ Independent of the others; app code is merged and tolerates the migration being 
 - `final_presentation` (single row, admin-only RLS): `presentation_minutes`, `qa_minutes`, `venue`, `meeting_url` (https), `note`, `logistics_published`. It is a separate table because every signed-in role can read `competition_settings`.
 - `get_my_final_presentation()`: returns data only to admins, judges with stage `final`/`both`, and non-disqualified finalist teams after the finalist notice is published. Venue and link are `NULL` until `logistics_published`.
 
-After applying: regenerate types, then switch the hardcoded schedule listed in [Competition phases](./COMPETITION-PHASES.md) to these tables.
 
 ### `20261117000000_showcase_finalists_shared_card.sql`
 

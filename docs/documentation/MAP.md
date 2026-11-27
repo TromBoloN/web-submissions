@@ -48,6 +48,8 @@ See [Competition phases](./COMPETITION-PHASES.md) for behavior.
 | `layout.tsx` | `requireRole("team")`, results-released flag, team code for the sidebar user chip |
 | `submission-client.tsx` | Orchestrates the page: phase, form state, open vs closed (bento) layout, showcase card, help strip |
 | `team-phase.ts` | `resolveTeamPhase()`: pure phase resolver, plus the `FinalistNoticeData` type |
+| `submission-link-field.tsx` | `LinkField` (one submission link input: clear, paste, error/help, link-check badge) |
+| `submission-rules.ts` | `validateSubmissionLinks()` and the GitHub/HTTP URL patterns, shared by the form, `saveSubmission` and the phase checklists |
 | `team-schedule.ts` | `FinalPresentation` type, `toWitaDateKey()`, `daysBetweenDateKeys()` |
 | `team-hero.tsx` | Phase-aware hero (countdown + live checklist, milestone tile, finalist/final/results states) |
 | `journey-track.tsx` | Hex-node timeline; horizontal on `md+`, vertical on mobile |
@@ -124,8 +126,7 @@ UI preferences and theming internals (`lib/preferences`, `stores/preferences`, `
 
 Full reference: [Data model](./DATA-MODEL.md).
 
-- Tables: `profiles`, `teams`, `competition_settings` (single row), `submissions`, `submission_history`, `preliminary_scores`, `final_scores`, `judge_recusals`, `case_study` (single row), `finalist_notice` (single row), `audit_logs`.
-- Pending (migration written, not applied): `competition_stages`, `final_presentation`, plus new `competition_settings` columns.
+- Tables: `profiles`, `teams`, `competition_settings` (single row), `submissions`, `submission_history`, `preliminary_scores`, `final_scores`, `judge_recusals`, `case_study` (single row), `finalist_notice` (single row), `final_presentation` (single row), `competition_stages`, `site_content`, `score_sanctions`, `audit_logs`.
 - Views: `preliminary_ranking`, `final_ranking` (`security_invoker`).
 - Storage: bucket `web-showcase` (team uploads under `showcase/<uid>/`, admin finalist uploads under `showcase/admin/<team_id>/`). Created by hand in production; locally from `supabase/config.toml`.
 

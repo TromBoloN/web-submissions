@@ -40,9 +40,9 @@ Exports administrator-only preliminary/final ranking data. It has the same authe
 | Team showcase | `src/app/(main)/team/karya/actions.ts` | Saves consent, title, description and image path through `save_showcase_details()`; images upload to the `web-showcase` bucket from the browser. |
 | Team results | `get_my_results()` in `20261026000000_team_results.sql` | Authenticated RPC that derives the caller's team and returns only released, anonymized results. |
 | Finalist notice | `get_my_finalist_notice()` | Authenticated RPC returning the caller's published finalist/non-finalist message. |
-| Public data | `get_public_showcase()`, `get_public_showcase_winners()`, `get_public_contact_whatsapp()` | Anon-callable RPCs returning public fields only. |
+| Public data | `get_public_showcase()`, `get_public_showcase_winners()`, `get_public_contact_whatsapp()`, `get_public_event_info()`, `get_public_competition_schedule()`, `get_site_content()` | Anon-callable RPCs returning public fields only. |
 
-The full function catalog, including the pending stage and final-presentation functions, is in [Data model](./DATA-MODEL.md#database-functions).
+The full function catalog, including the schedule, event-info, page-copy and final-presentation functions, is in [Data model](./DATA-MODEL.md#database-functions).
 
 ## Error behavior
 

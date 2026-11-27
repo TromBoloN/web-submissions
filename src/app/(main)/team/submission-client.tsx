@@ -7,22 +7,17 @@ import { useRouter } from "next/navigation";
 
 import { cn } from "cn";
 import {
-  AlertTriangle,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  ClipboardPaste,
   Clock,
   Code2,
   ExternalLink,
   FileX,
   Globe,
-  HelpCircle,
   LockKeyhole,
   MessageCircle,
   RotateCw,
   StickyNote,
-  Trash2,
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,18 +36,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatWhatsAppNumber, toWhatsAppUrl } from "@/lib/contact";
-import type { LinkCheckItem, LinkCheckResult } from "@/lib/link-check";
+import type { LinkCheckResult } from "@/lib/link-check";
 import type { Database } from "@/types/database";
 
 import { checkMyLinks, saveSubmission } from "./actions";
 import { GuardianIdCard } from "./guardian-id-card";
 import { JourneyTrack } from "./journey-track";
 import { SubmissionChecklist } from "./submission-checklist";
+import { LinkField } from "./submission-link-field";
 import { SubmissionReceipt } from "./submission-receipt";
+import { type SubmissionLinkErrors, validateSubmissionLinks } from "./submission-rules";
 import { TeamHero } from "./team-hero";
 import { type FinalistNoticeData, resolveTeamPhase } from "./team-phase";
 import type { FinalPresentation } from "./team-schedule";
@@ -181,67 +177,6 @@ function ShowcaseConsentCard({
   );
 }
 
-function LinkCheckBadge({
-  item,
-  isChecking,
-  statusId,
-}: {
-  item?: LinkCheckItem;
-  isChecking?: boolean;
-  statusId: string;
-}) {
-  if (isChecking) {
-    return (
-      <div id={statusId} className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-        <RotateCw className="size-3 animate-spin" />
-        <span>Memeriksa tautan...</span>
-      </div>
-    );
-  }
-
-  if (!item) return null;
-
-  if (item.status === "ok") {
-    return (
-      <div
-        id={statusId}
-        className="flex items-start gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-[13px] text-emerald-700 dark:text-emerald-400"
-      >
-        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
-        <div>
-          <span className="font-medium">Tautan valid:</span> {item.message}
-        </div>
-      </div>
-    );
-  }
-
-  if (item.status === "warning") {
-    return (
-      <div
-        id={statusId}
-        className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[13px] text-amber-700 dark:text-amber-400"
-      >
-        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-        <div>
-          <span className="font-medium">Peringatan:</span> {item.message}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      id={statusId}
-      className="flex items-start gap-1.5 rounded-md border border-muted bg-muted/40 p-2 text-[13px] text-muted-foreground"
-    >
-      <HelpCircle className="mt-0.5 size-3.5 shrink-0" />
-      <div>
-        <span className="font-medium">Info verifikasi:</span> {item.message}
-      </div>
-    </div>
-  );
-}
-
 export function SubmissionClient({
   team,
   submission,
@@ -266,11 +201,7 @@ export function SubmissionClient({
   const [videoUrl, setVideoUrl] = useState(submission?.video_url ?? "");
   const [notesForJudges, setNotesForJudges] = useState(submission?.notes_for_judges ?? "");
 
-  const [fieldErrors, setFieldErrors] = useState<{
-    github_url?: string;
-    live_demo_url?: string;
-    video_url?: string;
-  }>({});
+  const [fieldErrors, setFieldErrors] = useState<SubmissionLinkErrors>({});
 
   const [serverError, setServerError] = useState<string>();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -315,18 +246,8 @@ export function SubmissionClient({
     videoUrl.trim() !== (submission?.video_url ?? "").trim() ||
     notesForJudges.trim() !== (submission?.notes_for_judges ?? "").trim();
   const handleCountdownExpire = useCallback(() => setIsCountdownZero(true), []);
-
-  const handlePaste = async (setter: (val: string) => void) => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        setter(text.trim());
-        toast.success("Tautan berhasil ditempel.");
-      }
-    } catch {
-      toast.error("Gagal membaca papan klip.");
-    }
-  };
+  const clearFieldError = (field: keyof SubmissionLinkErrors) =>
+    setFieldErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
 
   const runLinkCheck = async (showToast = false) => {
     setIsCheckingLinks(true);
@@ -354,52 +275,11 @@ export function SubmissionClient({
     }
   };
 
-  const validateForSubmit = () => {
-    const errors: typeof fieldErrors = {};
-
-    const trimmedGithub = githubUrl.trim();
-    if (!trimmedGithub) {
-      errors.github_url = "Repositori GitHub wajib diisi.";
-    } else if (!/^https:\/\/github\.com\/.+/i.test(trimmedGithub)) {
-      errors.github_url = "Repositori GitHub harus berupa tautan repositori valid (diawali https://github.com/).";
-    }
-
-    const trimmedDemo = liveDemoUrl.trim();
-    if (!trimmedDemo) {
-      errors.live_demo_url = "URL Live Demo wajib diisi.";
-    } else if (!/^https?:\/\/.+/i.test(trimmedDemo)) {
-      errors.live_demo_url = "URL Live Demo harus berupa tautan web yang valid (diawali http:// atau https://).";
-    }
-
-    const trimmedVideo = videoUrl.trim();
-    if (!trimmedVideo) {
-      errors.video_url = "URL Video Demo wajib diisi.";
-    } else if (!/^https?:\/\/.+/i.test(trimmedVideo)) {
-      errors.video_url = "URL Video Demo harus berupa tautan video yang valid (diawali http:// atau https://).";
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const validateForDraft = () => {
-    const errors: typeof fieldErrors = {};
-
-    const trimmedGithub = githubUrl.trim();
-    if (trimmedGithub && !/^https:\/\/github\.com\/.+/i.test(trimmedGithub)) {
-      errors.github_url = "Repositori GitHub harus diawali https://github.com/";
-    }
-
-    const trimmedDemo = liveDemoUrl.trim();
-    if (trimmedDemo && !/^https?:\/\/.+/i.test(trimmedDemo)) {
-      errors.live_demo_url = "URL Live Demo harus diawali http:// atau https://";
-    }
-
-    const trimmedVideo = videoUrl.trim();
-    if (trimmedVideo && !/^https?:\/\/.+/i.test(trimmedVideo)) {
-      errors.video_url = "URL Video Demo harus diawali http:// atau https://";
-    }
-
+  const validate = (mode: "draft" | "submit") => {
+    const errors = validateSubmissionLinks(
+      { github_url: githubUrl, live_demo_url: liveDemoUrl, video_url: videoUrl },
+      mode,
+    );
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -435,12 +315,12 @@ export function SubmissionClient({
   };
 
   const handleSaveDraftClick = () => {
-    if (!validateForDraft()) return;
+    if (!validate("draft")) return;
     handleExecuteSave("draft");
   };
 
   const handleSubmitClick = () => {
-    if (!validateForSubmit()) return;
+    if (!validate("submit")) return;
     setIsConfirmOpen(true);
   };
 
@@ -455,237 +335,73 @@ export function SubmissionClient({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 p-4">
-        {/* GitHub URL */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="github_url" className="flex items-center gap-1.5 font-medium">
-              <Code2 className="size-4 text-muted-foreground" />
-              Repositori GitHub
-              <span className="text-destructive">*</span>
-            </Label>
-            {!isReadOnly && (
-              <div className="flex items-center gap-1">
-                {githubUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => setGithubUrl("")}
-                    className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
-                  >
-                    <Trash2 className="size-3" />
-                    <span>Hapus</span>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <Input
-              id="github_url"
-              name="github_url"
-              type="url"
-              inputMode="url"
-              value={githubUrl}
-              aria-describedby={
-                fieldErrors.github_url ? "github_url_error github_url_status" : "github_url_help github_url_status"
-              }
-              disabled={isReadOnly || isPending}
-              onChange={(e) => {
-                setGithubUrl(e.target.value);
-                if (fieldErrors.github_url) {
-                  setFieldErrors((prev) => ({ ...prev, github_url: undefined }));
-                }
-              }}
-              onBlur={(e) => setGithubUrl(e.target.value.trim())}
-              placeholder="https://github.com/organisasi/nama-proyek"
-              className={fieldErrors.github_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"}
-            />
-            {!isReadOnly && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Tempel URL GitHub"
-                disabled={isPending}
-                onClick={() => handlePaste(setGithubUrl)}
-                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <ClipboardPaste className="size-4" />
-              </Button>
-            )}
-          </div>
-          {fieldErrors.github_url ? (
-            <p id="github_url_error" className="text-[13px] text-destructive">
-              {fieldErrors.github_url}
-            </p>
-          ) : (
-            <p id="github_url_help" className="text-[13px] text-muted-foreground">
+        <LinkField
+          id="github_url"
+          label="Repositori GitHub"
+          icon={Code2}
+          value={githubUrl}
+          setValue={setGithubUrl}
+          onUserInput={() => clearFieldError("github_url")}
+          error={fieldErrors.github_url}
+          placeholder="https://github.com/organisasi/nama-proyek"
+          pasteLabel="Tempel URL GitHub"
+          help={
+            <>
               Tautan repositori publik GitHub yang berisi kode sumber proyek. Wajib diawali{" "}
               <code>https://github.com/</code>.
-            </p>
-          )}
-          <LinkCheckBadge item={linkCheck?.github} isChecking={isCheckingLinks} statusId="github_url_status" />
-        </div>
+            </>
+          }
+          checkItem={linkCheck?.github}
+          isChecking={isCheckingLinks}
+          readOnly={isReadOnly}
+          disabled={isPending}
+        />
 
-        {/* Live Demo URL */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="live_demo_url" className="flex items-center gap-1.5 font-medium">
-              <Globe className="size-4 text-muted-foreground" />
-              URL Live Demo
-              <span className="text-destructive">*</span>
-            </Label>
-            {!isReadOnly && (
-              <div className="flex items-center gap-1">
-                {liveDemoUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => setLiveDemoUrl("")}
-                    className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
-                  >
-                    <Trash2 className="size-3" />
-                    <span>Hapus</span>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <Input
-              id="live_demo_url"
-              name="live_demo_url"
-              type="url"
-              inputMode="url"
-              value={liveDemoUrl}
-              aria-describedby={
-                fieldErrors.live_demo_url
-                  ? "live_demo_url_error live_demo_url_status"
-                  : "live_demo_url_help live_demo_url_status"
-              }
-              disabled={isReadOnly || isPending}
-              onChange={(e) => {
-                setLiveDemoUrl(e.target.value);
-                if (fieldErrors.live_demo_url) {
-                  setFieldErrors((prev) => ({ ...prev, live_demo_url: undefined }));
-                }
-              }}
-              onBlur={(e) => setLiveDemoUrl(e.target.value.trim())}
-              placeholder="https://proyek-mitweek.vercel.app"
-              className={
-                fieldErrors.live_demo_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"
-              }
-            />
-            {!isReadOnly && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Tempel URL live demo"
-                disabled={isPending}
-                onClick={() => handlePaste(setLiveDemoUrl)}
-                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <ClipboardPaste className="size-4" />
-              </Button>
-            )}
-          </div>
-          {fieldErrors.live_demo_url ? (
-            <p id="live_demo_url_error" className="text-[13px] text-destructive">
-              {fieldErrors.live_demo_url}
-            </p>
-          ) : (
-            <p id="live_demo_url_help" className="text-[13px] text-muted-foreground">
-              Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel, Netlify,
-              dsb).
-            </p>
-          )}
-          <LinkCheckBadge item={linkCheck?.liveDemo} isChecking={isCheckingLinks} statusId="live_demo_url_status" />
-        </div>
+        <LinkField
+          id="live_demo_url"
+          label="URL Live Demo"
+          icon={Globe}
+          value={liveDemoUrl}
+          setValue={setLiveDemoUrl}
+          onUserInput={() => clearFieldError("live_demo_url")}
+          error={fieldErrors.live_demo_url}
+          placeholder="https://proyek-mitweek.vercel.app"
+          pasteLabel="Tempel URL live demo"
+          help="Tautan aplikasi web yang sudah di-deploy dan dapat diuji secara langsung oleh publik (Vercel, Netlify, dsb)."
+          checkItem={linkCheck?.liveDemo}
+          isChecking={isCheckingLinks}
+          readOnly={isReadOnly}
+          disabled={isPending}
+        />
 
-        {/* Video Demo URL */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="video_url" className="flex items-center gap-1.5 font-medium">
-              <Video className="size-4 text-muted-foreground" />
-              URL Video Demo
-              <span className="text-destructive">*</span>
-            </Label>
-            {!isReadOnly && (
-              <div className="flex items-center gap-1">
-                {videoUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => setVideoUrl("")}
-                    className="h-7 px-2 text-muted-foreground text-xs hover:text-destructive"
-                  >
-                    <Trash2 className="size-3" />
-                    <span>Hapus</span>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <Input
-              id="video_url"
-              name="video_url"
-              type="url"
-              inputMode="url"
-              value={videoUrl}
-              aria-describedby={
-                fieldErrors.video_url ? "video_url_error video_url_status" : "video_url_help video_url_status"
-              }
-              disabled={isReadOnly || isPending}
-              onChange={(e) => {
-                setVideoUrl(e.target.value);
-                if (fieldErrors.video_url) {
-                  setFieldErrors((prev) => ({ ...prev, video_url: undefined }));
-                }
-              }}
-              onBlur={(e) => setVideoUrl(e.target.value.trim())}
-              placeholder="https://youtube.com/watch?v=... atau https://youtu.be/..."
-              className={fieldErrors.video_url ? "border-destructive pr-10 focus-visible:ring-destructive" : "pr-10"}
-            />
-            {!isReadOnly && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Tempel URL video"
-                disabled={isPending}
-                onClick={() => handlePaste(setVideoUrl)}
-                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <ClipboardPaste className="size-4" />
-              </Button>
-            )}
-          </div>
-          {fieldErrors.video_url ? (
-            <p id="video_url_error" className="text-[13px] text-destructive">
-              {fieldErrors.video_url}
-            </p>
-          ) : (
-            <p id="video_url_help" className="text-[13px] text-muted-foreground">
+        <LinkField
+          id="video_url"
+          label="URL Video Demo"
+          icon={Video}
+          value={videoUrl}
+          setValue={setVideoUrl}
+          onUserInput={() => clearFieldError("video_url")}
+          error={fieldErrors.video_url}
+          placeholder="https://youtube.com/watch?v=... atau https://youtu.be/..."
+          pasteLabel="Tempel URL video"
+          help={
+            <>
               Tautan video demonstrasi proyek berdurasi <strong>maksimal 5 menit</strong> (Juknis C.8). YouTube atau
               Google Drive dengan izin akses publik.
-            </p>
-          )}
+            </>
+          }
+          checkItem={linkCheck?.video}
+          isChecking={isCheckingLinks}
+          readOnly={isReadOnly}
+          disabled={isPending}
+        >
           {(videoUrl.includes("list=") || videoUrl.includes("start_radio")) && (
             <p className="font-medium text-amber-600 text-xs">
               Tips: Tautan video terdeteksi memuat parameter playlist (&list=...). Disarankan menggunakan tautan
               langsung video tunggal agar juri dapat langsung membuka.
             </p>
           )}
-          <LinkCheckBadge item={linkCheck?.video} isChecking={isCheckingLinks} statusId="video_url_status" />
-        </div>
+        </LinkField>
 
         <p className="text-muted-foreground text-xs italic">
           * Pemeriksaan tautan hanya peringatan dan tidak menghalangi pengiriman.

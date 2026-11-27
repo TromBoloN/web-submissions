@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { formatStageDateLong, formatStageDates, getStage, type SystemStageKey } from "@/lib/competition-info";
 import { formatDeadlineMultiZone, formatDeadlineWita } from "@/lib/deadline";
 
+import { GITHUB_PATTERN, HTTP_PATTERN } from "./submission-rules";
 import type { FinalistNoticeData, TeamPhase } from "./team-phase";
 import { daysBetweenDateKeys, type FinalPresentation, toWitaDateKey } from "./team-schedule";
 
@@ -42,9 +43,6 @@ export type TeamHeroProps = {
   liveLinks: { github: string; liveDemo: string; video: string };
   hasUnsavedChanges: boolean;
 };
-
-const GITHUB_PATTERN = /^https:\/\/github\.com\/.+/i;
-const HTTP_PATTERN = /^https?:\/\/.+/i;
 
 function formatTimestampWita(iso: string | null | undefined): string {
   if (!iso) return "-";
@@ -440,7 +438,8 @@ function FinalDetails({
           </div>
         ))}
       </dl>
-      {(info.venue || meetingUrl) && (
+      {/* venue defaults to "" in the database, so test it as a boolean, not with ?? */}
+      {(Boolean(info.venue) || meetingUrl !== null) && (
         <div className="mt-3 space-y-1 text-sm">
           {info.venue && (
             <p>

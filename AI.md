@@ -84,19 +84,18 @@ Secrets
 - Add new screens to `src/navigation/sidebar/sidebar-items.ts`.
 - Use `@/` aliases. Biome style: double quotes, semicolons, two-space indent, sorted imports, 120-character lines.
 
-## Current state (updated 2026-11-14)
+## Current state (updated 2026-11-26)
 
 - Team portal redesign ("Guardian" look) is implemented: phase-aware hero, journey track, Guardian ID card, ticket receipt, bento layout, restyled sidebar, shared `ThemeToggle`. See `docs/documentation/DESIGN-SYSTEM.md` and `docs/documentation/COMPETITION-PHASES.md`.
-- `/admin/pengaturan` is split into sub-routes (`pengumpulan`, `hasil`, `galeri`, `studi-kasus`, `tautan`). See `docs/documentation/ADMIN-SETTINGS.md`.
+- `/admin/pengaturan` is split into sub-routes (`identitas`, `jadwal`, `konten`, `pengumpulan`, `hasil`, `galeri`, `studi-kasus`, `tautan`). The 2026 edition is over; the goal is that the next edition runs by editing settings, not code. See `docs/documentation/ADMIN-SETTINGS.md`.
 - The competition schedule lives in `competition_stages` (Pengaturan → Jadwal) and final logistics in `final_presentation` (Pengaturan → Identitas & Final). Pages read them through `getSchedule()` / `useSchedule()` and `get_my_final_presentation()`; see COMPETITION-PHASES.md.
 - `finalist_count` (Pengaturan → Identitas & Final) drives team-facing and public text only ("Top N"). The Top-5 selection on Peringkat and the admin Tim/Finalis checks stay hardcoded at 5 (owner decision, 2026-11-26).
-- Direction: the owner wants the site as dynamic as possible (comprehensive admin settings). Planned order: (1) stages as data, (2) event identity + final details, (3) content store for copy, (4) settings polish + phase preview.
+- Event name and track come from `getEventInfo()` / `useEventInfo()`; editable page copy from `getSiteContent()` with the registry in `src/lib/site-content.ts` (public by design). Every settings action writes an audit event.
+- Still in code on purpose: rubric weights (owner decision), the Top-5 selection logic, and gallery/portal copy not in the Konten registry. A read-only phase preview is the remaining settings idea.
 
 ## Open decisions (ask, never decide)
 
 - Judges with `judge_stage = 'both'` can read final logistics through `get_my_final_presentation()`. Confirm this is intended before relying on it.
-- Rubric weights: keep them out of settings entirely, or allow edits only until the first score is saved? Currently out of settings.
-- Content store for copy (checklist items, FAQ, rules, gallery text): table design and how `/karya` copy reaches anon users (must be an anon-callable SECURITY DEFINER RPC, never a table grant).
-- Event name/edition as settings so a next edition needs no code change (single competition at a time, not multi-tenant).
+- Rubric weights stay out of settings (owner decision, 2026-11-26). Revisit only if asked: edits would have to stop once the first score is saved.
 - Migrating the remaining raw hex colors in `src/app/karya/*` and `src/components/showcase-card.tsx` to tokens (separate step, may change how `/karya` looks).
 - Floating dock / icon-rail navigation: deferred, because the shell is shared with admin and judge.

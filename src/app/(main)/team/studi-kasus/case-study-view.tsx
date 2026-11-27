@@ -24,6 +24,8 @@ import { Separator } from "@/components/ui/separator";
 import { getEventInfo } from "@/lib/competition-info.server";
 import { PRELIMINARY_RUBRIC } from "@/lib/rubric";
 
+import { GITHUB_PATTERN, HTTP_PATTERN } from "../submission-rules";
+
 type CaseStudyData = {
   title: string;
   contentMd: string;
@@ -115,9 +117,6 @@ function getTableOfContents(content: string) {
 }
 
 const ARTICLE_ID = "case-study-article";
-
-const GITHUB_PATTERN = /^https:\/\/github\.com\/.+/i;
-const HTTP_PATTERN = /^https?:\/\/.+/i;
 
 function ReadyChecklist({ submission }: { submission: CaseStudySubmission | null }) {
   const items = [
